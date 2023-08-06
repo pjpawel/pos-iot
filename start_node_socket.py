@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from network.peer import Peer
 from blockchain.blockchain import Blockchain, BlockchainHandler
 
+
 def main(port: int = 5050):
     load_dotenv()
 
@@ -19,11 +20,11 @@ def main(port: int = 5050):
         blockchain.load_from_genesis_node(genesis_ip)
 
     node = Peer("localhost", port)
-    node.start(BlockchainHandler())
+    node.start(BlockchainHandler(blockchain))
 
 
 if __name__ == '__main__':
     if len(sys.argv) >= 2:
-        main(sys.argv[1])
+        main(int(sys.argv[1]))
     else:
         main()
