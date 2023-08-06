@@ -1,4 +1,9 @@
-env/
-.idea/
-.env.example
+# Python
 __pycache__/
+env/
+# IDE
+.idea/
+# ENV files
+.env.example
+# Others
+test-scripts/

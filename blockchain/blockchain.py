@@ -27,6 +27,12 @@ class Node:
             raise PublicKeyNotFoundException(f"Cannot get public key from node: {self.host}:{self.port}")
         return serialization.load_pem_public_key(response.content)  # bytes(response.text, "utf-8")
 
+    def to_json(self):
+        return {
+            "host": self.host,
+            "port": self.port
+        }
+
 
 class SelfNode(Node):
     KEYS = 'keys.json'
@@ -116,6 +122,17 @@ class Blockchain:
         response_json = response.json()
         self.chain = [jsonpickle.decode(block) for block in response_json["blockchain"]]
         self.nodes = [jsonpickle.decode(node) for node in response_json["nodes"]]
+
+    def exclude_self_node(self, self_ip: str):
+        for node in self.nodes:
+            if node.host == self_ip:
+                self.nodes.remove(node)
+
+    def blocks_to_dict(self):
+        return [block.__dict__ for block in self.chain]
+
+    def nodes_to_dict(self):
+        return [node.__dict__ for node in self.nodes]
 
     # def __del__(self):
     #     self.dump_to_storage()
