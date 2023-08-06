@@ -1,21 +1,22 @@
 import json
-from logging.handlers import TimedRotatingFileHandler
-import jsonpickle
-from flask import Flask, request
-import socket
-import os
-import requests
 import logging
-from dotenv import load_dotenv
-from pprint import pprint
+import os
+import socket
+from logging.handlers import TimedRotatingFileHandler
 
+import jsonpickle
+import requests
 from cryptography.hazmat.primitives import serialization
-from blockchain.blockchain import Blockchain, BlockchainHandler, Node, SelfNode
+from dotenv import load_dotenv
+from flask import Flask, request
+
+from blockchain.blockchain import Blockchain, Node, SelfNode
+
 # from scenario import run_scenarios
 
 load_dotenv()
 
-handler = TimedRotatingFileHandler(os.path.join(os.getenv('LOG_DIR'), "app.log"), when="midnight")
+handler = TimedRotatingFileHandler(os.path.join(os.getenv('LOG_DIR', "log"), "app.log"), when="midnight")
 handler.suffix = "%Y%m%d"
 level = logging.getLevelName(os.getenv('LOG_LEVEL', 'INFO'))
 logging.basicConfig(
