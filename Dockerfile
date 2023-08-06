@@ -4,6 +4,9 @@ WORKDIR /app
 
 COPY . .
 
+COPY .env.docker .env
+
 RUN pip3 install -r requirements.txt
 
-CMD [ "python3", "start_node.sh" ]
+EXPOSE 5000
+ENTRYPOINT [ "python3", "-m", "flask", "--app", "start_node_flask", "run", "--host=0.0.0.0" ]

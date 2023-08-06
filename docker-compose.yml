@@ -1,28 +1,32 @@
 
 services:
   node0:
+    container_name: node0
     build: .
     ports:
-      - "5050:5050"
+      - "5002:5000"
     volumes:
       - node0volume:/storage
     networks:
       blockchain:
-        ipv4_address: 172.18.0.1
+        ipv4_address: 172.18.0.2
     environment:
       # Generate using:
       # import nacl.secret
       # nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE).hex()
       SECRET_KEY: 07f83cd2a279a2edc6b7ae1ced2cef4d325490efb2d2194813d7b446155d0c64
   node1:
+    container_name: node1
     build: .
+    depends_on:
+     - node0
     ports:
-      - "5051:5050"
+      - "5003:5000"
     volumes:
-      - node0volume:/storage
+      - node1volume:/storage
     networks:
       blockchain:
-        ipv4_address: 172.18.0.2
+#        ipv4_address: 172.18.0.2
     environment:
       SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
 
