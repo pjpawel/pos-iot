@@ -6,8 +6,10 @@ class Transaction:
     signature: str
     data: dict
 
-    def __init__(self):
-        pass
+    def __init__(self, data):
+        self.source_id = data["data"]
+        self.signature = data["signature"]
+        self.data = data["data"]
 
     def to_json(self) -> str:
         return json.dumps(
