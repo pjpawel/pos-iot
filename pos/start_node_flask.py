@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import serialization
 from dotenv import load_dotenv
 from flask import Flask, request
 
-from blockchain.blockchain import Blockchain, Node, SelfNode
+from pos.blockchain.blockchain import Blockchain, Node, SelfNode
 
 # from scenario import run_scenarios
 

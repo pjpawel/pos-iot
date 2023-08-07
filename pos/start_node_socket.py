@@ -3,8 +3,8 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from network.peer import Peer
-from blockchain.blockchain import Blockchain, BlockchainHandler
+from pos.network.peer import Peer
+from pos.blockchain.blockchain import Blockchain, BlockchainHandler
 
 
 def main(port: int = 5050):

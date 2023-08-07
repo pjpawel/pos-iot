@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 import jsonpickle
 
 from .block import Block
-from network.peer import Handler
+from pos.network.peer import Handler
 from .util import is_file, is_dir
 from .exception import PublicKeyNotFoundException
 
