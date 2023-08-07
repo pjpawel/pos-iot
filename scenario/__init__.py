@@ -2,6 +2,7 @@ from enum import StrEnum, auto
 from threading import Thread
 
 from definitions import instant_sender
+from exception import ScenarioNotFound
 
 
 class Scenario(StrEnum):
@@ -11,6 +12,8 @@ class Scenario(StrEnum):
         match self:
             case self.INSTANT_SENDER:
                 return instant_sender
+            case _:
+                raise ScenarioNotFound(f"Scenario wasn't found {self.name}")
 
     def call(self, nodes):
         thread = Thread(target=self.get_definition(), args=[nodes])
