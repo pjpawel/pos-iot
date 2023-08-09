@@ -1,3 +1,12 @@
-/env
+# Python
+__pycache__/
+env/
+.pytest_cache/
+# IDE
+.idea/
+# ENV files
+.env.example
+# Others
+test-scripts/
 storage/*
 log/*

@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 env/
+.pytest_cache/
 # IDE
 .idea/
 # ENV files
