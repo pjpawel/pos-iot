@@ -1,5 +1,8 @@
 import os
 import json
+from dataclasses import dataclass
+from uuid import UUID
+
 import requests
 
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -9,15 +12,18 @@ import jsonpickle
 
 from .block import Block
 from pos.network.peer import Handler
-from .util import is_file, is_dir
+from .utils import is_file, is_dir
 from .exception import PublicKeyNotFoundException
 
 
+@dataclass
 class Node:
+    identifier: UUID  #
     host: str
     port: int
 
-    def __init__(self, host: str, port: int):
+    def __init__(self, identifier: bytes, host: str, port: int):
+        self.identifier = UUID(bytes_le=identifier)
         self.host = host
         self.port = port
 
@@ -27,15 +33,9 @@ class Node:
             raise PublicKeyNotFoundException(f"Cannot get public key from node: {self.host}:{self.port}")
         return serialization.load_pem_public_key(response.content)  # bytes(response.text, "utf-8")
 
-    def to_json(self):
-        return {
-            "host": self.host,
-            "port": self.port
-        }
-
 
 class SelfNode(Node):
-    KEYS = 'keys.json'
+    INFO_PATH = 'node.json'
 
     public_key: RSAPublicKey
     private_key: RSAPrivateKey
@@ -43,11 +43,11 @@ class SelfNode(Node):
     def get_public_key(self) -> RSAPublicKey:
         return self.public_key
 
-    @staticmethod
-    def load_self():
+    @classmethod
+    def load_self(cls):
         storage = os.getenv('STORAGE_DIR')
-        node = SelfNode("localhost", 5000)
-        key_path = os.path.join(storage, SelfNode.KEYS)
+        node = cls("localhost", 5000)
+        key_path = os.path.join(storage, cls.INFO_PATH)
         if is_file(key_path):
             with open(key_path) as f:
                 keys = json.load(f)
@@ -60,24 +60,25 @@ class SelfNode(Node):
                 public_exponent=65537,
                 key_size=2048
             )
-            private_key_pem = node.private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
             node.public_key = node.private_key.public_key()
-            public_key_pem = node.public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
-            node.dump(storage, private_key_pem.decode("utf-8"), public_key_pem.decode("utf-8"))
+            node.dump(storage)
         return node
 
-    def dump(self, storage_dir: str, private_key: str, public_key: str) -> None:
-        with open(os.path.join(storage_dir, self.KEYS), "w") as f:
+    def dump(self, storage_dir: str) -> None:
+        private_key_pem = self.private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        public_key_pem = self.public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        with open(os.path.join(storage_dir, self.INFO_PATH), "w") as f:
             json.dump({
-                "public": public_key,
-                "private": private_key
+                "public": public_key_pem.decode("utf-8"),
+                "private": private_key_pem.decode("utf-8"),
+                "identifier": self.identifier.bytes_le
             }, f)
 
 
@@ -115,6 +116,19 @@ class Blockchain:
             json.dump(self.nodes, f)
 
     def load_from_genesis_node(self, genesis_ip: str) -> None:
+        data = {
+            "port": 5000,
+            "register": True,
+            "lastBlock": None
+        }
+        response = requests.post(f"http://{genesis_ip}:{5000}/genesis/register_node", json=data)
+        if response.status_code != 200:
+            raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
+        response_json = response.json()
+        self.chain = [jsonpickle.decode(block) for block in response_json["blockchain"]]
+        self.nodes = [jsonpickle.decode(node) for node in response_json["nodes"]]
+
+    def update_from_genesis_node(self, genesis_ip: str) -> None:
         data = {"port": 5000}
         response = requests.post(f"http://{genesis_ip}:{5000}/genesis/register_node", json=data)
         if response.status_code != 200:
@@ -149,3 +163,4 @@ class BlockchainHandler(Handler):
         print("Data received")
         print(data)
         print("=========")
+
