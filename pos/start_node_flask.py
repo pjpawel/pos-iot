@@ -1,19 +1,15 @@
-import json
-import logging
 import os
 import socket
-from logging.handlers import TimedRotatingFileHandler
-from copy import copy
+from uuid import uuid4
 
-import jsonpickle
 import requests
-from cryptography.hazmat.primitives import serialization
 from dotenv import load_dotenv
 from flask import Flask, request
 
-from pos.blockchain.blockchain import Blockchain, Node, SelfNode
+from pos.blockchain.blockchain import Blockchain
+from pos.blockchain.node import Node, SelfNode
 from pos.utils import setup_logger
-from scenario import run_scenarios
+from pos.scenario import run_scenarios
 
 """
 Loading env values
@@ -45,14 +41,17 @@ if blockchain.has_storage_files():
 elif ip != genesis_ip:
     print("Blockchain loading from genesis")
     blockchain.load_from_genesis_node(genesis_ip)
-    # TODO: Identifier of genesis node
-    blockchain.nodes.append(Node(genesis_ip, 5000))
+    # TODO: Identifier of genesis node from info
+    blockchain.nodes.append(Node("", genesis_ip, 5000))
 
-self_node = SelfNode.load_self()
+self_node = SelfNode.load()
 blockchain.exclude_self_node(ip)
 
+if ip != genesis_ip and not blockchain.chain:
+    blockchain.create_first_block(self_node)
+
 """
-Run scenarios in Threads
+Run scenarios in background
 """
 run_scenarios(os.getenv('POS_SCENARIOS'), blockchain.nodes)
 
@@ -60,6 +59,10 @@ run_scenarios(os.getenv('POS_SCENARIOS'), blockchain.nodes)
 Run flask app
 """
 app = Flask(__name__)
+
+"""
+=================== Info API ===================
+"""
 
 
 @app.get("/info")
@@ -73,7 +76,8 @@ def info():
     return {
         "status": "active",
         "ip": ip,
-        "hostname": hostname
+        "hostname": hostname,
+        "identifier": self_node.identifier.hex
     }
 
 
@@ -103,14 +107,20 @@ def get_public_key():
     Get node public key
     :return:
     """
-    return self_node.public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    ).decode("utf-8")
+    return self_node.get_public_key_str()
+
+
+"""
+=================== Action API ===================
+"""
 
 
 @app.post("/transaction")
 def add_transaction():
+    """
+    TODO:
+    :return:
+    """
     data = request.get_json()
     pass
 
@@ -118,7 +128,7 @@ def add_transaction():
 @app.post("/node/populate-new")
 def populate_new_node():
     """
-    JSON: {
+    Request must be in form: {
         "identifier": "<identifier>",
         "host": "<host>",
         "port": <port>
@@ -131,41 +141,61 @@ def populate_new_node():
     identifier = data.get("identifier")
     host = data.get("host")
     port = int(data.get("port"))
-    blockchain.nodes.append(Node(identifier, host, port))
+    blockchain.nodes.append(Node(bytes.fromhex(identifier), host, port))
+
+
+"""
+=================== Genesis API ===================
+"""
+
+
+@app.post("/genesis/register")
+def genesis_register():
+    if ip != genesis_ip:
+        return {"message": "Node is not genesis"}, 400
+    identifier = uuid4()
+    new_node = Node(identifier, request.remote_addr, 5000)
+    data_to_send = {
+        "identifier": identifier.bytes_le.hex(),
+        "host": new_node.host,
+        "port": new_node.port
+    }
+    for node in blockchain.nodes:
+        requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
+    blockchain.nodes.append(new_node)
+    return data_to_send
 
 
 @app.post("/genesis/update")
 def genesis_update():
+    """
+    Node identifier must be valid uuid hex
+    :return:
+    """
     if ip != genesis_ip:
         return {"message": "Node is not genesis"}, 400
     data = request.get_json()
-    register_node = data.get("register", False)
-    port = int(data.get("port", 5000))
-    identifier = data.get("identifier")
     last_block_hash = data.get("lastBlock", None)
+    excluded_nodes = data.get("nodeIdentifiers", [])
 
     blocks_to_show = None
     nodes_to_show = None
-
-    if register_node:
-        new_node = Node(identifier, request.remote_addr, port)
-        data_to_send = {
-            "host": new_node.host,
-            "port": new_node.port
-        }
+    if last_block_hash is not None:
+        # TODO: test this method
+        blocks_to_show = []
+        for block in blockchain.chain[::-1]:
+            blocks_to_show.append(block)
+            if block.prev_hash == last_block_hash:
+                break
+        blocks_to_show.reverse()
+    if excluded_nodes:
+        nodes_to_show = []
         for node in blockchain.nodes:
-            requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send)
+            if node.identifier.hex not in excluded_nodes:
+                nodes_to_show.append(node)
 
-        nodes_to_show = copy(blockchain.nodes)
-        blockchain.nodes.append(new_node)
-    elif last_block_hash is not None:
-
-        for blocks in blockchain.chain:
-            pass
-
-
-
-    return json.dumps({
-        "blockchain": [jsonpickle.encode(block) for block in blocks_to_show or blockchain.chain],
-        "nodes": [jsonpickle.encode(node) for node in nodes_to_show or blockchain.nodes]
-    })
+    # TODO: maybe sent as encoded bytes
+    return {
+        "blockchain": [block.__dict__ for block in blocks_to_show or blockchain.chain],
+        "nodes": [node.__dict__ for node in nodes_to_show or blockchain.nodes]
+    }
