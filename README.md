@@ -7,3 +7,6 @@
  - [ ] Save self_node to nodes in blockchain
  - [ ] Ustalenie jaka jest struktura transkacji i bloku
  - [ ] Czy self_node będzie trzymany jako global czy jako pierwszy obiekt z list nodes
+
+
+### 

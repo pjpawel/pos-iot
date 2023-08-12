@@ -8,3 +8,4 @@ env/
 .env.example
 # Others
 test-scripts/
+.$schematy.*
