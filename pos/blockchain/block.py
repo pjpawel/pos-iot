@@ -52,7 +52,8 @@ class Block:
         out += [self.validator.bytes_le]
         out += [self.signature]
         out += [encode_int(len(self.transactions), 4)]
-        out += [b''.join([tx.encode() for tx in self.transactions])]
+        if len(self.transactions) > 0:
+            out += [b''.join([tx.encode() for tx in self.transactions])]
         return b''.join(out)
 
     def verify(self, public_key: Ed25519PublicKey) -> bool:

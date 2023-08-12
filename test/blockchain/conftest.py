@@ -2,6 +2,7 @@
 Pytest fixtures for pos.blockchain test module
 """
 import os
+import socket
 
 import pytest
 
@@ -28,8 +29,11 @@ class Helper:
     def put_storage_env() -> None:
         os.environ["STORAGE_DIR"] = Helper.get_storage_dir()
 
+    @staticmethod
+    def put_genesis_node_env(real_ip: bool = True) -> None:
+        os.environ["GENESIS_NODE"] = socket.gethostbyname(socket.gethostname()) if real_ip else "localhost"
+
 
 @pytest.fixture()
 def helper():
     return Helper
-

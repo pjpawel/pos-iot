@@ -9,7 +9,7 @@ import requests
 from dotenv import load_dotenv
 from flask import Flask, request
 
-from pos.blockchain.blockchain import Blockchain
+from pos.blockchain.blockchain import Blockchain, PoS
 from pos.blockchain.node import Node, SelfNode
 from pos.blockchain.transaction import TxCandidate, Tx
 from pos.utils import setup_logger
@@ -28,31 +28,40 @@ setup_logger()
 """
 Load blockchain
 """
+# hostname = socket.gethostname()
+# ip = socket.gethostbyname(hostname)
+# genesis_ip = os.getenv("GENESIS_NODE")
+#
+# if ip == genesis_ip:
+#     name = "genesis"
+# else:
+#     name = "node"
+# print(f"=== Running as {name} ===")
+#
+# blockchain = Blockchain()
+# if blockchain.has_storage_files():
+#     print("Blockchain loading from storage")
+#     blockchain.load_from_storage()
+# elif ip != genesis_ip:
+#     print("Blockchain loading from genesis")
+#     blockchain.load_from_genesis_node(genesis_ip)
+#     blockchain.nodes.append(Node("", genesis_ip, 5000))
+#
+# self_node = SelfNode.load()
+# blockchain.exclude_self_node(ip)
+#
+# if ip != genesis_ip and not blockchain.chain:
+#     blockchain.create_first_block(self_node)
+
 hostname = socket.gethostname()
 ip = socket.gethostbyname(hostname)
 genesis_ip = os.getenv("GENESIS_NODE")
 
-if ip == genesis_ip:
-    name = "genesis"
-else:
-    name = "node"
-print(f"=== Running as {name} ===")
+pos = PoS()
+pos.load()
 
-blockchain = Blockchain()
-if blockchain.has_storage_files():
-    print("Blockchain loading from storage")
-    blockchain.load_from_storage()
-elif ip != genesis_ip:
-    print("Blockchain loading from genesis")
-    blockchain.load_from_genesis_node(genesis_ip)
-    # TODO: Identifier of genesis node from info
-    blockchain.nodes.append(Node("", genesis_ip, 5000))
-
-self_node = SelfNode.load()
-blockchain.exclude_self_node(ip)
-
-if ip != genesis_ip and not blockchain.chain:
-    blockchain.create_first_block(self_node)
+blockchain = pos.blockchain
+self_node = pos.self_node
 
 """
 Run scenarios in background
@@ -126,12 +135,9 @@ def add_transaction():
     :return:
     """
     try:
-        b = BytesIO(request.data)
-        tx = Tx.decode(b)
-    except Exception as msg:
-        logging.error(msg)
+        pos.add_transaction(request.data)
+    except Exception:
         return {"Invalid transaction data"}, 400
-    blockchain.add_new_transaction(tx)
 
 
 @app.post("/node/populate-new")
@@ -146,11 +152,7 @@ def populate_new_node():
     """
     if request.remote_addr is not genesis_ip:
         return {"message": "Only genesis node can populate another node"}, 400
-    data = request.get_json()
-    identifier = data.get("identifier")
-    host = data.get("host")
-    port = int(data.get("port"))
-    blockchain.nodes.append(Node(bytes.fromhex(identifier), host, port))
+    pos.populate_new_node(request.get_json())
 
 
 """
@@ -160,19 +162,13 @@ def populate_new_node():
 
 @app.post("/genesis/register")
 def genesis_register():
+    """
+    Initialize node registration
+    :return:
+    """
     if ip != genesis_ip:
         return {"message": "Node is not genesis"}, 400
-    identifier = uuid4()
-    new_node = Node(identifier, request.remote_addr, 5000)
-    data_to_send = {
-        "identifier": new_node.identifier.bytes_le.hex(),
-        "host": new_node.host,
-        "port": new_node.port
-    }
-    for node in blockchain.nodes:
-        requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
-    blockchain.nodes.append(new_node)
-    return data_to_send
+    return pos.genesis_register(request.remote_addr)
 
 
 @app.post("/genesis/update")
@@ -183,27 +179,4 @@ def genesis_update():
     """
     if ip != genesis_ip:
         return {"message": "Node is not genesis"}, 400
-    data = request.get_json()
-    last_block_hash = data.get("lastBlock", None)
-    excluded_nodes = data.get("nodeIdentifiers", [])
-
-    blocks_to_show = None
-    nodes_to_show = None
-    if last_block_hash is not None:
-        blocks_to_show = []
-        for block in blockchain.chain[::-1]:
-            blocks_to_show.append(block)
-            if block.prev_hash == last_block_hash:
-                break
-        blocks_to_show.reverse()
-    if excluded_nodes:
-        nodes_to_show = []
-        for node in blockchain.nodes:
-            if node.identifier.hex not in excluded_nodes:
-                nodes_to_show.append(node)
-
-    blocks_encoded = b''.join([block.encode() for block in blocks_to_show or blockchain.chain])
-    return {
-        "blockchain": b64encode(blocks_encoded).hex(),
-        "nodes": [node.__dict__ for node in nodes_to_show or blockchain.nodes]
-    }
+    return pos.genesis_update(request.get_json())
