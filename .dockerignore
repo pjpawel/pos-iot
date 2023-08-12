@@ -10,3 +10,4 @@ env/
 test-scripts/
 storage/*
 log/*
+test/

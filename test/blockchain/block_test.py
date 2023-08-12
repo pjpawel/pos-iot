@@ -20,7 +20,7 @@ def test_encode_and_decode():
         int(time()),
         sha256(b'12345').digest(),
         uuid4(),
-        sha256(b'asdfg').digest(),
+        sha256(b'asdfg').digest() * 8,
         [tx, tx2]
     )
 
