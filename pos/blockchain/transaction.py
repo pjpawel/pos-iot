@@ -52,21 +52,12 @@ class Tx:
         out += [data_encoded]
         return b''.join(out)
 
-    def validate(self, nodes: list[Node]) -> bool:
-        tx_node = None
-        for node in nodes:
-            if node.identifier == self.sender:
-                tx_node = node
-                break
-        if not tx_node:
-            logging.warning(f"Node not found with identifier {self.sender.hex}")
-            return False
-
+    def validate(self, node: Node) -> bool:
         all_data = self.encode()
         data = b''.join([bytes(all_data[:24]) + bytes(all_data[56:])])
 
         try:
-            tx_node.get_public_key().verify(self.signature, data)
+            node.get_public_key().verify(self.signature, data)
         except InvalidSignature:
             logging.warning(f"Transaction not verified found with identifier {self.sender.hex}")
             return False

@@ -24,13 +24,13 @@ def test_first_block_creation(helper: Helper):
 
     blockchain.create_first_block(self_node)
 
-    assert len(blockchain.chain) == 1
-    assert blockchain.chain[0].verify(self_node.public_key)
+    assert len(blockchain.blocks) == 1
+    assert blockchain.blocks[0].verify(self_node.public_key)
 
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
 
-    assert not blockchain.chain[0].verify(public_key)
+    assert not blockchain.blocks[0].verify(public_key)
 
 
 def test_pos_load(helper: Helper):
@@ -44,7 +44,7 @@ def test_pos_load(helper: Helper):
     pos.load()
 
     assert isinstance(pos.self_node, SelfNode)
-    assert len(pos.blockchain.chain) == 1
+    assert len(pos.blockchain.blocks) == 1
 
 
 def create_block() -> Block:
@@ -79,7 +79,7 @@ def test_genesis_register(helper: Helper):
     pos.load()
 
     ip = "192.168.1.200"
-    response = pos.genesis_register(ip)
+    response = pos.node_register(ip)
 
     assert UUID(response.get("identifier"))
     assert response.get("host") == ip
@@ -91,9 +91,9 @@ def test_genesis_update(helper: Helper):
     pos = PoS()
     pos.load()
 
-    assert len(pos.blockchain.chain) == 1
+    assert len(pos.blockchain.blocks) == 1
 
-    response = pos.genesis_update({})
+    response = pos.node_update({})
 
     blockchain_b64encoded = response.get("blockchain")
     nodes = response.get("nodes")
@@ -102,7 +102,7 @@ def test_genesis_update(helper: Helper):
 
     chain = decode_chain(blockchain_byt)
 
-    assert pos.blockchain.chain == chain
+    assert pos.blockchain.blocks == chain
 
     assert isinstance(nodes, list)
 

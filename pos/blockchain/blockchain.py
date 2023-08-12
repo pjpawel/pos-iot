@@ -2,10 +2,12 @@ import logging
 import os
 import json
 import socket
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from hashlib import sha256
 from io import BytesIO
+from typing import TextIO, BinaryIO
 from uuid import uuid4
+from sys import getsizeof
 
 import requests
 
@@ -13,7 +15,8 @@ from .block import Block, BlockCandidate
 from pos.network.peer import Handler
 from .transaction import Tx
 from .utils import is_file, is_dir
-from .node import Node, SelfNode
+from .node import Node, SelfNode, NodeType
+from .request import get_info
 
 
 def encode_chain(blocks: list[Block]) -> bytes:
@@ -32,85 +35,34 @@ def decode_chain(byt: bytes) -> list[Block]:
 
 
 class Blockchain:
-    BLOCKCHAIN_PATH = 'blockchain'
-    NODES_PATH = 'nodes'
-
-    storage_dir: str
-    chain: list[Block]
-    nodes: list[Node]
+    blocks: list[Block]
     candidate: BlockCandidate | None = None
 
     def __init__(self):
-        self.storage_dir = os.getenv('STORAGE_DIR')
-        self.chain = []
-        self.nodes = []
+        self.blocks = []
 
-    def add_new_transaction(self, tx: Tx):
+    def add_new_transaction(self, tx: Tx, node: Node):
         if not self.candidate:
             self.candidate = BlockCandidate.create_new([])
-        tx.validate(self.nodes)
+        tx.validate(node)
         self.candidate.transactions.append(tx)
-
-    def has_storage_files(self) -> bool:
-        return is_dir(self.storage_dir) \
-            and is_file(os.path.join(self.storage_dir, self.BLOCKCHAIN_PATH)) \
-            and is_file(os.path.join(self.storage_dir, self.NODES_PATH))
-
-    def load_from_storage(self) -> None:
-        with open(os.path.join(self.storage_dir, self.BLOCKCHAIN_PATH)) as f:
-            self.chain = json.load(f)
-        with open(os.path.join(self.storage_dir, self.NODES_PATH)) as f:
-            self.nodes = json.load(f)
-
-    def dump_to_storage(self) -> None:
-        with open(os.path.join(self.storage_dir, self.BLOCKCHAIN_PATH), 'w') as f:
-            json.dump(self.chain, f)
-        with open(os.path.join(self.storage_dir, self.NODES_PATH), 'w') as f:
-            json.dump(self.nodes, f)
 
     def create_first_block(self, self_node: SelfNode) -> None:
         block = BlockCandidate.create_new([])
-        self.chain.append(block.sign(
+        self.blocks.append(block.sign(
             sha256(b'0000000000').digest(),
             self_node.identifier,
             self_node.private_key
         ))
 
-    def load_from_genesis_node(self, genesis_ip: str) -> None:
-        data = {
-            "port": 5000,
-            "register": True,
-            "lastBlock": None
-        }
-        response = requests.post(f"http://{genesis_ip}:{5000}/genesis/register_node", json=data)
-        if response.status_code != 200:
-            raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
-        response_json = response.json()
-        self.chain = [block.__dict__ for block in response_json["blockchain"]]
-        self.nodes = [node.__dict__ for node in response_json["nodes"]]
+    def load_from_file(self, f: BinaryIO) -> None:
+        self.blocks = decode_chain(f.read(getsizeof(f)))
 
-    def update_from_genesis_node(self, genesis_ip: str) -> None:
-        data = {"port": 5000}
-        response = requests.post(f"http://{genesis_ip}:{5000}/genesis/register_node", json=data)
-        if response.status_code != 200:
-            raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
-        response_json = response.json()
-        self.chain = [Block.decode() for block in response_json["blockchain"]]
-        self.nodes = [node for node in response_json["nodes"]]
-
-    def exclude_self_node(self, self_ip: str):
-        for node in self.nodes:
-            if node.host == self_ip:
-                self.nodes.remove(node)
+    def load_from_bytes(self, b: bytes) -> None:
+        self.blocks = decode_chain(b)
 
     def blocks_to_dict(self):
-        return [block.__dict__ for block in self.chain]
-
-    def nodes_to_dict(self):
-        return [node.__dict__ for node in self.nodes]
-
-    # def __del__(self):
-    #     self.dump_to_storage()
+        return [block.__dict__ for block in self.blocks]
 
 
 class BlockchainHandler(Handler):
@@ -127,11 +79,21 @@ class BlockchainHandler(Handler):
 
 
 class PoS:
+    BLOCKCHAIN_PATH = 'blockchain'
+    NODES_PATH = 'nodes'
+    VALIDATORS_PATH = 'validators'
+
+    _storage_dir: str
     blockchain: Blockchain
     self_node: SelfNode
+    tx_to_verified: list[Tx] = []
+    nodes: list[Node] = []
+    validators: list[Node] = []
 
     def __init__(self):
+        self._storage_dir = os.getenv("STORAGE_DIR")
         self.blockchain = Blockchain()
+        self.self_node = SelfNode.load(os.getenv("NODE_TYPE"))
 
     def load(self) -> None:
         hostname = socket.gethostname()
@@ -144,57 +106,147 @@ class PoS:
             name = "node"
         print(f"=== Running as {name} ===")
 
-        if self.blockchain.has_storage_files():
+        if self._has_storage_files():
             print("Blockchain loading from storage")
-            self.blockchain.load_from_storage()
+            # Load from storage
+            self._load_from_storage()
         elif ip != genesis_ip:
             print("Blockchain loading from genesis")
-            self.blockchain.load_from_genesis_node(genesis_ip)
-            # Get info from genesis
-            response = requests.get(f"http::/{genesis_ip}:5000/info")
-            if response.status_code != 200:
-                raise Exception(f"Cannot get info from genesis")
-            identifier_hex = response.json().get("identifier")
-            self.blockchain.nodes.append(Node(identifier_hex, genesis_ip, 5000))
+            self.load_from_validator_node(genesis_ip)
+            identifier_hex = get_info(genesis_ip, 5000).get("identifier")
+            self.nodes.append(Node(identifier_hex, genesis_ip, 5000))
 
-        self.self_node = SelfNode.load()
-        self.blockchain.exclude_self_node(ip)
+        self._exclude_self_node(ip)
 
-        if ip == genesis_ip and not self.blockchain.chain:
+        if ip == genesis_ip and not self.blockchain.blocks:
             self.blockchain.create_first_block(self.self_node)
+
+    """
+    Internal methods
+    """
+
+    def load_from_validator_node(self, genesis_ip: str) -> None:
+        data = {
+            "port": 5000,
+            "register": True,
+            "lastBlock": None
+        }
+        response = requests.post(f"http://{genesis_ip}:{5000}/node/register", json=data)
+        if response.status_code != 200:
+            raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
+        response_json = response.json()
+        self.blockchain.load_from_bytes(b64decode(response_json["blockchain"]))
+        self.nodes = [node.__dict__ for node in response_json["nodes"]]
+
+    def update_from_validator_node(self, genesis_ip: str) -> None:
+        data = {"port": 5000}
+        response = requests.post(f"http://{genesis_ip}:{5000}/node/update", json=data)
+        if response.status_code != 200:
+            raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
+        response_json = response.json()
+        self.blockchain.load_from_bytes(b64decode(bytes.fromhex(response_json["blockchain"])))
+        self.nodes = [node for node in response_json["nodes"]]
+
+    def _has_storage_files(self) -> bool:
+        return is_dir(self._storage_dir) \
+            and is_file(os.path.join(self._storage_dir, self.BLOCKCHAIN_PATH)) \
+            and is_file(os.path.join(self._storage_dir, self.NODES_PATH)) \
+            and is_file(os.path.join(self._storage_dir, self.VALIDATORS_PATH))
+
+    def _exclude_self_node(self, self_ip: str) -> None:
+        for node in self.nodes:
+            if node.host == self_ip:
+                self.nodes.remove(node)
+                return
+        for node in self.validators:
+            if node.host == self_ip:
+                self.validators.remove(node)
+                return
+
+    def _load_from_storage(self) -> None:
+        with open(os.path.join(self._storage_dir, self.BLOCKCHAIN_PATH), "rb") as f:
+            self.blockchain.load_from_file(f)
+        with open(os.path.join(self._storage_dir, self.NODES_PATH)) as f:
+            self.nodes = json.load(f)
+        with open(os.path.join(self._storage_dir, self.VALIDATORS_PATH)) as f:
+            self.validators = json.load(f)
+
+    def _dump_to_storage(self) -> None:
+        with open(os.path.join(self._storage_dir, self.BLOCKCHAIN_PATH), 'wb') as f:
+            f.write(encode_chain(self.blockchain.blocks))
+        with open(os.path.join(self._storage_dir, self.NODES_PATH), 'w') as f:
+            json.dump(self.nodes, f)
+        with open(os.path.join(self._storage_dir, self.VALIDATORS_PATH), 'w') as f:
+            json.dump(self.validators, f)
+
+    # def __del__(self):
+    #     self._dump_to_storage()
+
+    """
+    API methods
+    """
 
     def add_transaction(self, data: bytes) -> None:
         b = BytesIO(data)
         tx = Tx.decode(b)
-        self.blockchain.add_new_transaction(tx)
+        tx_node = None
+        for node in self.nodes + self.validators:
+            if node.identifier == tx.sender:
+                tx_node = node
+                break
+        if not tx_node:
+            logging.warning(f"Node not found with identifier {tx.sender.hex}")
+            raise Exception(f"Node not found with identifier {tx.sender.hex}")
+            # return False
+        self.blockchain.add_new_transaction(tx, tx_node)
 
     def populate_new_node(self, data: dict) -> None:
         identifier = data.get("identifier")
         host = data.get("host")
         port = int(data.get("port"))
-        self.blockchain.nodes.append(Node(bytes.fromhex(identifier), host, port))
+        n_type = getattr(NodeType, data.get("type"))
 
-    def genesis_register(self, node_ip: str) -> dict:
+        # check if node is already register
+        for node in self.nodes + self.validators:
+            if node.host == host and node.port == port:
+                raise Exception(f"Node is already registered with identifier: {node.identifier}")
+
+        new_node = Node(identifier, host, port)
+        if n_type == NodeType.VALIDATOR:
+            self.validators.append(new_node)
+        else:
+            self.nodes.append(new_node)
+
+    def node_register(self, node_ip: str, port: int, n_type: NodeType) -> dict | tuple:
+        for node in self.nodes + self.validators:
+            if node.host == node_ip and node.port == port:
+                return {"error": f"Node is already registered with identifier: {node.identifier}"}, 400
+
         identifier = uuid4()
         new_node = Node(identifier, node_ip, 5000)
         data_to_send = {
             "identifier": new_node.identifier.bytes_le.hex(),
             "host": new_node.host,
-            "port": new_node.port
+            "port": new_node.port,
+            "type": n_type
         }
-        for node in self.blockchain.nodes:
+        if n_type == NodeType.VALIDATOR:
+            self.validators.append(new_node)
+        else:
+            self.nodes.append(new_node)
+        # Populate nodes
+        for node in self.validators:
             requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
-        self.blockchain.nodes.append(new_node)
         return data_to_send
 
-    def genesis_update(self, data: dict) -> dict:
+    def node_update(self, data: dict) -> dict:
         last_block_hash = data.get("lastBlock", None)
         excluded_nodes = data.get("nodeIdentifiers", [])
 
         blocks_to_show = None
         if last_block_hash is not None:
             blocks_to_show = []
-            for block in self.blockchain.chain[::-1]:
+            for block in self.blockchain.blocks[::-1]:
                 blocks_to_show.append(block)
                 if block.prev_hash == last_block_hash:
                     break
@@ -203,12 +255,12 @@ class PoS:
         nodes_to_show = None
         if excluded_nodes:
             nodes_to_show = []
-            for node in self.blockchain.nodes:
+            for node in self.nodes + self.validators:
                 if node.identifier.hex not in excluded_nodes:
                     nodes_to_show.append(node)
 
-        blocks_encoded = encode_chain(blocks_to_show or self.blockchain.chain)
+        blocks_encoded = encode_chain(blocks_to_show or self.blockchain.blocks)
         return {
             "blockchain": b64encode(blocks_encoded).hex(),
-            "nodes": [node.__dict__ for node in nodes_to_show or self.blockchain.nodes]
+            "nodes": [node.__dict__ for node in nodes_to_show or (self.nodes + self.validators)]
         }

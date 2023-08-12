@@ -2,11 +2,17 @@ import os
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 import json
+from enum import StrEnum, auto
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
 
 from .request import get_public_key
+
+
+class NodeType(StrEnum):
+    SENSOR = auto()
+    VALIDATOR = auto()
 
 
 @dataclass
@@ -40,6 +46,7 @@ class Node:
 class SelfNode(Node):
     INFO_PATH = 'node.json'
 
+    type: NodeType
     public_key: Ed25519PublicKey
     private_key: Ed25519PrivateKey
 
@@ -47,7 +54,7 @@ class SelfNode(Node):
         return self.public_key
 
     @classmethod
-    def load(cls):
+    def load(cls, n_type: NodeType | str):
         storage = os.getenv('STORAGE_DIR')
         key_path = os.path.join(storage, cls.INFO_PATH)
         if os.path.isfile(key_path):
@@ -63,6 +70,9 @@ class SelfNode(Node):
             node.private_key = Ed25519PrivateKey.generate()
             node.public_key = node.private_key.public_key()
             node.dump(storage)
+        if isinstance(n_type, str):
+            n_type = getattr(NodeType, n_type)
+        node.type = n_type
         return node
 
     def dump(self, storage_dir: str) -> None:

@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from flask import Flask, request
 
 from pos.blockchain.blockchain import PoS
+from pos.blockchain.node import NodeType
 from pos.utils import setup_logger
 from pos.scenario import run_scenarios
 
@@ -34,7 +35,7 @@ self_node = pos.self_node
 """
 Run scenarios in background
 """
-run_scenarios(os.getenv('POS_SCENARIOS'), blockchain.nodes)
+run_scenarios(os.getenv('POS_SCENARIOS'), pos.nodes)
 
 """
 Run flask app
@@ -128,23 +129,26 @@ def populate_new_node():
 """
 
 
-@app.post("/genesis/register")
-def genesis_register():
+@app.post("/node/register")
+def node_register():
     """
     Initialize node registration
     :return:
     """
     if ip != genesis_ip:
-        return {"message": "Node is not genesis"}, 400
-    return pos.genesis_register(request.remote_addr)
+        return {"message": "Node is not validator"}, 400
+    data = request.get_json()
+    port = int(data.get("port"))
+    n_type = getattr(NodeType, data.get("type"))
+    return pos.node_register(request.remote_addr, port, n_type)
 
 
-@app.post("/genesis/update")
-def genesis_update():
+@app.post("/node/update")
+def node_update():
     """
     Node identifier must be valid uuid hex
     :return:
     """
     if ip != genesis_ip:
         return {"message": "Node is not genesis"}, 400
-    return pos.genesis_update(request.get_json())
+    return pos.node_update(request.get_json())

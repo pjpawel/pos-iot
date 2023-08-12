@@ -8,3 +8,10 @@ def get_public_key(host: str, port: int) -> bytes:
     if response.status_code != 200:
         raise PublicKeyNotFoundException(f"Cannot get public key from node: {host}:{port}")
     return response.content
+
+
+def get_info(host: str, port: int) -> dict:
+    response = requests.get(f"http::/{host}:{port}/info")
+    if response.status_code != 200:
+        raise Exception(f"Cannot get info from host: {host}:{port}")
+    return response.json()
