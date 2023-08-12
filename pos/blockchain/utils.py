@@ -28,7 +28,8 @@ def encode_str(s: str, n_bytes: int = None) -> bytes:
     if n_bytes is None:
         return b
     if n_bytes != len(b):
-        raise Exception(f"Error while encoding string {s}, number of bytes {len(b)}, but declared number of bytes {n_bytes}")
+        raise Exception(f"Error while encoding string {s}, number of bytes {len(b)}, "
+                        f"but declared number of bytes {n_bytes}")
     return b
 
 

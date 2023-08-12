@@ -1,17 +1,10 @@
-import logging
 import os
 import socket
-from io import BytesIO
-from uuid import uuid4
-from base64 import b64encode, b64decode
 
-import requests
 from dotenv import load_dotenv
 from flask import Flask, request
 
-from pos.blockchain.blockchain import Blockchain, PoS
-from pos.blockchain.node import Node, SelfNode
-from pos.blockchain.transaction import TxCandidate, Tx
+from pos.blockchain.blockchain import PoS
 from pos.utils import setup_logger
 from pos.scenario import run_scenarios
 
@@ -28,31 +21,6 @@ setup_logger()
 """
 Load blockchain
 """
-# hostname = socket.gethostname()
-# ip = socket.gethostbyname(hostname)
-# genesis_ip = os.getenv("GENESIS_NODE")
-#
-# if ip == genesis_ip:
-#     name = "genesis"
-# else:
-#     name = "node"
-# print(f"=== Running as {name} ===")
-#
-# blockchain = Blockchain()
-# if blockchain.has_storage_files():
-#     print("Blockchain loading from storage")
-#     blockchain.load_from_storage()
-# elif ip != genesis_ip:
-#     print("Blockchain loading from genesis")
-#     blockchain.load_from_genesis_node(genesis_ip)
-#     blockchain.nodes.append(Node("", genesis_ip, 5000))
-#
-# self_node = SelfNode.load()
-# blockchain.exclude_self_node(ip)
-#
-# if ip != genesis_ip and not blockchain.chain:
-#     blockchain.create_first_block(self_node)
-
 hostname = socket.gethostname()
 ip = socket.gethostbyname(hostname)
 genesis_ip = os.getenv("GENESIS_NODE")

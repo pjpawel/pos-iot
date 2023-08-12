@@ -7,7 +7,7 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from .transaction import Tx
-from .utils import decode_int, decode_str, encode_int, encode_str, read_bytes
+from .utils import decode_int, encode_int, read_bytes
 
 
 @dataclass
