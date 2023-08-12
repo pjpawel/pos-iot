@@ -3,8 +3,11 @@ from time import time
 from uuid import uuid4
 from hashlib import sha256
 from copy import copy
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 from pos.blockchain.transaction import Transaction
-from pos.blockchain.block import Block
+from pos.blockchain.block import Block, BlockProposition
 
 
 def test_encode_and_decode():
@@ -14,15 +17,10 @@ def test_encode_and_decode():
     tx2 = copy(tx)
     tx2.signature = sha256(b'def').digest()
     tx2.data = {"message": "def", "id": 6}
+    block_p = BlockProposition(2, int(time()), None, None, [tx, tx2])
 
-    block = Block(
-        2,
-        int(time()),
-        sha256(b'12345').digest(),
-        uuid4(),
-        sha256(b'asdfg').digest() * 8,
-        [tx, tx2]
-    )
+    private_key = Ed25519PrivateKey.generate()
+    block = block_p.sign(sha256(b'12345').digest(), uuid4(), private_key)
 
     encoded_block = block.encode()
 

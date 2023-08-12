@@ -3,9 +3,7 @@ from io import BytesIO
 from uuid import UUID
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from .transaction import Transaction
 from .utils import decode_int, decode_str, encode_int, encode_str, read_bytes
@@ -36,9 +34,8 @@ class Block:
         prev_hash = read_bytes(s, 32)
         # decode validator (uuid: 16 bytes)
         validator = UUID(bytes_le=read_bytes(s, 16))
-        # decode signature (256 bytes because of 2048 key length)
-        # https://crypto.stackexchange.com/questions/95878/does-the-signature-length-of-rs256-depend-on-the-size-of-the-rsa-key-used-for-si
-        signature = read_bytes(s, 256)
+        # decode signature (64 bytes)
+        signature = read_bytes(s, 64)
         # decode header n_transaction
         n_transaction = decode_int(s, 4)
         transactions = []
@@ -57,19 +54,11 @@ class Block:
         out += [b''.join([tx.encode() for tx in self.transactions])]
         return b''.join(out)
 
-    def verify(self, public_key: RSAPublicKey) -> bool:
+    def verify(self, public_key: Ed25519PublicKey) -> bool:
         all_data = bytearray(self.encode())
-        data = b''.join([bytes(all_data[:56]) + bytes(all_data[312:])])
+        data = b''.join([bytes(all_data[:56]) + bytes(all_data[120:])])
         try:
-            public_key.verify(
-                self.signature,
-                data,
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH
-                ),
-                hashes.SHA256()
-            )
+            public_key.verify(self.signature, data)
         except InvalidSignature:
             return False
         return True
@@ -105,17 +94,10 @@ class BlockProposition:
         out += [b''.join([tx.encode() for tx in self.transactions])]
         return b''.join(out)
 
-    def sign(self, prev_hash: bytes, validator: UUID, private_key: RSAPrivateKey) -> Block:
+    def sign(self, prev_hash: bytes, validator: UUID, private_key: Ed25519PrivateKey) -> Block:
         self.prev_hash = prev_hash
         self.validator = validator
-        signature = private_key.sign(
-            self.encode(),
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
-            ),
-            hashes.SHA256()
-        )
+        signature = private_key.sign(self.encode())
         return Block(
             self.version,
             self.timestamp,

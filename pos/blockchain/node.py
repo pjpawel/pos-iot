@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 import json
 
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey, RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
 
@@ -30,7 +28,7 @@ class Node:
         self.port = port
 
     def get_public_key(self) -> Ed25519PublicKey:
-        return Ed25519PublicKey.from_public_bytes(get_public_key(self.host, self.port))
+        return serialization.load_pem_public_key(get_public_key(self.host, self.port))
 
     def get_public_key_str(self) -> str:
         return self.get_public_key().public_bytes(
@@ -42,10 +40,10 @@ class Node:
 class SelfNode(Node):
     INFO_PATH = 'node.json'
 
-    public_key: RSAPublicKey
-    private_key: RSAPrivateKey
+    public_key: Ed25519PublicKey
+    private_key: Ed25519PrivateKey
 
-    def get_public_key(self) -> RSAPublicKey:
+    def get_public_key(self) -> Ed25519PublicKey:
         return self.public_key
 
     @classmethod
@@ -62,7 +60,7 @@ class SelfNode(Node):
             node.public_key = serialization.load_pem_public_key(public_key_stream)
         else:
             node = cls(uuid4(), "localhost", 5000)
-            node.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            node.private_key = Ed25519PrivateKey.generate()
             node.public_key = node.private_key.public_key()
             node.dump(storage)
         return node

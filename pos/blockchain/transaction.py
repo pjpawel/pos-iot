@@ -48,5 +48,8 @@ class Transaction:
         return b''.join(out)
 
 
+class TransactionProposition:
+    pass
+
 class TransactionService:
     pass

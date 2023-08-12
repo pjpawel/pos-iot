@@ -1,6 +1,6 @@
 import os
 
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from pos.blockchain.blockchain import Blockchain
 from pos.blockchain.node import SelfNode
@@ -29,7 +29,7 @@ def test_first_block_creation():
 
     delete_key_file(key_path)
 
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
 
     assert not blockchain.chain[0].verify(public_key)
