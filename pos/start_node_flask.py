@@ -1,6 +1,9 @@
+import logging
 import os
 import socket
+from io import BytesIO
 from uuid import uuid4
+from base64 import b64encode, b64decode
 
 import requests
 from dotenv import load_dotenv
@@ -8,6 +11,7 @@ from flask import Flask, request
 
 from pos.blockchain.blockchain import Blockchain
 from pos.blockchain.node import Node, SelfNode
+from pos.blockchain.transaction import TxCandidate, Tx
 from pos.utils import setup_logger
 from pos.scenario import run_scenarios
 
@@ -118,11 +122,16 @@ def get_public_key():
 @app.post("/transaction")
 def add_transaction():
     """
-    TODO:
+    Add new transaction to block candidate
     :return:
     """
-    data = request.get_json()
-    pass
+    try:
+        b = BytesIO(request.data)
+        tx = Tx.decode(b)
+    except Exception as msg:
+        logging.error(msg)
+        return {"Invalid transaction data"}, 400
+    blockchain.add_new_transaction(tx)
 
 
 @app.post("/node/populate-new")
@@ -156,7 +165,7 @@ def genesis_register():
     identifier = uuid4()
     new_node = Node(identifier, request.remote_addr, 5000)
     data_to_send = {
-        "identifier": identifier.bytes_le.hex(),
+        "identifier": new_node.identifier.bytes_le.hex(),
         "host": new_node.host,
         "port": new_node.port
     }
@@ -181,7 +190,6 @@ def genesis_update():
     blocks_to_show = None
     nodes_to_show = None
     if last_block_hash is not None:
-        # TODO: test this method
         blocks_to_show = []
         for block in blockchain.chain[::-1]:
             blocks_to_show.append(block)
@@ -194,8 +202,8 @@ def genesis_update():
             if node.identifier.hex not in excluded_nodes:
                 nodes_to_show.append(node)
 
-    # TODO: maybe sent as encoded bytes
+    blocks_encoded = b''.join([block.encode() for block in blocks_to_show or blockchain.chain])
     return {
-        "blockchain": [block.__dict__ for block in blocks_to_show or blockchain.chain],
+        "blockchain": b64encode(blocks_encoded).hex(),
         "nodes": [node.__dict__ for node in nodes_to_show or blockchain.nodes]
     }

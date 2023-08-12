@@ -5,8 +5,9 @@ from time import time
 
 import requests
 
-from .block import Block, BlockProposition
+from .block import Block, BlockCandidate
 from pos.network.peer import Handler
+from .transaction import Tx
 from .utils import is_file, is_dir
 from .node import Node, SelfNode
 
@@ -18,14 +19,18 @@ class Blockchain:
     storage_dir: str
     chain: list[Block]
     nodes: list[Node]
+    candidate: BlockCandidate | None = None
 
     def __init__(self):
         self.storage_dir = os.getenv('STORAGE_DIR')
         self.chain = []
         self.nodes = []
 
-    def add_block(self, block: Block) -> None:
-        self.chain.append(block)
+    def add_new_transaction(self, tx: Tx):
+        if not self.candidate:
+            self.candidate = BlockCandidate.create_new([])
+        tx.validate(self.nodes)
+        self.candidate.transactions.append(tx)
 
     def has_storage_files(self) -> bool:
         return is_dir(self.storage_dir) \
@@ -45,7 +50,7 @@ class Blockchain:
             json.dump(self.nodes, f)
 
     def create_first_block(self, self_node: SelfNode) -> None:
-        block = BlockProposition(1, int(time()), None, None, [])
+        block = BlockCandidate.create_new([])
         self.chain.append(block.sign(
             sha256(b'0000000000').digest(),
             self_node.identifier,
@@ -72,7 +77,7 @@ class Blockchain:
             raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
         response_json = response.json()
         self.chain = [Block.decode() for block in response_json["blockchain"]]
-        self.nodes = [decode(node) for node in response_json["nodes"]]
+        self.nodes = [node for node in response_json["nodes"]]
 
     def exclude_self_node(self, self_ip: str):
         for node in self.nodes:
@@ -100,3 +105,8 @@ class BlockchainHandler(Handler):
         print("Data received")
         print(data)
         print("=========")
+
+
+class PoS:
+    blockchain: Blockchain
+
