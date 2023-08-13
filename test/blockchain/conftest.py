@@ -6,14 +6,14 @@ import socket
 
 import pytest
 
-from pos.blockchain.node import SelfNode
+from pos.blockchain.node import SelfNode, NodeType
 
 
 class Helper:
 
     @staticmethod
     def get_storage_dir() -> str:
-        return os.path.join("test", "../storage")
+        return os.path.relpath(os.path.join("test", "storage"))
 
     @staticmethod
     def get_storage_key_path() -> str:
@@ -33,6 +33,9 @@ class Helper:
     def put_genesis_node_env(real_ip: bool = True) -> None:
         os.environ["GENESIS_NODE"] = socket.gethostbyname(socket.gethostname()) if real_ip else "localhost"
 
+    @staticmethod
+    def put_node_type_env(n_type: NodeType = NodeType.VALIDATOR) -> None:
+        os.environ["NODE_TYPE"] = n_type.name
 
 @pytest.fixture()
 def helper():

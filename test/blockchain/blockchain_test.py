@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from pos.blockchain.block import Block, BlockCandidate
 from pos.blockchain.blockchain import Blockchain, PoS, decode_chain
-from pos.blockchain.node import SelfNode
+from pos.blockchain.node import SelfNode, NodeType
 from pos.blockchain.transaction import Tx
 
 from test.blockchain.conftest import Helper
@@ -17,6 +17,7 @@ from test.blockchain.conftest import Helper
 def test_first_block_creation(helper: Helper):
     # TODO: move to block
     helper.put_storage_env()
+    helper.put_node_type_env()
     helper.delete_storage_key()
 
     blockchain = Blockchain()
@@ -73,20 +74,22 @@ def test_decode_blockchain():
     assert chain == new_chain
 
 
-def test_genesis_register(helper: Helper):
+def test_node_register(helper: Helper):
     helper.put_genesis_node_env()
     pos = PoS()
     pos.load()
 
     ip = "192.168.1.200"
-    response = pos.node_register(ip)
+    port = 5000
+    n_type = NodeType.VALIDATOR
+    response = pos.node_register(ip, port, n_type)
 
     assert UUID(response.get("identifier"))
     assert response.get("host") == ip
     assert response.get("port") == 5000
 
 
-def test_genesis_update(helper: Helper):
+def test_node_update(helper: Helper):
     helper.put_genesis_node_env()
     pos = PoS()
     pos.load()

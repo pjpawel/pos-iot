@@ -72,14 +72,14 @@ def get_blockchain():
     return blockchain.blocks_to_dict()
 
 
-@app.get("/nodes")
+@app.get("/node/list")
 def nodes():
     """
     Show nodes in network
     :return:
     """
     return {
-        "nodes": blockchain.nodes_to_dict()
+        "nodes": [node.__dict__ for node in pos.nodes]
     }
 
 
@@ -125,7 +125,7 @@ def populate_new_node():
 
 
 """
-=================== Genesis API ===================
+=================== Validator API ===================
 """
 
 
@@ -135,8 +135,6 @@ def node_register():
     Initialize node registration
     :return:
     """
-    if ip != genesis_ip:
-        return {"message": "Node is not validator"}, 400
     data = request.get_json()
     port = int(data.get("port"))
     n_type = getattr(NodeType, data.get("type"))
@@ -149,6 +147,4 @@ def node_update():
     Node identifier must be valid uuid hex
     :return:
     """
-    if ip != genesis_ip:
-        return {"message": "Node is not genesis"}, 400
     return pos.node_update(request.get_json())

@@ -218,6 +218,8 @@ class PoS:
             self.nodes.append(new_node)
 
     def node_register(self, node_ip: str, port: int, n_type: NodeType) -> dict | tuple:
+        if self.self_node.type != NodeType.VALIDATOR:
+            return {"message": "Node is not validator"}, 400
         for node in self.nodes + self.validators:
             if node.host == node_ip and node.port == port:
                 return {"error": f"Node is already registered with identifier: {node.identifier}"}, 400
@@ -230,16 +232,18 @@ class PoS:
             "port": new_node.port,
             "type": n_type
         }
+        # Populate node
+        for node in self.validators:
+            requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
         if n_type == NodeType.VALIDATOR:
             self.validators.append(new_node)
         else:
             self.nodes.append(new_node)
-        # Populate nodes
-        for node in self.validators:
-            requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
         return data_to_send
 
-    def node_update(self, data: dict) -> dict:
+    def node_update(self, data: dict) -> dict | tuple:
+        if self.self_node.type != NodeType.VALIDATOR:
+            return {"message": "Node is not validator"}, 400
         last_block_hash = data.get("lastBlock", None)
         excluded_nodes = data.get("nodeIdentifiers", [])
 
