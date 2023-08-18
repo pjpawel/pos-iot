@@ -90,14 +90,14 @@ def get_blockchain():
     return blockchain.blocks_to_dict()
 
 
-@app.get("/nodes", endpoint='get_nodes')
+@app.get("/node/list")
 def nodes():
     """
     Show nodes in network
     :return:
     """
     return {
-        "nodes": pos.nodes_to_dict()
+        "nodes": [node.__dict__ for node in pos.nodes]
     }
 
 

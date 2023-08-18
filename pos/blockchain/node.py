@@ -54,7 +54,9 @@ class SelfNode(Node):
         return self.public_key
 
     @classmethod
-    def load(cls, n_type: NodeType | str):
+    def load(cls, n_type: NodeType | str | None = None):
+        if not n_type:
+            n_type = os.getenv("NODE_TYPE")
         storage = os.getenv('STORAGE_DIR')
         key_path = os.path.join(storage, cls.INFO_PATH)
         if os.path.isfile(key_path):
