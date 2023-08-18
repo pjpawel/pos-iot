@@ -1,13 +1,15 @@
+import logging
 import os
 import socket
 
 from dotenv import load_dotenv
 from flask import Flask, request
 
-from pos.blockchain.blockchain import PoS
+from pos.blockchain.blockchain import PoS, PoSException
 from pos.blockchain.node import NodeType
 from pos.utils import setup_logger
 from pos.scenario import run_scenarios
+from pos.blockchain.verifier import TransactionVerifier
 
 """
 Loading env values
@@ -33,6 +35,11 @@ blockchain = pos.blockchain
 self_node = pos.self_node
 
 """
+Run verification of transactions in background
+"""
+tx_verifier = TransactionVerifier(pos)
+
+"""
 Run scenarios in background
 """
 run_scenarios(os.getenv('POS_SCENARIOS'), pos.nodes)
@@ -40,6 +47,17 @@ run_scenarios(os.getenv('POS_SCENARIOS'), pos.nodes)
 """
 Run flask app
 """
+
+
+def handle_pos_exception(func):
+    def inner():
+        try:
+            return func()
+        except PoSException as e:
+            return e.message, e.code
+    return inner
+
+
 app = Flask(__name__)
 
 """
@@ -47,7 +65,7 @@ app = Flask(__name__)
 """
 
 
-@app.get("/info")
+@app.get("/info", endpoint='info')
 def info():
     """
     Show info about node
@@ -63,7 +81,7 @@ def info():
     }
 
 
-@app.get("/blockchain")
+@app.get("/blockchain", endpoint='get_blockchain')
 def get_blockchain():
     """
     Show blockchain storage
@@ -72,18 +90,18 @@ def get_blockchain():
     return blockchain.blocks_to_dict()
 
 
-@app.get("/nodes")
+@app.get("/nodes", endpoint='get_nodes')
 def nodes():
     """
     Show nodes in network
     :return:
     """
     return {
-        "nodes": blockchain.nodes_to_dict()
+        "nodes": pos.nodes_to_dict()
     }
 
 
-@app.get("/public-key")
+@app.get("/public-key", endpoint='get_public_key')
 def get_public_key():
     """
     Get node public key
@@ -97,19 +115,21 @@ def get_public_key():
 """
 
 
-@app.post("/transaction")
-def add_transaction():
+@app.post("/transaction", endpoint='new_transaction')
+def transaction_new():
     """
     Add new transaction to block candidate
     :return:
     """
     try:
-        pos.add_transaction(request.data)
-    except Exception:
+        return pos.transaction_new(request.data, request.remote_addr)
+    except Exception as e:
+        logging.warning(e)
         return {"Invalid transaction data"}, 400
 
 
-@app.post("/node/populate-new")
+@app.post("/node/populate-new", endpoint='populate_node')
+@handle_pos_exception
 def populate_new_node():
     """
     Request must be in form: {
@@ -119,36 +139,32 @@ def populate_new_node():
     }
     :return:
     """
-    if request.remote_addr is not genesis_ip:
-        return {"message": "Only genesis node can populate another node"}, 400
-    pos.populate_new_node(request.get_json())
+    pos.populate_new_node(request.get_json(), request.remote_addr)
 
 
 """
-=================== Genesis API ===================
+=================== Validator API ===================
 """
 
 
-@app.post("/node/register")
+@app.post("/node/register", endpoint='node_register')
+@handle_pos_exception
 def node_register():
     """
     Initialize node registration
     :return:
     """
-    if ip != genesis_ip:
-        return {"message": "Node is not validator"}, 400
     data = request.get_json()
     port = int(data.get("port"))
     n_type = getattr(NodeType, data.get("type"))
     return pos.node_register(request.remote_addr, port, n_type)
 
 
-@app.post("/node/update")
+@app.post("/node/update", endpoint='node_update')
+@handle_pos_exception
 def node_update():
     """
     Node identifier must be valid uuid hex
     :return:
     """
-    if ip != genesis_ip:
-        return {"message": "Node is not genesis"}, 400
     return pos.node_update(request.get_json())

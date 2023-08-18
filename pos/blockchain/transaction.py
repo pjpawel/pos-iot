@@ -7,6 +7,7 @@ from time import time
 
 from cryptography.exceptions import InvalidSignature
 
+from .exception import PoSException
 from .node import SelfNode, Node
 from .utils import decode_int, decode_str, encode_int, encode_str, read_bytes
 
@@ -52,20 +53,14 @@ class Tx:
         out += [data_encoded]
         return b''.join(out)
 
-    def validate(self, node: Node) -> bool:
+    def validate(self, node: Node) -> None:
         all_data = self.encode()
         data = b''.join([bytes(all_data[:24]) + bytes(all_data[56:])])
 
         try:
             node.get_public_key().verify(self.signature, data)
         except InvalidSignature:
-            logging.warning(f"Transaction not verified found with identifier {self.sender.hex}")
-            return False
-
-        return self._validate_data()
-
-    def _validate_data(self) -> bool:
-        return True
+            raise PoSException(f"Transaction not verified found with identifier {self.sender.hex}")
 
 
 class TxCandidate:
@@ -101,5 +96,16 @@ class TxCandidate:
         return Tx(self.version, self.timestamp, self.sender, signature, self.data)
 
 
-class TransactionService:
-    pass
+@dataclass
+class TxToVerify:
+    tx: Tx
+    node: Node
+    voting: dict[Node, bool]
+    time: int
+
+    def __init__(self, tx: Tx, node: Node):
+        self.tx = tx
+        self.node = node
+        self.voting = {}
+        self.time = int(time())
+

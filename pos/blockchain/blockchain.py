@@ -5,18 +5,19 @@ import socket
 from base64 import b64encode, b64decode
 from hashlib import sha256
 from io import BytesIO
-from typing import TextIO, BinaryIO
-from uuid import uuid4
+from typing import BinaryIO
+from uuid import uuid4, UUID
 from sys import getsizeof
 
 import requests
 
 from .block import Block, BlockCandidate
 from pos.network.peer import Handler
-from .transaction import Tx
+from .transaction import Tx, TxToVerify
 from .utils import is_file, is_dir
 from .node import Node, SelfNode, NodeType
-from .request import get_info
+from .request import get_info, send_populate_verification_result
+from .exception import PoSException
 
 
 def encode_chain(blocks: list[Block]) -> bytes:
@@ -44,7 +45,6 @@ class Blockchain:
     def add_new_transaction(self, tx: Tx, node: Node):
         if not self.candidate:
             self.candidate = BlockCandidate.create_new([])
-        tx.validate(node)
         self.candidate.transactions.append(tx)
 
     def create_first_block(self, self_node: SelfNode) -> None:
@@ -86,7 +86,7 @@ class PoS:
     _storage_dir: str
     blockchain: Blockchain
     self_node: SelfNode
-    tx_to_verified: list[Tx] = []
+    tx_to_verified: dict[UUID, TxToVerify] = {}
     nodes: list[Node] = []
     validators: list[Node] = []
 
@@ -121,6 +121,9 @@ class PoS:
         if ip == genesis_ip and not self.blockchain.blocks:
             self.blockchain.create_first_block(self.self_node)
 
+    def nodes_to_dict(self) -> list[dict]:
+        return [node.__dict__ for node in self.validators + self.nodes]
+
     """
     Internal methods
     """
@@ -129,14 +132,16 @@ class PoS:
         data = {
             "port": 5000,
             "register": True,
-            "lastBlock": None
+            "lastBlock": None,
+            "type": self.self_node.type.name
         }
         response = requests.post(f"http://{genesis_ip}:{5000}/node/register", json=data)
         if response.status_code != 200:
             raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
+        # TODO: update to robi nie register
         response_json = response.json()
-        self.blockchain.load_from_bytes(b64decode(response_json["blockchain"]))
-        self.nodes = [node.__dict__ for node in response_json["nodes"]]
+        self.blockchain.load_from_bytes(b64decode(bytes.fromhex(response_json.get("blockchain"))))
+        self.nodes = [node.__dict__ for node in response_json.get("nodes")]
 
     def update_from_validator_node(self, genesis_ip: str) -> None:
         data = {"port": 5000}
@@ -144,8 +149,22 @@ class PoS:
         if response.status_code != 200:
             raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000}")
         response_json = response.json()
-        self.blockchain.load_from_bytes(b64decode(bytes.fromhex(response_json["blockchain"])))
-        self.nodes = [node for node in response_json["nodes"]]
+        self.blockchain.load_from_bytes(b64decode(bytes.fromhex(response_json.get("blockchain"))))
+        self.nodes = [node.__dict__ for node in response_json.get("nodes")]
+
+    def send_transaction_verification(self, uuid: UUID, tx_to_verify: TxToVerify, verified: bool, message: str | None = None):
+        data_to_send = {
+            "identifier": uuid.hex,
+            "verified": verified,
+            "message": message
+        }
+        for node in self.validators:
+            if node == tx_to_verify.node:
+                continue
+            try:
+                send_populate_verification_result(node.host, node.port, data_to_send)
+            except Exception as e:
+                logging.error(e)
 
     def _has_storage_files(self) -> bool:
         return is_dir(self._storage_dir) \
@@ -186,7 +205,9 @@ class PoS:
     API methods
     """
 
-    def add_transaction(self, data: bytes) -> None:
+    def transaction_new(self, data: bytes, request_addr: str) -> dict:
+        self._validate_if_i_am_validator()
+
         b = BytesIO(data)
         tx = Tx.decode(b)
         tx_node = None
@@ -195,12 +216,43 @@ class PoS:
                 tx_node = node
                 break
         if not tx_node:
-            logging.warning(f"Node not found with identifier {tx.sender.hex}")
             raise Exception(f"Node not found with identifier {tx.sender.hex}")
-            # return False
-        self.blockchain.add_new_transaction(tx, tx_node)
+        if tx_node.host != request_addr:
+            raise Exception(f"Node hostname ({tx_node.host}) different than remote_addr: ({request_addr})")
+        tx.validate(tx_node)
+        uuid = uuid4()
+        self.tx_to_verified[uuid] = TxToVerify(tx, tx_node)
+        return {"id": uuid.hex}
 
-    def populate_new_node(self, data: dict) -> None:
+    def transaction_populate(self, data: bytes, identifier: str):
+        uuid = UUID(identifier)
+        tx = Tx.decode(BytesIO(data))
+
+        tx_node = None
+        for node in self.nodes + self.validators:
+            if node.identifier == tx.sender:
+                tx_node = node
+                break
+
+        if not tx_node:
+            raise Exception(f"Node not found with identifier {tx.sender.hex}")
+
+        tx.validate(tx_node)
+        self.tx_to_verified[uuid] = TxToVerify(tx, tx_node)
+
+    def transaction_populate_verify_result(self, verified: bool, identifier: str, remote_addr: str):
+        self._validate_request_from_validator(remote_addr)
+        node = self._get_node_from_request_addr(remote_addr)
+        uuid = UUID(identifier)
+        tx_to_verified = self.tx_to_verified.get(uuid)
+        tx_to_verified.voting[node] = verified
+        if len(self.tx_to_verified) == len(self.validators):
+            self.blockchain.add_new_transaction(tx_to_verified.tx, tx_to_verified.node)
+            self.tx_to_verified.pop(uuid)
+
+    def populate_new_node(self, data: dict, request_addr: str) -> None:
+        self._validate_request_from_validator(request_addr)
+
         identifier = data.get("identifier")
         host = data.get("host")
         port = int(data.get("port"))
@@ -218,6 +270,8 @@ class PoS:
             self.nodes.append(new_node)
 
     def node_register(self, node_ip: str, port: int, n_type: NodeType) -> dict | tuple:
+        self._validate_if_i_am_validator()
+
         for node in self.nodes + self.validators:
             if node.host == node_ip and node.port == port:
                 return {"error": f"Node is already registered with identifier: {node.identifier}"}, 400
@@ -230,16 +284,21 @@ class PoS:
             "port": new_node.port,
             "type": n_type
         }
+
+        # Populate nodes
+        for node in self.validators:
+            requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
+
         if n_type == NodeType.VALIDATOR:
             self.validators.append(new_node)
         else:
             self.nodes.append(new_node)
-        # Populate nodes
-        for node in self.validators:
-            requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
+
         return data_to_send
 
-    def node_update(self, data: dict) -> dict:
+    def node_update(self, data: dict) -> dict | tuple:
+        self._validate_if_i_am_validator()
+
         last_block_hash = data.get("lastBlock", None)
         excluded_nodes = data.get("nodeIdentifiers", [])
 
@@ -264,3 +323,25 @@ class PoS:
             "blockchain": b64encode(blocks_encoded).hex(),
             "nodes": [node.__dict__ for node in nodes_to_show or (self.nodes + self.validators)]
         }
+
+    """
+    Internal API methods
+    """
+
+    def _validate_if_i_am_validator(self) -> None:
+        if not self.self_node.type == NodeType.VALIDATOR:
+            raise PoSException({"error": "I am not validator"}, 400)
+
+    def _validate_request_from_validator(self, request_addr: str) -> None:
+        validator = False
+        for node in self.validators:
+            if node.host == request_addr:
+                validator = True
+        if not validator:
+            raise PoSException({"error": "Request came from node which is not validator"}, 400)
+
+    def _get_node_from_request_addr(self, request_addr: str) -> Node:
+        for node in self.validators + self.nodes:
+            if node.host == request_addr:
+                return node
+        raise PoSException({"error": "Request came from unknown node"}, 400)

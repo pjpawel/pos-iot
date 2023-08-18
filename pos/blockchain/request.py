@@ -15,3 +15,10 @@ def get_info(host: str, port: int) -> dict:
     if response.status_code != 200:
         raise Exception(f"Cannot get info from host: {host}:{port}")
     return response.json()
+
+
+def send_populate_verification_result(host: str, port: int, data: dict) -> None:
+    response = requests.post(f"http::/{host}:{port}/transaction/populate/verify-result", data)
+    if response.status_code != 200:
+        raise Exception(f"Cannot send populate verification result from host: {host}:{port}")
+    return response.json()
