@@ -1,8 +1,8 @@
 from enum import StrEnum, auto
 from threading import Thread
 
-from definitions import instant_sender, mad_sender, simple_sender
-from exception import ScenarioNotFound, ScenarioNotSupported
+from .definitions import instant_sender, mad_sender, simple_sender
+from .exception import ScenarioNotFound, ScenarioNotSupported
 from pos.blockchain.blockchain import Node
 
 

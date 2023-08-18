@@ -1,7 +1,7 @@
 from time import sleep
 import requests
 
-from utils import get_random_from_list
+from .utils import get_random_from_list
 
 
 def instant_sender(nodes):
@@ -12,9 +12,11 @@ def instant_sender(nodes):
     """
     while True:
         sleep(5)
+        if not nodes:
+            continue
         node = get_random_from_list(nodes)
         requests.post(f"http://{node.host}:{node.port}/transaction", {
-            # TODO: generate random data with signature of sender
+            "message": "abc"
         })
 
 
