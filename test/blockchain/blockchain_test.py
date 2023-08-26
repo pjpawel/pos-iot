@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pos.blockchain.block import Block, BlockCandidate
 from pos.blockchain.blockchain import Blockchain, PoS, decode_chain
 from pos.blockchain.node import SelfNode, NodeType
-from pos.blockchain.transaction import Tx
+from pos.blockchain.transaction import Tx, TxCandidate
 
 from test.blockchain.conftest import Helper
 
@@ -48,23 +48,10 @@ def test_pos_load(helper: Helper):
     assert len(pos.blockchain.blocks) == 1
 
 
-def create_block() -> Block:
-    uid = uuid4()
-    signature = sha256(b'abc')
-    tx = Tx(1, int(time()), uid, signature.digest(), {"message": "abc", "id": 5})
-    tx2 = copy(tx)
-    tx2.signature = sha256(b'def').digest()
-    tx2.data = {"message": "def", "id": 6}
-    block_p = BlockCandidate(2, int(time()), None, None, [tx, tx2])
-
-    private_key = Ed25519PrivateKey.generate()
-    return block_p.sign(sha256(b'12345').digest(), uuid4(), private_key)
-
-
-def test_decode_blockchain():
+def test_decode_blockchain(helper: Helper):
     chain = []
     for i in range(6):
-        chain.append(create_block())
+        chain.append(helper.create_block())
 
     encoded = b''.join([block.encode() for block in chain])
 
@@ -79,10 +66,11 @@ def test_node_register(helper: Helper):
     pos = PoS()
     pos.load()
 
+    id = uuid4()
     ip = "192.168.1.200"
     port = 5000
     n_type = NodeType.VALIDATOR
-    response = pos.node_register(ip, port, n_type)
+    response = pos.node_register(id, ip, port, n_type)
 
     assert UUID(response.get("identifier"))
     assert response.get("host") == ip
@@ -108,4 +96,3 @@ def test_node_update(helper: Helper):
     assert pos.blockchain.blocks == chain
 
     assert isinstance(nodes, list)
-
