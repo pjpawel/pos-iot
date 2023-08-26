@@ -1,5 +1,6 @@
 import json
 import logging
+from base64 import b64encode
 from dataclasses import dataclass
 from io import BytesIO
 from uuid import UUID
@@ -35,7 +36,7 @@ class Tx:
         # decode sender identifier (uuid: 16 bytes)
         sender = UUID(bytes_le=read_bytes(s, 16))
         # decode signature (Ed25519: 64 bytes)
-        signature = read_bytes(s, 32)
+        signature = read_bytes(s, 64)
         # decode header data_length
         data_length = decode_int(s, 4)
         data_str = decode_str(s, data_length)
@@ -55,12 +56,22 @@ class Tx:
 
     def validate(self, node: Node) -> None:
         all_data = self.encode()
-        data = b''.join([bytes(all_data[:24]) + bytes(all_data[56:])])
+        data = b''.join([bytes(all_data[:24]) + bytes(all_data[88:])])
 
         try:
             node.get_public_key().verify(self.signature, data)
-        except InvalidSignature:
-            raise PoSException(f"Transaction not verified found with identifier {self.sender.hex}")
+        except InvalidSignature as error:
+            logging.error(error)
+            logging.error(f"Transaction data: {b64encode(all_data)}, node public key: {node.get_public_key_str()}")
+            raise PoSException(f"Transaction not verified by identifier {self.sender.hex}", 400)
+
+    def to_dict(self):
+        return {
+            "version": self.version,
+            "timestamp": self.timestamp,
+            "sender": self.sender.hex,
+            "data": self.data
+        }
 
 
 class TxCandidate:
@@ -82,9 +93,9 @@ class TxCandidate:
         if not self.sender:
             raise Exception("Cannot encode without sender")
         out = []
-        out += [self.sender.bytes_le]
         out += [encode_int(self.version, 4)]
         out += [encode_int(self.timestamp, 4)]
+        out += [self.sender.bytes_le]
         data_encoded = encode_str(json.dumps(self.data))
         out += [encode_int(len(data_encoded), 4)]
         out += [data_encoded]
@@ -100,7 +111,7 @@ class TxCandidate:
 class TxToVerify:
     tx: Tx
     node: Node
-    voting: dict[Node, bool]
+    voting: dict[UUID, bool]
     time: int
 
     def __init__(self, tx: Tx, node: Node):
@@ -108,4 +119,13 @@ class TxToVerify:
         self.node = node
         self.voting = {}
         self.time = int(time())
+
+    def add_verification_result(self, node: Node, result: bool) -> None:
+        if node.identifier in list(self.voting.keys()):
+            raise Exception(f"Voting is already saved from node {node.identifier}")
+        self.voting[node.identifier] = result
+
+    def is_voting_positive(self) -> bool:
+        results = list(self.voting.values())
+        return results.count(True) > (len(results)/2)
 

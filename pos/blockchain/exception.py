@@ -3,9 +3,9 @@ class PublicKeyNotFoundException(Exception):
 
 
 class PoSException(Exception):
-    message: dict
+    message: str
     code: int
 
-    def __init__(self, message: dict, code: int):
+    def __init__(self, message: str, code: int):
         self.message = message
         self.code = code

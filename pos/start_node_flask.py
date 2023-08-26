@@ -1,9 +1,12 @@
+import json
 import logging
 import os
 import socket
+from base64 import b64encode
+from uuid import uuid4, UUID
 
 from dotenv import load_dotenv
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 from pos.blockchain.blockchain import PoS, PoSException
 from pos.blockchain.node import NodeType
@@ -38,27 +41,25 @@ self_node = pos.self_node
 Run verification of transactions in background
 """
 tx_verifier = TransactionVerifier(pos)
+tx_verifier.start()
 
 """
 Run scenarios in background
 """
-run_scenarios(os.getenv('POS_SCENARIOS'), pos.nodes)
+run_scenarios(os.getenv('POS_SCENARIOS'), pos)
 
 """
 Run flask app
 """
 
 
-def handle_pos_exception(func):
-    def inner():
-        try:
-            return func()
-        except PoSException as e:
-            return e.message, e.code
-    return inner
-
-
 app = Flask(__name__)
+
+
+@app.errorhandler(PoSException)
+def pos_error_handler(error: PoSException):
+    return jsonify(error=error.message), error.code
+
 
 """
 =================== Info API ===================
@@ -87,7 +88,36 @@ def get_blockchain():
     Show blockchain storage
     :return:
     """
-    return blockchain.blocks_to_dict()
+    return {"blockchain": blockchain.blocks_to_dict()}
+
+
+@app.get("/blockchain/to-verify")
+def get_transaction_to_verify():
+    """
+    ONLY DEV endpoint
+    :return:
+    """
+    data = {}
+    for uuid, tx_to_verify in pos.tx_to_verified.items():
+        data[uuid.hex] = {
+            "timestamp": tx_to_verify.time,
+            "transaction": b64encode(tx_to_verify.tx.encode()).hex(),
+            "node": tx_to_verify.node.identifier.hex
+        }
+    return data
+
+
+@app.get("/blockchain/verified")
+def get_transaction_verified():
+    """
+    ONLY DEV endpoint
+    :return:
+    """
+    if not pos.blockchain.candidate:
+        return {}
+    return {
+        "transactions": [{"timestamp": tx.timestamp, "data": tx.data} for tx in pos.blockchain.candidate.transactions]
+    }
 
 
 @app.get("/node/list")
@@ -116,20 +146,23 @@ def get_public_key():
 
 
 @app.post("/transaction", endpoint='new_transaction')
+# @handle_pos_exception
 def transaction_new():
     """
     Add new transaction to block candidate
     :return:
     """
     try:
-        return pos.transaction_new(request.data, request.remote_addr)
+        # request.content_length
+        # TODO: check content_length
+        return pos.transaction_new(request.get_data(as_text=False), request.remote_addr)
     except Exception as e:
-        logging.warning(e)
-        return {"Invalid transaction data"}, 400
+        logging.warning(f"Error registering new transaction {e}")
+        return "Invalid transaction data", 400
 
 
 @app.post("/node/populate-new", endpoint='populate_node')
-@handle_pos_exception
+# @handle_pos_exception
 def populate_new_node():
     """
     Request must be in form: {
@@ -147,8 +180,26 @@ def populate_new_node():
 """
 
 
+@app.get("/transaction/<identifier>")
+def transaction_get(identifier: str):
+    return pos.transaction_get(identifier)
+
+
+@app.post("/transaction/<identifier>/populate")
+def transaction_populate(identifier: str):
+    pos.transaction_populate(request.get_data(as_text=False), identifier)
+    return {}
+
+
+@app.post("/transaction/<identifier>/verifyResult")
+def transaction_verify_result(identifier: str):
+    request_json = request.get_json()
+    pos.transaction_populate_verify_result(request_json.get("result"), identifier, request.remote_addr)
+    return {}
+
+
 @app.post("/node/register", endpoint='node_register')
-@handle_pos_exception
+# @handle_pos_exception
 def node_register():
     """
     Initialize node registration
@@ -157,14 +208,17 @@ def node_register():
     data = request.get_json()
     port = int(data.get("port"))
     n_type = getattr(NodeType, data.get("type"))
-    return pos.node_register(request.remote_addr, port, n_type)
+    identifier = UUID(data.get("identifier", uuid4().hex))
+    return pos.node_register(identifier, request.remote_addr, port, n_type)
 
 
 @app.post("/node/update", endpoint='node_update')
-@handle_pos_exception
+# @handle_pos_exception
 def node_update():
     """
     Node identifier must be valid uuid hex
     :return:
     """
     return pos.node_update(request.get_json())
+
+

@@ -18,10 +18,11 @@ class NodeType(StrEnum):
 @dataclass
 class Node:
     identifier: UUID
+    type: NodeType
     host: str
     port: int
 
-    def __init__(self, identifier: bytes | str | UUID, host: str, port: int):
+    def __init__(self, identifier: bytes | str | UUID, host: str, port: int, n_type: NodeType | None = None):
         if isinstance(identifier, bytes):
             self.identifier = UUID(bytes_le=identifier)
         elif isinstance(identifier, str):
@@ -32,6 +33,9 @@ class Node:
             raise Exception("Unknown type of identifier: " + type(identifier))
         self.host = host
         self.port = port
+        if n_type is None:
+            n_type = NodeType.SENSOR
+        self.type = n_type
 
     def get_public_key(self) -> Ed25519PublicKey:
         return serialization.load_pem_public_key(get_public_key(self.host, self.port))
@@ -42,16 +46,29 @@ class Node:
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ).decode("utf-8")
 
+    @classmethod
+    def load_from_dict(cls, data: dict):
+        return cls(
+            UUID(data.get("identifier")),
+            data.get("host"),
+            data.get("port")
+        )
+
 
 class SelfNode(Node):
     INFO_PATH = 'node.json'
 
-    type: NodeType
     public_key: Ed25519PublicKey
     private_key: Ed25519PrivateKey
 
     def get_public_key(self) -> Ed25519PublicKey:
         return self.public_key
+
+    def get_public_key_str(self):
+        return self.get_public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode("utf-8")
 
     @classmethod
     def load(cls, n_type: NodeType | str | None = None):
