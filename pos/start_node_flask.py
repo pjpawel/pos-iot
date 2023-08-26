@@ -1,12 +1,18 @@
+import json
+import logging
 import os
 import socket
+from base64 import b64encode
+from uuid import uuid4, UUID
 
 from dotenv import load_dotenv
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
-from pos.blockchain.blockchain import PoS
+from pos.blockchain.blockchain import PoS, PoSException
+from pos.blockchain.node import NodeType
 from pos.utils import setup_logger
 from pos.scenario import run_scenarios
+from pos.blockchain.verifier import TransactionVerifier
 
 """
 Loading env values
@@ -32,21 +38,35 @@ blockchain = pos.blockchain
 self_node = pos.self_node
 
 """
+Run verification of transactions in background
+"""
+tx_verifier = TransactionVerifier(pos)
+tx_verifier.start()
+
+"""
 Run scenarios in background
 """
-run_scenarios(os.getenv('POS_SCENARIOS'), blockchain.nodes)
+run_scenarios(os.getenv('POS_SCENARIOS'), pos)
 
 """
 Run flask app
 """
+
+
 app = Flask(__name__)
+
+
+@app.errorhandler(PoSException)
+def pos_error_handler(error: PoSException):
+    return jsonify(error=error.message), error.code
+
 
 """
 =================== Info API ===================
 """
 
 
-@app.get("/info")
+@app.get("/info", endpoint='info')
 def info():
     """
     Show info about node
@@ -62,27 +82,56 @@ def info():
     }
 
 
-@app.get("/blockchain")
+@app.get("/blockchain", endpoint='get_blockchain')
 def get_blockchain():
     """
     Show blockchain storage
     :return:
     """
-    return blockchain.blocks_to_dict()
+    return {"blockchain": blockchain.blocks_to_dict()}
 
 
-@app.get("/nodes")
+@app.get("/blockchain/to-verify")
+def get_transaction_to_verify():
+    """
+    ONLY DEV endpoint
+    :return:
+    """
+    data = {}
+    for uuid, tx_to_verify in pos.tx_to_verified.items():
+        data[uuid.hex] = {
+            "timestamp": tx_to_verify.time,
+            "transaction": b64encode(tx_to_verify.tx.encode()).hex(),
+            "node": tx_to_verify.node.identifier.hex
+        }
+    return data
+
+
+@app.get("/blockchain/verified")
+def get_transaction_verified():
+    """
+    ONLY DEV endpoint
+    :return:
+    """
+    if not pos.blockchain.candidate:
+        return {}
+    return {
+        "transactions": [{"timestamp": tx.timestamp, "data": tx.data} for tx in pos.blockchain.candidate.transactions]
+    }
+
+
+@app.get("/node/list")
 def nodes():
     """
     Show nodes in network
     :return:
     """
     return {
-        "nodes": blockchain.nodes_to_dict()
+        "nodes": [node.__dict__ for node in pos.nodes]
     }
 
 
-@app.get("/public-key")
+@app.get("/public-key", endpoint='get_public_key')
 def get_public_key():
     """
     Get node public key
@@ -96,19 +145,24 @@ def get_public_key():
 """
 
 
-@app.post("/transaction")
-def add_transaction():
+@app.post("/transaction", endpoint='new_transaction')
+# @handle_pos_exception
+def transaction_new():
     """
     Add new transaction to block candidate
     :return:
     """
     try:
-        pos.add_transaction(request.data)
-    except Exception:
-        return {"Invalid transaction data"}, 400
+        # request.content_length
+        # TODO: check content_length
+        return pos.transaction_new(request.get_data(as_text=False), request.remote_addr)
+    except Exception as e:
+        logging.warning(f"Error registering new transaction {e}")
+        return "Invalid transaction data", 400
 
 
-@app.post("/node/populate-new")
+@app.post("/node/populate-new", endpoint='populate_node')
+# @handle_pos_exception
 def populate_new_node():
     """
     Request must be in form: {
@@ -118,33 +172,53 @@ def populate_new_node():
     }
     :return:
     """
-    if request.remote_addr is not genesis_ip:
-        return {"message": "Only genesis node can populate another node"}, 400
-    pos.populate_new_node(request.get_json())
+    pos.populate_new_node(request.get_json(), request.remote_addr)
 
 
 """
-=================== Genesis API ===================
+=================== Validator API ===================
 """
 
 
-@app.post("/genesis/register")
-def genesis_register():
+@app.get("/transaction/<identifier>")
+def transaction_get(identifier: str):
+    return pos.transaction_get(identifier)
+
+
+@app.post("/transaction/<identifier>/populate")
+def transaction_populate(identifier: str):
+    pos.transaction_populate(request.get_data(as_text=False), identifier)
+    return {}
+
+
+@app.post("/transaction/<identifier>/verifyResult")
+def transaction_verify_result(identifier: str):
+    request_json = request.get_json()
+    pos.transaction_populate_verify_result(request_json.get("result"), identifier, request.remote_addr)
+    return {}
+
+
+@app.post("/node/register", endpoint='node_register')
+# @handle_pos_exception
+def node_register():
     """
     Initialize node registration
     :return:
     """
-    if ip != genesis_ip:
-        return {"message": "Node is not genesis"}, 400
-    return pos.genesis_register(request.remote_addr)
+    data = request.get_json()
+    port = int(data.get("port"))
+    n_type = getattr(NodeType, data.get("type"))
+    identifier = UUID(data.get("identifier", uuid4().hex))
+    return pos.node_register(identifier, request.remote_addr, port, n_type)
 
 
-@app.post("/genesis/update")
-def genesis_update():
+@app.post("/node/update", endpoint='node_update')
+# @handle_pos_exception
+def node_update():
     """
     Node identifier must be valid uuid hex
     :return:
     """
-    if ip != genesis_ip:
-        return {"message": "Node is not genesis"}, 400
-    return pos.genesis_update(request.get_json())
+    return pos.node_update(request.get_json())
+
+

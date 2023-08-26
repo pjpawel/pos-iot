@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 import json
+from enum import StrEnum, auto
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
@@ -9,13 +10,19 @@ from cryptography.hazmat.primitives import serialization
 from .request import get_public_key
 
 
+class NodeType(StrEnum):
+    SENSOR = auto()
+    VALIDATOR = auto()
+
+
 @dataclass
 class Node:
     identifier: UUID
+    type: NodeType
     host: str
     port: int
 
-    def __init__(self, identifier: bytes | str | UUID, host: str, port: int):
+    def __init__(self, identifier: bytes | str | UUID, host: str, port: int, n_type: NodeType | None = None):
         if isinstance(identifier, bytes):
             self.identifier = UUID(bytes_le=identifier)
         elif isinstance(identifier, str):
@@ -26,6 +33,9 @@ class Node:
             raise Exception("Unknown type of identifier: " + type(identifier))
         self.host = host
         self.port = port
+        if n_type is None:
+            n_type = NodeType.SENSOR
+        self.type = n_type
 
     def get_public_key(self) -> Ed25519PublicKey:
         return serialization.load_pem_public_key(get_public_key(self.host, self.port))
@@ -35,6 +45,14 @@ class Node:
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ).decode("utf-8")
+
+    @classmethod
+    def load_from_dict(cls, data: dict):
+        return cls(
+            UUID(data.get("identifier")),
+            data.get("host"),
+            data.get("port")
+        )
 
 
 class SelfNode(Node):
@@ -46,8 +64,16 @@ class SelfNode(Node):
     def get_public_key(self) -> Ed25519PublicKey:
         return self.public_key
 
+    def get_public_key_str(self):
+        return self.get_public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode("utf-8")
+
     @classmethod
-    def load(cls):
+    def load(cls, n_type: NodeType | str | None = None):
+        if not n_type:
+            n_type = os.getenv("NODE_TYPE")
         storage = os.getenv('STORAGE_DIR')
         key_path = os.path.join(storage, cls.INFO_PATH)
         if os.path.isfile(key_path):
@@ -63,6 +89,9 @@ class SelfNode(Node):
             node.private_key = Ed25519PrivateKey.generate()
             node.public_key = node.private_key.public_key()
             node.dump(storage)
+        if isinstance(n_type, str):
+            n_type = getattr(NodeType, n_type)
+        node.type = n_type
         return node
 
     def dump(self, storage_dir: str) -> None:

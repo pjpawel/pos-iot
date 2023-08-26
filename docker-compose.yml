@@ -29,6 +29,7 @@ services:
 #        ipv4_address: 172.18.0.2
     environment:
       SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
+      #POS_SCENARIOS: NONE
 
 volumes:
   node0volume:

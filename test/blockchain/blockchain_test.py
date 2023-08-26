@@ -8,8 +8,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from pos.blockchain.block import Block, BlockCandidate
 from pos.blockchain.blockchain import Blockchain, PoS, decode_chain
-from pos.blockchain.node import SelfNode
-from pos.blockchain.transaction import Tx
+from pos.blockchain.node import SelfNode, NodeType
+from pos.blockchain.transaction import Tx, TxCandidate
 
 from test.blockchain.conftest import Helper
 
@@ -17,6 +17,7 @@ from test.blockchain.conftest import Helper
 def test_first_block_creation(helper: Helper):
     # TODO: move to block
     helper.put_storage_env()
+    helper.put_node_type_env()
     helper.delete_storage_key()
 
     blockchain = Blockchain()
@@ -24,13 +25,13 @@ def test_first_block_creation(helper: Helper):
 
     blockchain.create_first_block(self_node)
 
-    assert len(blockchain.chain) == 1
-    assert blockchain.chain[0].verify(self_node.public_key)
+    assert len(blockchain.blocks) == 1
+    assert blockchain.blocks[0].verify(self_node.public_key)
 
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
 
-    assert not blockchain.chain[0].verify(public_key)
+    assert not blockchain.blocks[0].verify(public_key)
 
 
 def test_pos_load(helper: Helper):
@@ -44,26 +45,13 @@ def test_pos_load(helper: Helper):
     pos.load()
 
     assert isinstance(pos.self_node, SelfNode)
-    assert len(pos.blockchain.chain) == 1
+    assert len(pos.blockchain.blocks) == 1
 
 
-def create_block() -> Block:
-    uid = uuid4()
-    signature = sha256(b'abc')
-    tx = Tx(1, int(time()), uid, signature.digest(), {"message": "abc", "id": 5})
-    tx2 = copy(tx)
-    tx2.signature = sha256(b'def').digest()
-    tx2.data = {"message": "def", "id": 6}
-    block_p = BlockCandidate(2, int(time()), None, None, [tx, tx2])
-
-    private_key = Ed25519PrivateKey.generate()
-    return block_p.sign(sha256(b'12345').digest(), uuid4(), private_key)
-
-
-def test_decode_blockchain():
+def test_decode_blockchain(helper: Helper):
     chain = []
     for i in range(6):
-        chain.append(create_block())
+        chain.append(helper.create_block())
 
     encoded = b''.join([block.encode() for block in chain])
 
@@ -73,27 +61,30 @@ def test_decode_blockchain():
     assert chain == new_chain
 
 
-def test_genesis_register(helper: Helper):
+def test_node_register(helper: Helper):
     helper.put_genesis_node_env()
     pos = PoS()
     pos.load()
 
+    id = uuid4()
     ip = "192.168.1.200"
-    response = pos.genesis_register(ip)
+    port = 5000
+    n_type = NodeType.VALIDATOR
+    response = pos.node_register(id, ip, port, n_type)
 
     assert UUID(response.get("identifier"))
     assert response.get("host") == ip
     assert response.get("port") == 5000
 
 
-def test_genesis_update(helper: Helper):
+def test_node_update(helper: Helper):
     helper.put_genesis_node_env()
     pos = PoS()
     pos.load()
 
-    assert len(pos.blockchain.chain) == 1
+    assert len(pos.blockchain.blocks) == 1
 
-    response = pos.genesis_update({})
+    response = pos.node_update({})
 
     blockchain_b64encoded = response.get("blockchain")
     nodes = response.get("nodes")
@@ -102,7 +93,6 @@ def test_genesis_update(helper: Helper):
 
     chain = decode_chain(blockchain_byt)
 
-    assert pos.blockchain.chain == chain
+    assert pos.blockchain.blocks == chain
 
     assert isinstance(nodes, list)
-

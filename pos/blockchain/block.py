@@ -1,3 +1,4 @@
+from base64 import b64encode
 from dataclasses import dataclass
 from io import BytesIO
 from time import time
@@ -65,14 +66,14 @@ class Block:
             return False
         return True
 
-    def __dict__(self):
+    def to_dict(self):
         return {
             'version': self.version,
             'timestamp': self.timestamp,
-            'prev_hash': self.prev_hash,
-            'validator': self.validator,
-            'signature': self.signature,
-            'transactions': [transaction.__dict__ for transaction in self.transactions]
+            'prev_hash': b64encode(self.prev_hash).hex(),
+            'validator': self.validator.hex,
+            'signature': b64encode(self.signature).hex(),
+            'transactions': [transaction.to_dict() for transaction in self.transactions]
         }
 
 
