@@ -5,14 +5,13 @@ import socket
 from base64 import b64encode, b64decode
 from hashlib import sha256
 from io import BytesIO
-from typing import BinaryIO, IO
+from typing import BinaryIO
 from uuid import uuid4, UUID
 from sys import getsizeof
 
 import requests
 
 from .block import Block, BlockCandidate
-from pos.network.peer import Handler
 from .transaction import Tx, TxToVerify
 from .utils import is_file, is_dir
 from .node import Node, SelfNode, NodeType
@@ -63,19 +62,6 @@ class Blockchain:
 
     def blocks_to_dict(self):
         return [block.to_dict() for block in self.blocks]
-
-
-class BlockchainHandler(Handler):
-    blockchain: Blockchain
-
-    def __init__(self, blockchain):
-        self.blockchain = blockchain
-
-    def handle(self, data: str):
-        print("=========")
-        print("Data received")
-        print(data)
-        print("=========")
 
 
 class PoS:
@@ -247,14 +233,8 @@ class PoS:
         b = BytesIO(data)
         tx = Tx.decode(b)
 
-        # TODO: change to _get_node...
-        tx_node = None
-        for node in self.nodes:
-            if node.identifier == tx.sender:
-                tx_node = node
-                break
-        if not tx_node:
-            raise Exception(f"Node not found with identifier {tx.sender.hex}")
+        # TODO: test it
+        tx_node = self._get_node_by_identifier(tx.sender)
         if tx_node.host != request_addr:
             raise Exception(f"Node hostname ({tx_node.host}) different than remote_addr: ({request_addr})")
 
@@ -288,24 +268,14 @@ class PoS:
             return
 
         tx = Tx.decode(BytesIO(data))
-
-        # TODO change to _get_node_by_id
-        tx_node = None
-        for node in self.nodes + [self.self_node]:
-            if node.identifier == tx.sender:
-                tx_node = node
-                break
-
-        if not tx_node:
-            raise Exception(f"Node not found with identifier {tx.sender.hex}")
-
+        # TODO: test
+        tx_node = self._get_node_by_identifier(tx.sender)
         tx.validate(tx_node)
         self.tx_to_verified[uuid] = TxToVerify(tx, tx_node)
 
     def transaction_populate_verify_result(self, verified: bool, identifier: str, remote_addr: str):
         self._validate_request_from_validator(remote_addr)
         node = self._get_node_from_request_addr(remote_addr)
-
         uuid = UUID(identifier)
         self.add_transaction_verification_result(uuid, node, verified)
 
