@@ -146,7 +146,6 @@ def get_public_key():
 
 
 @app.post("/transaction", endpoint='new_transaction')
-# @handle_pos_exception
 def transaction_new():
     """
     Add new transaction to block candidate
@@ -162,7 +161,6 @@ def transaction_new():
 
 
 @app.post("/node/populate-new", endpoint='populate_node')
-# @handle_pos_exception
 def populate_new_node():
     """
     Request must be in form: {
@@ -199,7 +197,6 @@ def transaction_verify_result(identifier: str):
 
 
 @app.post("/node/register", endpoint='node_register')
-# @handle_pos_exception
 def node_register():
     """
     Initialize node registration
