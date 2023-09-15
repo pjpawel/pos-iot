@@ -1,6 +1,6 @@
 import json
 import logging
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from dataclasses import dataclass
 from io import BytesIO
 from uuid import UUID
@@ -73,6 +73,9 @@ class Tx:
             "data": self.data
         }
 
+    def __str__(self):
+        return b64encode(self.encode()).hex()
+
 
 class TxCandidate:
     _DEFAULT_VERSION = 1
@@ -129,3 +132,24 @@ class TxToVerify:
         results = list(self.voting.values())
         return results.count(True) > (len(results)/2)
 
+    def __str__(self) -> str:
+        return ':'.join([
+            str(self.tx).replace(':', '_'),
+            str(self.node).replace(':', '_'),
+            '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]),
+            self.time
+        ])
+
+    @classmethod
+    def from_str(cls, data: str):
+        split = data.split(':')
+        tx = cls(
+            Tx.decode(BytesIO(b64decode(split[0].replace('_', ':')))),
+            Node.load_from_list(split[1].split('_'))
+        )
+        tx.time = split[3]
+        voting_split = split[2].split('_')
+        for vote in voting_split:
+            vote_split = vote.split('-')
+            tx.voting[UUID(vote_split[0])] = bool(vote_split[1])
+        return cls

@@ -1,15 +1,11 @@
 import base64
-from copy import copy
-from hashlib import sha256
-from time import time
 from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pos.blockchain.block import Block, BlockCandidate
-from pos.blockchain.blockchain import Blockchain, PoS, decode_chain
+from pos.blockchain.blockchain import Blockchain, PoS
 from pos.blockchain.node import SelfNode, NodeType
-from pos.blockchain.transaction import Tx, TxCandidate
+from pos.blockchain.storage import decode_chain
 
 from test.blockchain.conftest import Helper
 

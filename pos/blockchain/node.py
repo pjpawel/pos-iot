@@ -54,9 +54,19 @@ class Node:
             data.get("port")
         )
 
+    @classmethod
+    def load_from_list(cls, data: list):
+        return cls(data[0], data[1], data[2])
+
+    def to_list(self) -> list:
+        return [self.identifier, self.host, self.port]
+
+    def __str__(self) -> str:
+        return ':'.join(self.to_list())
+
 
 class SelfNode(Node):
-    INFO_PATH = 'node.json'
+    INFO_PATH = 'self_node.json'
 
     public_key: Ed25519PublicKey
     private_key: Ed25519PrivateKey
