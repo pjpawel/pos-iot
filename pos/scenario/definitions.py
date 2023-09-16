@@ -22,7 +22,6 @@ def instant_sender(pos: PoS):
     :param pos:
     :return:
     """
-    sleep(15)
     while True:
         sleep(5)
         if pos.nodes.len() == 0:
@@ -30,6 +29,7 @@ def instant_sender(pos: PoS):
         logging.info(LOG_PREFIX + 'Available nodes to send to: ' +
                      ''.join([node.identifier.hex for node in pos.nodes.all()]))
         node = get_random_from_list(pos.nodes.all())
+        logging.info(LOG_PREFIX + f"Creating transaction to send")
         tx_can = TxCandidate({"message": "abc", "id": uuid4().hex})
         tx = tx_can.sign(pos.self_node)
         response = requests.post(f"http://{node.host}:{node.port}/transaction", tx.encode())
@@ -37,6 +37,7 @@ def instant_sender(pos: PoS):
             assert isinstance(response.json(), dict)
             uuid = UUID(response.json().get("id"))
             pos.tx_to_verified.add(uuid, TxToVerify(tx, pos.self_node))
+            logging.info(LOG_PREFIX + f"Transaction {uuid} sent successfully")
         else:
             logging.error(LOG_PREFIX + f"Error while sending transaction. Error: {response.text}")
 

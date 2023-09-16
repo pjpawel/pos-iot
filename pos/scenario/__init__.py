@@ -1,3 +1,4 @@
+import logging
 from enum import StrEnum, auto
 from threading import Thread
 
@@ -42,6 +43,7 @@ def run_scenarios(names_list: str, pos: PoS):
     for name in names:
         try:
             scenario_enum = getattr(Scenario, name)
+            logging.info(f"Running scenario {scenario_enum.name}")
         except AttributeError:
             mess = f'Error: There is no scenario with name: {name}'
             print(mess)
