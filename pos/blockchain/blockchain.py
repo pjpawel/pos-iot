@@ -9,15 +9,24 @@ from uuid import uuid4, UUID
 import requests
 
 from .block import Block, BlockCandidate
-from .storage import BlocksStorage, encode_chain, NodeStorage, TransactionStorage
+from .storage import BlocksStorage, encode_chain, NodeStorage, TransactionStorage, Storage
 from .transaction import Tx, TxToVerify
-from .utils import is_file, is_dir
+from .utils import is_dir
 from .node import Node, SelfNode, NodeType
 from .request import get_info, send_populate_verification_result, send_transaction_populate, send_transaction_get_info
 from .exception import PoSException
 
 
-class Blockchain:
+class Manager:
+    _storage: Storage
+
+    def has_storage_files(self) -> bool:
+        if self._storage.has_files():
+            return self._storage.is_not_empty()
+        return False
+
+
+class Blockchain(Manager):
     _storage: BlocksStorage
     blocks: list[Block]
     candidate: BlockCandidate | None = None
@@ -51,14 +60,12 @@ class Blockchain:
     def load_from_bytes(self, b: bytes):
         self._storage.load_from_bytes(b)
 
-    def has_storage_files(self):
-        return self._storage.has_files()
-
     def refresh(self):
         self.blocks = self._storage.load()
 
 
-class TransactionToVerifyManager:
+class TransactionToVerifyManager(Manager):
+    _storage = TransactionStorage
     _txs: dict[UUID, TxToVerify]
 
     def __init__(self):
@@ -70,9 +77,6 @@ class TransactionToVerifyManager:
             self.refresh()
         self._txs[identifier] = tx
         self._storage.update({identifier: tx})
-
-    def has_storage_files(self):
-        return self._storage.has_files()
 
     def refresh(self):
         self._txs = self._storage.load()
@@ -90,7 +94,7 @@ class TransactionToVerifyManager:
         return self._txs.pop(identifier)
 
 
-class NodeManager:
+class NodeManager(Manager):
     _nodes: list[Node]
     _storage: NodeStorage
 
@@ -132,9 +136,6 @@ class NodeManager:
                 validators.append(node)
         return validators
 
-    def has_storage_files(self):
-        return self._storage.has_files()
-
     def refresh(self):
         self._nodes = self._storage.load()
 
@@ -155,14 +156,12 @@ class NodeManager:
 
 
 class PoS:
-    _storage_dir: str
     blockchain: Blockchain
-    self_node: SelfNode
     nodes: NodeManager
     tx_to_verified: TransactionToVerifyManager
+    self_node: SelfNode
 
     def __init__(self):
-        self._storage_dir = os.getenv("STORAGE_DIR")
         self.self_node = SelfNode.load(os.getenv("NODE_TYPE"))
         self.blockchain = Blockchain()
         self.nodes = NodeManager()
@@ -176,7 +175,7 @@ class PoS:
         name = "genesis" if ip == genesis_ip else "node"
         print(f"=== Running as {name} ===")
 
-        if is_dir(self._storage_dir) and self.blockchain.has_storage_files() and self.nodes.has_storage_files():
+        if is_dir(os.getenv("STORAGE_DIR")) and self.blockchain.has_storage_files() and self.nodes.has_storage_files():
             print("Blockchain loading from storage")
             self.blockchain.refresh()
             self.nodes.refresh()
@@ -248,7 +247,7 @@ class PoS:
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
-                f"Transaction not find {uuid.hex} from {', '.join([uuid.hex for uuid in self.tx_to_verified.keys()])}")
+                f"Transaction not find {uuid.hex} from {', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
             logging.info(f"Getting transaction {uuid.hex} from node {node.identifier.hex}")
             tx_bytes = send_transaction_get_info(node.host, node.port, uuid.hex)
 
@@ -299,7 +298,7 @@ class PoS:
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
-                f"Transaction not find {identifier} from {', '.join([uuid.hex for uuid in self.tx_to_verified.keys()])}")
+                f"Transaction not find {identifier} from {', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
             raise PoSException(f"Cannot find transaction of given id {identifier}", 404)
         return tx_to_verified.tx.encode()
 

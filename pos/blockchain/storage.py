@@ -48,6 +48,9 @@ class Storage:
     def has_files(self) -> bool:
         return is_file(self.path)
 
+    def is_not_empty(self) -> bool:
+        return os.path.getsize(self.path) != 0
+
 
 class BlocksStorage(Storage):
     PATH = 'blockchain'
