@@ -10,7 +10,6 @@ import requests
 from .manager import Blockchain, TransactionToVerifyManager, NodeManager
 from .storage import encode_chain
 from .transaction import Tx, TxToVerify
-from .utils import is_dir
 from .node import Node, SelfNode, NodeType
 from .request import get_info, send_populate_verification_result, send_transaction_populate, send_transaction_get_info
 from .exception import PoSException
@@ -28,21 +27,21 @@ class PoS:
         self.nodes = NodeManager()
         self.tx_to_verified = TransactionToVerifyManager()
 
-    def load(self) -> None:
+    def load(self, only_from_file: bool = False) -> None:
         hostname = socket.gethostname()
         ip = socket.gethostbyname(hostname)
         genesis_ip = os.getenv("GENESIS_NODE")
 
         name = "genesis" if ip == genesis_ip else "node"
-        print(f"=== Running as {name} ===")
+        logging.info(f"=== Running as {name} ===")
 
-        if is_dir(os.getenv("STORAGE_DIR")) and self.nodes.has_storage_files():
-            print("Blockchain loading from storage")
+        if not self.nodes.has_empty_files():
+            logging.info("Blockchain loading from storage")
             self.blockchain.refresh()
             self.nodes.refresh()
             self.tx_to_verified.refresh()
-        elif ip != genesis_ip:
-            print("Blockchain loading from genesis")
+        elif ip != genesis_ip and not only_from_file:
+            logging.info("Blockchain loading from genesis")
             self.load_from_validator_node(genesis_ip)
             identifier_hex = get_info(genesis_ip, 5000).get("identifier")
             self.nodes.add(Node(identifier_hex, genesis_ip, 5000, NodeType.VALIDATOR))
@@ -155,7 +154,10 @@ class PoS:
 
     def transaction_get(self, identifier: str) -> bytes:
         self._validate_if_i_am_validator()
-        uuid = UUID(identifier)
+        try:
+            uuid = UUID(identifier)
+        except Exception:
+            raise PoSException(f"Identifier {identifier} is not valid UUID", 400)
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
@@ -172,6 +174,8 @@ class PoS:
 
         tx = Tx.decode(BytesIO(data))
         tx_node = self.nodes.find_by_identifier(tx.sender)
+        if self.self_node.identifier == tx.sender:
+            tx_node = self.self_node
         if not tx_node:
             raise Exception(f"Node not found with identifier {tx.sender.hex}")
 

@@ -25,7 +25,7 @@ sleep(10.0)
 Run verification of transactions
 """
 pos = PoS()
-pos.load()
+pos.load(only_from_file=False)
 
 tx_verifier = TransactionVerifier(pos)
 tx_verifier.start()

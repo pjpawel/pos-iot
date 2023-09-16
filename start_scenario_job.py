@@ -27,6 +27,6 @@ sleep(10.0)
 Run scenarios
 """
 pos = PoS()
-pos.load()
+pos.load(only_from_file=False)
 
 run_scenarios(os.getenv('POS_SCENARIOS'), pos)

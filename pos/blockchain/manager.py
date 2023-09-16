@@ -13,6 +13,9 @@ class Manager:
     def has_storage_files(self) -> bool:
         return self._storage.has_files()
 
+    def has_empty_files(self) -> bool:
+        return self._storage.is_empty()
+
 
 class Blockchain(Manager):
     _storage: BlocksStorage
@@ -101,6 +104,9 @@ class NodeManager(Manager):
 
     def all(self) -> list[Node]:
         return self._nodes
+
+    def len(self) -> int:
+        return len(self._nodes)
 
     def find_by_identifier(self, identifier: UUID) -> Node | None:
         for node in self._nodes:

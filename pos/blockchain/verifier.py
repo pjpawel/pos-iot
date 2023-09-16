@@ -27,7 +27,7 @@ class TransactionVerifier:
                 tx_uuid = None
                 tx_to_verify = None
                 for uuid in uuid_to_do:
-                    tx_to_verify = self.pos.tx_to_verified.get(uuid)
+                    tx_to_verify = self.pos.tx_to_verified.find(uuid)
                     if tx_to_verify:
                         # For scaling reasons part of TxToVerified must be lock
                         tx_uuid = uuid

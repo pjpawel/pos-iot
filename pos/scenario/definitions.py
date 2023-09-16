@@ -25,8 +25,7 @@ def instant_sender(pos: PoS):
     sleep(15)
     while True:
         sleep(5)
-        if not pos.nodes:
-            #    return
+        if pos.nodes.len() == 0:
             continue
         logging.info(LOG_PREFIX + 'Available nodes to send to: ' +
                      ''.join([node.identifier.hex for node in pos.nodes.all()]))

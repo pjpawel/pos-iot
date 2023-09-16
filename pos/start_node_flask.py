@@ -80,11 +80,10 @@ def get_blockchain():
 @app.get("/blockchain/to-verify")
 def get_transaction_to_verify():
     """
-    ONLY DEV endpoint
     :return:
     """
     data = {}
-    for uuid, tx_to_verify in pos.tx_to_verified.items():
+    for uuid, tx_to_verify in pos.tx_to_verified.all().items():
         data[uuid.hex] = {
             "timestamp": tx_to_verify.time,
             "transaction": b64encode(tx_to_verify.tx.encode()).hex(),
@@ -96,7 +95,6 @@ def get_transaction_to_verify():
 @app.get("/blockchain/verified")
 def get_transaction_verified():
     """
-    ONLY DEV endpoint
     :return:
     """
     if not pos.blockchain.candidate:
