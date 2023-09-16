@@ -33,9 +33,9 @@ services:
 
 volumes:
   node0volume:
-    external: true
+    #external: true
   node1volume:
-    external: true
+    #external: true
 
 networks:
   blockchain:
