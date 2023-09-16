@@ -28,15 +28,16 @@ def instant_sender(pos: PoS):
         if not pos.nodes:
             #    return
             continue
-        logging.info(LOG_PREFIX + 'Available nodes to send to: ' + ''.join([node.identifier.hex for node in pos.nodes]))
-        node = get_random_from_list(pos.nodes)
+        logging.info(LOG_PREFIX + 'Available nodes to send to: ' +
+                     ''.join([node.identifier.hex for node in pos.nodes.all()]))
+        node = get_random_from_list(pos.nodes.all())
         tx_can = TxCandidate({"message": "abc", "id": uuid4().hex})
         tx = tx_can.sign(pos.self_node)
         response = requests.post(f"http://{node.host}:{node.port}/transaction", tx.encode())
         if response.status_code == 200:
             assert isinstance(response.json(), dict)
             uuid = UUID(response.json().get("id"))
-            pos.tx_to_verified[uuid] = TxToVerify(tx, pos.self_node)
+            pos.tx_to_verified.add(uuid, TxToVerify(tx, pos.self_node))
         else:
             logging.error(LOG_PREFIX + f"Error while sending transaction. Error: {response.text}")
 

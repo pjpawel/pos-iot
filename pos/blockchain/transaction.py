@@ -76,6 +76,10 @@ class Tx:
     def __str__(self):
         return b64encode(self.encode()).hex()
 
+    @classmethod
+    def from_str(cls, data: str):
+        return cls.decode(BytesIO(b64decode(bytes.fromhex(data))))
+
 
 class TxCandidate:
     _DEFAULT_VERSION = 1
@@ -137,19 +141,21 @@ class TxToVerify:
             str(self.tx).replace(':', '_'),
             str(self.node).replace(':', '_'),
             '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]),
-            self.time
+            str(self.time)
         ])
 
     @classmethod
     def from_str(cls, data: str):
         split = data.split(':')
+        node_info = split[1].split('_')
+        node = Node.load_from_list(node_info) if node_info[4] == '0' else SelfNode.load_from_list(node_info)
         tx = cls(
-            Tx.decode(BytesIO(b64decode(split[0].replace('_', ':')))),
-            Node.load_from_list(split[1].split('_'))
+            Tx.from_str((split[0].replace('_', ':'))),
+            node
         )
-        tx.time = split[3]
-        voting_split = split[2].split('_')
-        for vote in voting_split:
-            vote_split = vote.split('-')
-            tx.voting[UUID(vote_split[0])] = bool(vote_split[1])
-        return cls
+        tx.time = int(split[3])
+        if split[2] != "":
+            for vote in split[2].split('_'):
+                vote_split = vote.split('-')
+                tx.voting[UUID(vote_split[0])] = bool(vote_split[1])
+        return tx

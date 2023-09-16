@@ -19,7 +19,7 @@ class TransactionVerifier:
     def process(self):
         while True:
             uuid_to_do = []
-            for uuid, tx_to_verify in self.pos.tx_to_verified.items():
+            for uuid, tx_to_verify in self.pos.tx_to_verified.all().items():
                 if self.pos.self_node.identifier not in list(tx_to_verify.voting.keys()):
                     uuid_to_do.append(uuid)
 

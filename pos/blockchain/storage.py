@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 from io import BytesIO
 from sys import getsizeof
@@ -9,7 +10,6 @@ from pathlib import Path
 from pos.blockchain.block import Block
 from pos.blockchain.node import Node
 from pos.blockchain.transaction import TxToVerify
-from pos.blockchain.utils import is_file
 
 
 def encode_chain(blocks: list[Block]) -> bytes:
@@ -46,31 +46,33 @@ class Storage:
         self._cached_mtime = os.path.getmtime(self.path)
 
     def has_files(self) -> bool:
-        return is_file(self.path)
+        return os.path.isfile(self.path)
 
-    def is_not_empty(self) -> bool:
-        return os.path.getsize(self.path) != 0
+    def is_empty(self) -> bool:
+        return os.path.getsize(self.path) == 0
+
+    def get_size(self) -> int:
+        return os.path.getsize(self.path)
 
 
 class BlocksStorage(Storage):
     PATH = 'blockchain'
 
-    # def __init__(self):
-    #     super().__init__()
-    #     self.path = os.path.join(self._storage_dir, 'blockchain')
-
     def load(self) -> list[Block]:
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
         with open(self.path, "rb") as f:
             blocks = self.load_from_file(f)
         self.update_cache_mtime()
         return blocks
 
     def dump(self, blocks: list[Block]):
+        logging.info(f"Writing {len(blocks)} {self.PATH} to storage")
         with open(self.path, 'wb') as f:
             f.write(encode_chain(blocks))
         self.update_cache_mtime()
 
     def update(self, blocks: list[Block]):
+        logging.info(f"Appending {len(blocks)} {self.PATH} to storage")
         with open(self.path, 'ab') as f:
             f.write(encode_chain(blocks))
         self.update_cache_mtime()
@@ -85,11 +87,8 @@ class BlocksStorage(Storage):
 class NodeStorage(Storage):
     PATH = 'nodes'
 
-    # def __init__(self):
-    #     super().__init__()
-    #     self.path = os.path.join(self._storage_dir, 'nodes')
-
     def load(self) -> list[Node]:
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
         with open(self.path) as f:
             reader = csv.reader(f)
             nodes = [Node.load_from_list(data) for data in reader]
@@ -97,12 +96,14 @@ class NodeStorage(Storage):
         return nodes
 
     def dump(self, nodes: list[Node]) -> None:
+        logging.info(f"Writing {len(nodes)} {self.PATH} to storage")
         with open(self.path, 'w') as f:
             writer = csv.writer(f)
             writer.writerows([node.to_list() for node in nodes])
         self.update_cache_mtime()
 
     def update(self, nodes: list[Node]) -> None:
+        logging.info(f"Appending {len(nodes)} {self.PATH} to storage")
         with open(self.path, 'a') as f:
             writer = csv.writer(f)
             writer.writerows([node.to_list() for node in nodes])
@@ -112,11 +113,8 @@ class NodeStorage(Storage):
 class TransactionStorage(Storage):
     PATH = 'transaction'
 
-    # def __init__(self):
-    #     super().__init__()
-    #     self.path = os.path.join(self._storage_dir, 'transaction')
-
     def dump(self, txs: dict[UUID, TxToVerify]) -> None:
+        logging.info(f"Writing {len(txs)} {self.PATH} to storage")
         with open(self.path, 'w') as f:
             writer = csv.writer(f)
             for key in list(txs.keys()):
@@ -124,6 +122,7 @@ class TransactionStorage(Storage):
         self.update_cache_mtime()
 
     def update(self, txs: dict[UUID, TxToVerify]) -> None:
+        logging.info(f"Appending {len(txs)} {self.PATH} to storage")
         with open(self.path, 'a') as f:
             writer = csv.writer(f)
             for key in list(txs.keys()):
@@ -131,6 +130,7 @@ class TransactionStorage(Storage):
         self.update_cache_mtime()
 
     def load(self) -> dict[UUID, TxToVerify]:
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
         with open(self.path, 'r') as f:
             reader = csv.reader(f)
             txs = {}
