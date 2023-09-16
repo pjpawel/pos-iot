@@ -107,7 +107,8 @@ class PoS:
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
-                f"Transaction not find {uuid.hex} from {', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
+                f"Transaction not find {uuid.hex} from "
+                f"{', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
             logging.info(f"Getting transaction {uuid.hex} from node {node.identifier.hex}")
             tx_bytes = send_transaction_get_info(node.host, node.port, uuid.hex)
 
@@ -161,7 +162,8 @@ class PoS:
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
-                f"Transaction not find {identifier} from {', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
+                f"Transaction not find {identifier} from "
+                f"{', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
             raise PoSException(f"Cannot find transaction of given id {identifier}", 404)
         return tx_to_verified.tx.encode()
 

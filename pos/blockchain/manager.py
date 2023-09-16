@@ -3,7 +3,7 @@ from uuid import UUID
 
 from .block import Block, BlockCandidate
 from .node import SelfNode, Node, NodeType
-from .storage import BlocksStorage, encode_chain, NodeStorage, TransactionStorage, Storage
+from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage
 from .transaction import Tx, TxToVerify
 
 

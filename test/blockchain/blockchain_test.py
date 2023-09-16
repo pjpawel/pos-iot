@@ -62,11 +62,11 @@ def test_node_register(helper: Helper):
     pos = PoS()
     pos.load()
 
-    id = uuid4()
+    uid = uuid4()
     ip = "192.168.1.200"
     port = 5000
     n_type = NodeType.VALIDATOR
-    response = pos.node_register(id, ip, port, n_type)
+    response = pos.node_register(uid, ip, port, n_type)
 
     assert UUID(response.get("identifier"))
     assert response.get("host") == ip

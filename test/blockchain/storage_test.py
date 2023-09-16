@@ -9,7 +9,7 @@ from pos.blockchain.storage import BlocksStorage, TransactionStorage, NodeStorag
 from test.blockchain.conftest import Helper
 
 
-def test_blocks_storage_has_files(helper:Helper):
+def test_blocks_storage_has_files(helper: Helper):
     helper.put_storage_env()
 
     storage = BlocksStorage()
