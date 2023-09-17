@@ -9,7 +9,7 @@ import pytest
 
 from pos.blockchain.block import Block, BlockCandidate
 from pos.blockchain.node import SelfNode, NodeType
-from pos.blockchain.transaction import TxCandidate
+from pos.blockchain.transaction import TxCandidate, Tx, TxToVerify
 
 
 class Helper:
@@ -27,6 +27,15 @@ class Helper:
         key_path = Helper.get_storage_key_path()
         if os.path.isfile(key_path):
             os.remove(key_path)
+
+    @staticmethod
+    def clear_storage() -> None:
+        Helper.put_storage_env()
+        storage_dir = Helper.get_storage_dir()
+        for file in os.listdir(storage_dir):
+            if file == '.gitignore':
+                continue
+            os.remove(os.path.join(storage_dir, file))
 
     @staticmethod
     def put_storage_env() -> None:
@@ -60,7 +69,23 @@ class Helper:
 
         return block_p.sign(sha256(b'12345').digest(), self_node.identifier, self_node.private_key)
 
+    @staticmethod
+    def create_transaction() -> Tx:
+        self_node = Helper.get_self_node()
+        tx_c = TxCandidate({"message": "abc", "id": 5})
+        return tx_c.sign(self_node)
+
+    @staticmethod
+    def create_tx_to_verify() -> TxToVerify:
+        return TxToVerify(Helper.create_transaction(), Helper.get_self_node())
+
 
 @pytest.fixture()
 def helper():
     return Helper
+
+
+@pytest.fixture(autouse=True)
+def around_test():
+    Helper.clear_storage()
+    yield

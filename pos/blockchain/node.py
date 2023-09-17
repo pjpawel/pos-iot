@@ -22,7 +22,7 @@ class Node:
     host: str
     port: int
 
-    def __init__(self, identifier: bytes | str | UUID, host: str, port: int, n_type: NodeType | None = None):
+    def __init__(self, identifier: bytes | str | UUID, host: str, port: int, n_type: NodeType | None | str = None):
         if isinstance(identifier, bytes):
             self.identifier = UUID(bytes_le=identifier)
         elif isinstance(identifier, str):
@@ -35,6 +35,8 @@ class Node:
         self.port = port
         if n_type is None:
             n_type = NodeType.SENSOR
+        if isinstance(n_type, str):
+            n_type = getattr(NodeType, n_type.upper())
         self.type = n_type
 
     def get_public_key(self) -> Ed25519PublicKey:
@@ -54,9 +56,19 @@ class Node:
             data.get("port")
         )
 
+    @classmethod
+    def load_from_list(cls, data: list):
+        return cls(data[0], data[1], int(data[2]), data[3])
+
+    def to_list(self) -> list[str]:
+        return [self.identifier.hex, self.host, str(self.port), str(self.type), '0']
+
+    def __str__(self) -> str:
+        return ':'.join(self.to_list())
+
 
 class SelfNode(Node):
-    INFO_PATH = 'node.json'
+    INFO_PATH = 'self_node.json'
 
     public_key: Ed25519PublicKey
     private_key: Ed25519PrivateKey
@@ -110,3 +122,6 @@ class SelfNode(Node):
                 "private": private_key_pem.decode("utf-8"),
                 "identifier": self.identifier.bytes_le.hex()
             }, f)
+
+    def to_list(self) -> list[str]:
+        return [self.identifier.hex, self.host, str(self.port), str(self.type), '1']

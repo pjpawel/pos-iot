@@ -1,6 +1,6 @@
 import json
 import logging
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from dataclasses import dataclass
 from io import BytesIO
 from uuid import UUID
@@ -73,6 +73,13 @@ class Tx:
             "data": self.data
         }
 
+    def __str__(self):
+        return b64encode(self.encode()).hex()
+
+    @classmethod
+    def from_str(cls, data: str):
+        return cls.decode(BytesIO(b64decode(bytes.fromhex(data))))
+
 
 class TxCandidate:
     _DEFAULT_VERSION = 1
@@ -120,12 +127,54 @@ class TxToVerify:
         self.voting = {}
         self.time = int(time())
 
+    def has_verification_result(self, node: Node) -> bool:
+        return node.identifier in list(self.voting.keys())
+
     def add_verification_result(self, node: Node, result: bool) -> None:
         if node.identifier in list(self.voting.keys()):
-            raise Exception(f"Voting is already saved from node {node.identifier}")
+            logging.warning(f"Voting is already saved from node {node.identifier.hex}")
+            #logging.info(f"Voting: " + '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]))
+            return
         self.voting[node.identifier] = result
+        logging.info(f"Successfully added verification result {result} from {node.identifier.hex}")
 
     def is_voting_positive(self) -> bool:
         results = list(self.voting.values())
         return results.count(True) > (len(results)/2)
 
+    def get_positive_votes(self) -> int:
+        return list(self.voting.values()).count(True)
+
+    def is_ready_to_vote(self, n_voters: int) -> bool:
+        results = list(self.voting.values())
+        n_result = len(results)
+        missing = n_voters - n_result
+        if missing == 0:
+            return True
+        n_positives = results.count(True)
+        n_negatives = n_result - n_positives
+        return abs(n_positives - n_negatives) > missing
+
+    def __str__(self) -> str:
+        return ':'.join([
+            str(self.tx).replace(':', '_'),
+            str(self.node).replace(':', '_'),
+            '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]),
+            str(self.time)
+        ])
+
+    @classmethod
+    def from_str(cls, data: str):
+        split = data.split(':')
+        node_info = split[1].split('_')
+        node = Node.load_from_list(node_info) if node_info[4] == '0' else SelfNode.load_from_list(node_info)
+        tx = cls(
+            Tx.from_str((split[0].replace('_', ':'))),
+            node
+        )
+        tx.time = int(split[3])
+        if split[2] != "":
+            for vote in split[2].split('_'):
+                vote_split = vote.split('-')
+                tx.voting[UUID(vote_split[0])] = bool(vote_split[1])
+        return tx

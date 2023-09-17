@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import socket
@@ -11,8 +10,6 @@ from flask import Flask, request, jsonify
 from pos.blockchain.blockchain import PoS, PoSException
 from pos.blockchain.node import NodeType
 from pos.utils import setup_logger
-from pos.scenario import run_scenarios
-from pos.blockchain.verifier import TransactionVerifier
 
 """
 Loading env values
@@ -36,17 +33,6 @@ pos.load()
 
 blockchain = pos.blockchain
 self_node = pos.self_node
-
-"""
-Run verification of transactions in background
-"""
-tx_verifier = TransactionVerifier(pos)
-tx_verifier.start()
-
-"""
-Run scenarios in background
-"""
-run_scenarios(os.getenv('POS_SCENARIOS'), pos)
 
 """
 Run flask app
@@ -94,15 +80,18 @@ def get_blockchain():
 @app.get("/blockchain/to-verify")
 def get_transaction_to_verify():
     """
-    ONLY DEV endpoint
     :return:
     """
     data = {}
-    for uuid, tx_to_verify in pos.tx_to_verified.items():
+    for uuid, tx_to_verify in pos.tx_to_verified.all().items():
         data[uuid.hex] = {
             "timestamp": tx_to_verify.time,
             "transaction": b64encode(tx_to_verify.tx.encode()).hex(),
-            "node": tx_to_verify.node.identifier.hex
+            "node": tx_to_verify.node.identifier.hex,
+            "voting": {
+                "result": tx_to_verify.get_positive_votes(),
+                "count": len(tx_to_verify.voting)
+            }
         }
     return data
 
@@ -110,7 +99,6 @@ def get_transaction_to_verify():
 @app.get("/blockchain/verified")
 def get_transaction_verified():
     """
-    ONLY DEV endpoint
     :return:
     """
     if not pos.blockchain.candidate:
@@ -127,7 +115,7 @@ def nodes():
     :return:
     """
     return {
-        "nodes": [node.__dict__ for node in pos.nodes]
+        "nodes": pos.nodes.to_dict()
     }
 
 
@@ -155,8 +143,8 @@ def transaction_new():
         # request.content_length
         # TODO: check content_length
         return pos.transaction_new(request.get_data(as_text=False), request.remote_addr)
-    except Exception as e:
-        logging.warning(f"Error registering new transaction {e}")
+    except Exception:
+        logging.exception("Error registering new transaction")
         return "Invalid transaction data", 400
 
 

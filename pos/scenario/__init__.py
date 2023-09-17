@@ -1,10 +1,10 @@
+import logging
 from enum import StrEnum, auto
 from threading import Thread
 
 from .definitions import instant_sender, mad_sender, simple_sender, none_sender
 from .exception import ScenarioNotFound, ScenarioNotSupported
-from pos.blockchain.blockchain import Node, PoS
-from ..blockchain.node import SelfNode
+from pos.blockchain.blockchain import PoS
 
 
 class Scenario(StrEnum):
@@ -43,6 +43,7 @@ def run_scenarios(names_list: str, pos: PoS):
     for name in names:
         try:
             scenario_enum = getattr(Scenario, name)
+            logging.info(f"Running scenario {scenario_enum.name}")
         except AttributeError:
             mess = f'Error: There is no scenario with name: {name}'
             print(mess)
