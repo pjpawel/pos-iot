@@ -138,6 +138,8 @@ class PoS:
             assert isinstance(tx_to_verified, TxToVerify)
             if tx_to_verified.is_voting_positive():
                 self.blockchain.add_new_transaction(tx_to_verified.tx)
+            else:
+                logging.info(f"Transaction {uuid.hex} was rejected")
 
     """
     API methods
