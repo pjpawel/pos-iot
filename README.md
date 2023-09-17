@@ -1,14 +1,8 @@
 # Study of the potential use of the PoS algorithm in Internet of Things networks
-*Proof of Trust simulation*
+*Proof of Trust blockchain simulation*
 
 ### Author:
 - Paweł Podgórski
-
-### Problems:
- - [ ] Save self_node to nodes in blockchain
- - [ ] Ustalenie jaka jest struktura transakcji i bloku
- - [ ] Czy self_node będzie trzymany jako global czy jako pierwszy obiekt z list nodes
-
 
 ### Environment setup
 
