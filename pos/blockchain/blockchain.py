@@ -94,7 +94,7 @@ class PoS:
             "result": verified,
             "message": message
         }
-        for node in self.nodes.get_validator_nodes():
+        for node in self.nodes.all():
             if node.identifier == self.self_node.identifier:
                 continue
             try:
@@ -120,8 +120,17 @@ class PoS:
             tx_to_verified = self.tx_to_verified.get(uuid)
             assert isinstance(tx_to_verified, TxToVerify)
 
-        tx_to_verified.add_verification_result(node, result)
+        self.tx_to_verified.add_verification_result(uuid, node, result)
+        tx_to_verified = self.tx_to_verified.find(uuid)
         logging.info(f"Printing result verification for transaction {uuid.hex}: {tx_to_verified.voting}")
+
+        # n_validators = self.nodes.count_validator_nodes(self.self_node)
+        # if tx_to_verified.is_ready_to_vote(n_validators):
+        #     logging.info(f"Transaction {uuid.hex} voting")
+        #     tx_to_verified = self.tx_to_verified.pop(uuid)
+        #     assert isinstance(tx_to_verified, TxToVerify)
+        #     if tx_to_verified.is_voting_positive():
+        #         self.blockchain.add_new_transaction(tx_to_verified.tx)
 
         if len(tx_to_verified.voting) == self.nodes.count_validator_nodes(self.self_node):
             logging.info(f"Transaction {uuid.hex} voting")
@@ -142,9 +151,9 @@ class PoS:
 
         tx_node = self.nodes.find_by_identifier(tx.sender)
         if not tx_node:
-            raise Exception(f"Node not found with identifier {tx.sender.hex}")
+            raise PoSException(f"Node not found with identifier {tx.sender.hex}", 404)
         if tx_node.host != request_addr:
-            raise Exception(f"Node hostname ({tx_node.host}) different than remote_addr: ({request_addr})")
+            raise PoSException(f"Node hostname ({tx_node.host}) different than remote_addr: ({request_addr})", 400)
 
         tx.validate(tx_node)
 
@@ -155,10 +164,7 @@ class PoS:
 
     def transaction_get(self, identifier: str) -> bytes:
         self._validate_if_i_am_validator()
-        try:
-            uuid = UUID(identifier)
-        except Exception:
-            raise PoSException(f"Identifier {identifier} is not valid UUID", 400)
+        uuid = self._validate_get_uuid(identifier)
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
@@ -168,7 +174,7 @@ class PoS:
         return tx_to_verified.tx.encode()
 
     def transaction_populate(self, data: bytes, identifier: str) -> None:
-        uuid = UUID(identifier)
+        uuid = self._validate_get_uuid(identifier)
         tx_to_verify = self.tx_to_verified.find(uuid)
         if tx_to_verify:
             logging.info(f"Transaction {uuid.hex} already registered")
@@ -176,7 +182,7 @@ class PoS:
 
         tx = Tx.decode(BytesIO(data))
         tx_node = self.nodes.find_by_identifier(tx.sender)
-        if self.self_node.identifier == tx.sender:
+        if not tx_node and self.self_node.identifier == tx.sender:
             tx_node = self.self_node
         if not tx_node:
             raise Exception(f"Node not found with identifier {tx.sender.hex}")
@@ -187,13 +193,13 @@ class PoS:
     def transaction_populate_verify_result(self, verified: bool, identifier: str, remote_addr: str):
         self._validate_request_from_validator(remote_addr)
         node = self._get_node_from_request_addr(remote_addr)
-        uuid = UUID(identifier)
+        uuid = self._validate_get_uuid(identifier)
         self.add_transaction_verification_result(uuid, node, verified)
 
     def populate_new_node(self, data: dict, request_addr: str) -> None:
         self._validate_request_from_validator(request_addr)
 
-        identifier = data.get("identifier")
+        identifier = self._validate_get_uuid(data.get("identifier"))
         host = data.get("host")
         port = int(data.get("port"))
         n_type = getattr(NodeType, data.get("type"))
@@ -282,3 +288,11 @@ class PoS:
         node = self.nodes.find_by_identifier(identifier)
         if not node:
             raise Exception(f"Node {identifier.hex} was not found")
+
+    def _validate_get_uuid(self, identifier: str) -> UUID:
+        try:
+            return UUID(identifier)
+        except:
+            msg = f"Identifier {identifier} is not valid UUID"
+            logging.info(msg)
+            raise PoSException(msg, 400)

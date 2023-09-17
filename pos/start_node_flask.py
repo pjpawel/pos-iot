@@ -87,7 +87,11 @@ def get_transaction_to_verify():
         data[uuid.hex] = {
             "timestamp": tx_to_verify.time,
             "transaction": b64encode(tx_to_verify.tx.encode()).hex(),
-            "node": tx_to_verify.node.identifier.hex
+            "node": tx_to_verify.node.identifier.hex,
+            "voting": {
+                "result": tx_to_verify.get_positive_votes(),
+                "count": len(tx_to_verify.voting)
+            }
         }
     return data
 

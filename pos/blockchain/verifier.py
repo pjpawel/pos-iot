@@ -1,6 +1,7 @@
 import logging
 from threading import Thread
 from time import sleep
+from random import shuffle
 
 from pos.blockchain.blockchain import PoS
 from pos.blockchain.transaction import TxToVerify
@@ -20,16 +21,19 @@ class TransactionVerifier:
     def process(self):
         logging.info(self.LOG_PREFIX + "Start processing ")
         while True:
+            self.pos.tx_to_verified.refresh()
             uuid_to_do = []
             for uuid, tx_to_verify in self.pos.tx_to_verified.all().items():
                 if self.pos.self_node.identifier not in list(tx_to_verify.voting.keys()):
                     uuid_to_do.append(uuid)
 
-            logging.info(self.LOG_PREFIX + f"Transactions {','.join([uid.hex for uid in uuid_to_do])} found to verify")
-
             if uuid_to_do:
+                logging.info(
+                    self.LOG_PREFIX + f"Transactions {','.join([uid.hex for uid in uuid_to_do])} found to verify")
+
                 tx_uuid = None
                 tx_to_verify = None
+                shuffle(uuid_to_do)
                 for uuid in uuid_to_do:
                     tx_to_verify = self.pos.tx_to_verified.find(uuid)
                     if tx_to_verify:
@@ -50,7 +54,7 @@ class TransactionVerifier:
                 except Exception as e:
                     logging.error(self.LOG_PREFIX + f"Error while verifying transaction of id {tx_uuid.hex}. Error: {e}")
             else:
-                logging.debug(self.LOG_PREFIX + "Nothing to verify")
+                logging.info(self.LOG_PREFIX + "Nothing to verify")
                 sleep(1)
 
     def verify_transaction(self, tx: TxToVerify) -> bool:

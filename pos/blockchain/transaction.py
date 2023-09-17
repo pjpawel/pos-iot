@@ -127,14 +127,33 @@ class TxToVerify:
         self.voting = {}
         self.time = int(time())
 
+    def has_verification_result(self, node: Node) -> bool:
+        return node.identifier in list(self.voting.keys())
+
     def add_verification_result(self, node: Node, result: bool) -> None:
         if node.identifier in list(self.voting.keys()):
-            raise Exception(f"Voting is already saved from node {node.identifier}")
+            logging.warning(f"Voting is already saved from node {node.identifier.hex}")
+            #logging.info(f"Voting: " + '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]))
+            return
         self.voting[node.identifier] = result
+        logging.info(f"Successfully added verification result {result} from {node.identifier.hex}")
 
     def is_voting_positive(self) -> bool:
         results = list(self.voting.values())
         return results.count(True) > (len(results)/2)
+
+    def get_positive_votes(self) -> int:
+        return list(self.voting.values()).count(True)
+
+    def is_ready_to_vote(self, n_voters: int) -> bool:
+        results = list(self.voting.values())
+        n_result = len(results)
+        missing = n_voters - n_result
+        if missing == 0:
+            return True
+        n_positives = results.count(True)
+        n_negatives = n_result - n_positives
+        return abs(n_positives - n_negatives) > missing
 
     def __str__(self) -> str:
         return ':'.join([

@@ -111,6 +111,19 @@ def test_transaction(helper: Helper):
     assert txs == txs_updating
 
 
+def test_transaction_adding_validator(helper: Helper):
+    storage = TransactionStorage()
+
+    uid = uuid4()
+    txs = {uid: helper.create_tx_to_verify()}
+
+    storage.update(txs)
+
+
+
+
+
+
 def test_node(helper: Helper):
     storage = NodeStorage()
 

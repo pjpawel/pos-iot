@@ -1,3 +1,4 @@
+import logging
 from hashlib import sha256
 from uuid import UUID
 
@@ -82,7 +83,24 @@ class TransactionToVerifyManager(Manager):
         return self._txs
 
     def pop(self, identifier: UUID) -> TxToVerify:
-        return self._txs.pop(identifier)
+        if not self._storage.is_up_to_date():
+            self.refresh()
+        txs = self._txs.pop(identifier)
+        self._storage.dump(self._txs)
+        return txs
+
+    def add_verification_result(self, identifier: UUID, node: Node, result: bool) -> None:
+        tx = self.find(identifier)
+        if not tx:
+            raise Exception(f"Transaction {identifier.hex} not found")
+        if tx.has_verification_result(node):
+            logging.warning(f"Voting is already saved from node {node.identifier}")
+            return
+        if not self._storage.is_up_to_date():
+            self.refresh()
+        self._txs[identifier].voting[node.identifier] = result
+        logging.info(f"Successfully added verification result {result} from {node.identifier.hex}")
+        self._storage.dump(self._txs)
 
 
 class NodeManager(Manager):
