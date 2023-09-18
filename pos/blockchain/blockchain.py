@@ -11,7 +11,7 @@ from .manager import Blockchain, TransactionToVerifyManager, NodeManager
 from .storage import encode_chain
 from .transaction import Tx, TxToVerify
 from .node import Node, SelfNode, NodeType
-from .request import get_info, send_populate_verification_result, send_transaction_populate, send_transaction_get_info
+from .request import Request
 from .exception import PoSException
 
 
@@ -43,7 +43,7 @@ class PoS:
         elif ip != genesis_ip and not only_from_file:
             logging.info("Blockchain loading from genesis")
             self.load_from_validator_node(genesis_ip)
-            identifier_hex = get_info(genesis_ip, 5000).get("identifier")
+            identifier_hex = Request.get_info(genesis_ip, 5000).get("identifier")
             self.nodes.add(Node(identifier_hex, genesis_ip, 5000, NodeType.VALIDATOR))
 
         self.nodes.exclude_self_node(ip)
@@ -85,7 +85,7 @@ class PoS:
                 if node.identifier == self.self_node.identifier:
                     continue
             try:
-                send_transaction_populate(node.host, node.port, uuid.hex, tx_encoded)
+                Request.send_transaction_populate(node.host, node.port, uuid.hex, tx_encoded)
             except Exception as e:
                 logging.error(f"Error while sending transaction populate to node {node.identifier.hex}. Error: {e}")
 
@@ -98,7 +98,7 @@ class PoS:
             if node.identifier == self.self_node.identifier:
                 continue
             try:
-                send_populate_verification_result(node.host, node.port, uuid.hex, data_to_send)
+                Request.send_populate_verification_result(node.host, node.port, uuid.hex, data_to_send)
             except Exception as e:
                 logging.error(f"Error while sending verification result to node {node.identifier.hex}. "
                               f"Transaction identifier: {uuid.hex} Result: {verified}. Error: {e}")
@@ -110,7 +110,7 @@ class PoS:
                 f"Transaction not find {uuid.hex} from "
                 f"{', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
             logging.info(f"Getting transaction {uuid.hex} from node {node.identifier.hex}")
-            tx_bytes = send_transaction_get_info(node.host, node.port, uuid.hex)
+            tx_bytes = Request.send_transaction_get_info(node.host, node.port, uuid.hex)
 
             b = BytesIO(tx_bytes)
             tx = Tx.decode(b)

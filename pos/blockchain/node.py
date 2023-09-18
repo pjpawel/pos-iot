@@ -7,7 +7,7 @@ from enum import StrEnum, auto
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
 
-from .request import get_public_key
+from .request import Request
 
 
 class NodeType(StrEnum):
@@ -40,7 +40,7 @@ class Node:
         self.type = n_type
 
     def get_public_key(self) -> Ed25519PublicKey:
-        return serialization.load_pem_public_key(get_public_key(self.host, self.port))
+        return serialization.load_pem_public_key(Request.get_public_key(self.host, self.port))
 
     def get_public_key_str(self) -> str:
         return self.get_public_key().public_bytes(
