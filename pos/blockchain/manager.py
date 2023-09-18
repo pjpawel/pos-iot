@@ -18,7 +18,7 @@ class Manager:
         return self._storage.is_empty()
 
 
-class Blockchain(Manager):
+class BlockchainManager(Manager):
     _storage: BlocksStorage
     blocks: list[Block]
     candidate: BlockCandidate | None = None
