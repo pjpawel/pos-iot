@@ -141,6 +141,12 @@ class PoS:
             else:
                 logging.info(f"Transaction {uuid.hex} was rejected")
 
+    def node_validator_agreement_list_send(self):
+        for node in self.nodes.all():
+            if self.self_node.identifier == node.identifier:
+                continue
+            # Send validators list
+
     """
     API methods
     """
@@ -262,6 +268,24 @@ class PoS:
             "blockchain": b64encode(blocks_encoded).hex(),
             "nodes": [node.__dict__ for node in nodes_to_show or self.nodes.all()]
         }
+
+    def node_validator_agreement_get(self):
+        pass
+
+    def node_validator_agreement_start(self):
+        pass
+
+    def node_validator_agreement_list_get(self):
+        pass
+
+    def node_validator_agreement_list_set(self):
+        pass
+
+    def node_validator_agreement_accept(self):
+        pass
+
+    def node_validator_agreement_done(self):
+        pass
 
     """
     Internal API methods
