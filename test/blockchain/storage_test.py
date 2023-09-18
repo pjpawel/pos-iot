@@ -3,9 +3,9 @@ from copy import copy
 from time import sleep
 from uuid import uuid4
 
-from pos.blockchain.block import Block
-from pos.blockchain.node import Node
-from pos.blockchain.storage import BlocksStorage, TransactionStorage, NodeStorage
+from pos.network.block import Block
+from pos.network.node import Node
+from pos.network.storage import BlocksStorage, TransactionStorage, NodeStorage
 from test.blockchain.conftest import Helper
 
 

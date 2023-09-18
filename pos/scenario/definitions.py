@@ -5,9 +5,9 @@ import requests
 import logging
 
 from .utils import get_random_from_list, print_runtime_error
-from ..blockchain.blockchain import PoS
-from ..blockchain.node import SelfNode, Node
-from ..blockchain.transaction import TxCandidate, TxToVerify
+from ..network.blockchain import PoS
+from ..network.node import SelfNode, Node
+from ..network.transaction import TxCandidate, TxToVerify
 
 LOG_PREFIX = 'SCENARIO: '
 

@@ -8,9 +8,9 @@ from typing import BinaryIO
 from uuid import UUID
 from pathlib import Path
 
-from pos.blockchain.block import Block
-from pos.blockchain.node import Node
-from pos.blockchain.transaction import TxToVerify
+from pos.network.block import Block
+from pos.network.node import Node
+from pos.network.transaction import TxToVerify
 
 
 def encode_chain(blocks: list[Block]) -> bytes:

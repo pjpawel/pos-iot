@@ -2,8 +2,8 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pos.blockchain.blockchain import PoS
-from pos.blockchain.verifier import TransactionVerifier
+from pos.network.blockchain import PoS
+from pos.network.verifier import TransactionVerifier
 from pos.utils import setup_logger
 
 

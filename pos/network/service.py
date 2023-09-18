@@ -1,4 +1,4 @@
-from pos.blockchain.manager import BlockchainManager, NodeManager, TransactionToVerifyManager
+from pos.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager
 
 
 class Blockchain(BlockchainManager):

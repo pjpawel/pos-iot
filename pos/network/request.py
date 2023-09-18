@@ -1,6 +1,6 @@
 import requests
 
-from pos.blockchain.exception import PublicKeyNotFoundException
+from pos.network.exception import PublicKeyNotFoundException
 
 
 class Request:

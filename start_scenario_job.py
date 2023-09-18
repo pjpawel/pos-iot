@@ -3,7 +3,7 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pos.blockchain.blockchain import PoS
+from pos.network.blockchain import PoS
 from pos.scenario import run_scenarios
 from pos.utils import setup_logger
 

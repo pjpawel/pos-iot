@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from pos.blockchain.manager import TransactionToVerifyManager
+from pos.network.manager import TransactionToVerifyManager
 from test.blockchain.conftest import Helper
 
 

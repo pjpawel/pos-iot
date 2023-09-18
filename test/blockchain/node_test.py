@@ -1,6 +1,6 @@
 import os
 
-from pos.blockchain.node import SelfNode
+from pos.network.node import SelfNode
 
 from test.blockchain.conftest import Helper
 

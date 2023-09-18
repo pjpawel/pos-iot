@@ -7,8 +7,8 @@ from uuid import uuid4, UUID
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 
-from pos.blockchain.blockchain import PoS, PoSException
-from pos.blockchain.node import NodeType
+from pos.network.blockchain import PoS, PoSException
+from pos.network.node import NodeType
 from pos.utils import setup_logger
 
 """

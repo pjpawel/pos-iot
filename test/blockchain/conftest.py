@@ -7,9 +7,9 @@ from hashlib import sha256
 
 import pytest
 
-from pos.blockchain.block import Block, BlockCandidate
-from pos.blockchain.node import SelfNode, NodeType
-from pos.blockchain.transaction import TxCandidate, Tx, TxToVerify
+from pos.network.block import Block, BlockCandidate
+from pos.network.node import SelfNode, NodeType
+from pos.network.transaction import TxCandidate, Tx, TxToVerify
 
 
 class Helper:

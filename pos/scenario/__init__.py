@@ -4,7 +4,7 @@ from threading import Thread
 
 from .definitions import instant_sender, mad_sender, simple_sender, none_sender
 from .exception import ScenarioNotFound, ScenarioNotSupported
-from pos.blockchain.blockchain import PoS
+from pos.network.blockchain import PoS
 
 
 class Scenario(StrEnum):
