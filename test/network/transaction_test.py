@@ -9,7 +9,7 @@ from test.network.conftest import Helper
 def test_encode_and_decode(helper: Helper):
     self_node = helper.get_self_node()
 
-    tx_c = TxCandidate({"message": "abc", "id": 5})
+    tx_c = TxCandidate({"d": "abc", "t": "1"})
     tx = tx_c.sign(self_node)
 
     encoded_tx = tx.encode()
@@ -33,7 +33,25 @@ def test_create_from_candidate(helper: Helper):
 def test_sign_verify(helper: Helper):
     self_node = helper.get_self_node()
 
-    tx_c = TxCandidate({"message": "abc", "id": 5})
+    tx_c = TxCandidate({"d": "abc", "t": "1"})
+    tx = tx_c.sign(self_node)
+
+    tx.validate(self_node)
+
+
+def test_sign_verify_data_float(helper: Helper):
+    self_node = helper.get_self_node()
+
+    tx_c = TxCandidate({"d": 67.6, "t": "1"})
+    tx = tx_c.sign(self_node)
+
+    tx.validate(self_node)
+
+
+def test_sign_verify_data_int(helper: Helper):
+    self_node = helper.get_self_node()
+
+    tx_c = TxCandidate({"d": 57, "t": "1"})
     tx = tx_c.sign(self_node)
 
     tx.validate(self_node)
@@ -42,7 +60,7 @@ def test_sign_verify(helper: Helper):
 def test_tx_verification_result_positive(helper: Helper):
     self_node = helper.get_self_node()
 
-    tx_c = TxCandidate({"message": "abc", "id": 5})
+    tx_c = TxCandidate({"d": "abc", "t": "1"})
     tx = tx_c.sign(self_node)
 
     tx_to_verify = TxToVerify(tx, self_node)

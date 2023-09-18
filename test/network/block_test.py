@@ -10,10 +10,10 @@ def test_encode_and_decode(helper: Helper):
 
     self_node = helper.get_self_node()
 
-    tx_c = TxCandidate({"message": "abc", "id": 5})
+    tx_c = TxCandidate({"d": "abc", "t": "5"})
     tx = tx_c.sign(self_node)
 
-    tx_c_2 = TxCandidate({"message": "def", "id": 6})
+    tx_c_2 = TxCandidate({"d": "def", "t": "0"})
     tx_2 = tx_c_2.sign(self_node)
 
     block_p = BlockCandidate.create_new([tx, tx_2])

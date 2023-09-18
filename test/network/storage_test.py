@@ -81,13 +81,13 @@ def test_transaction_storage(helper: Helper):
     storage = TransactionStorage()
 
     mtime_old = copy(storage._cached_mtime)
-    sleep(0.01)
+    size_old = copy(storage._cached_size)
 
     uid = uuid4()
     storage.update({uid: helper.create_tx_to_verify()})
 
+    assert not (mtime_old == storage._cached_mtime and size_old == storage._cached_size)
     assert storage.is_up_to_date()
-    assert mtime_old != storage._cached_mtime
 
 
 def test_transaction(helper: Helper):

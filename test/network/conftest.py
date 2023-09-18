@@ -59,7 +59,7 @@ class Helper:
     def create_block() -> Block:
         self_node = Helper.get_self_node()
 
-        tx_c = TxCandidate({"message": "abc", "id": 5})
+        tx_c = TxCandidate({"d": "abc", "t": "1"})
         tx = tx_c.sign(self_node)
 
         tx_c_2 = TxCandidate({"message": "def", "id": 6})
@@ -72,7 +72,7 @@ class Helper:
     @staticmethod
     def create_transaction() -> Tx:
         self_node = Helper.get_self_node()
-        tx_c = TxCandidate({"message": "abc", "id": 5})
+        tx_c = TxCandidate({"d": "abc", "t": "1"})
         return tx_c.sign(self_node)
 
     @staticmethod

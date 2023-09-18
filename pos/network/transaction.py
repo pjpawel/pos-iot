@@ -56,14 +56,31 @@ class Tx:
 
     def validate(self, node: Node) -> None:
         all_data = self.encode()
-        data = b''.join([bytes(all_data[:24]) + bytes(all_data[88:])])
-
         try:
+            data = b''.join([bytes(all_data[:24]) + bytes(all_data[88:])])
+            self.validate_data()
             node.get_public_key().verify(self.signature, data)
         except InvalidSignature as error:
             logging.error(error)
             logging.error(f"Transaction data: {b64encode(all_data)}, node public key: {node.get_public_key_str()}")
             raise PoSException(f"Transaction not verified by identifier {self.sender.hex}", 400)
+        except Exception as e:
+            raise PoSException(f"Validation error: {e}", 400)
+
+    def validate_data(self) -> None:
+        t = self.data.get("t")
+        if not t:
+            raise Exception("Missing 'type' (t) of data in transaction")
+        if not isinstance(t, str):
+            raise Exception("Invalid type of 'type' (t) in transaction. Must be string")
+        data = self.data.get("d")
+        if not data:
+            raise Exception("Missing 'data' (d) in transaction")
+        if not isinstance(data, float) and not isinstance(data, int) and not isinstance(data, str):
+            raise Exception("Invalid type of 'data' (d) in transaction. Must be int, float or str")
+        note = self.data.get("n")
+        if note and not isinstance(note, str):
+            raise Exception("Invalid type of 'note' (n) in transaction. Must be string")
 
     def to_dict(self):
         return {
