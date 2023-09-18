@@ -3,7 +3,8 @@ from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pos.blockchain.blockchain import BlockchainManager, PoS
+from pos.blockchain.blockchain import PoS
+from pos.blockchain.service import Blockchain
 from pos.blockchain.node import SelfNode, NodeType
 from pos.blockchain.storage import decode_chain
 
@@ -16,7 +17,7 @@ def test_first_block_creation(helper: Helper):
     helper.put_node_type_env()
     helper.delete_storage_key()
 
-    blockchain = BlockchainManager()
+    blockchain = Blockchain()
     self_node = SelfNode.load()
 
     blockchain.create_first_block(self_node)

@@ -7,7 +7,7 @@ from uuid import uuid4, UUID
 
 import requests
 
-from .manager import BlockchainManager, TransactionToVerifyManager, NodeManager
+from .service import Blockchain, Node as NodeService, TransactionToVerify
 from .storage import encode_chain
 from .transaction import Tx, TxToVerify
 from .node import Node, SelfNode, NodeType
@@ -16,16 +16,16 @@ from .exception import PoSException
 
 
 class PoS:
-    blockchain: BlockchainManager
-    nodes: NodeManager
-    tx_to_verified: TransactionToVerifyManager
+    blockchain: Blockchain
+    nodes: NodeService
+    tx_to_verified: TransactionToVerify
     self_node: SelfNode
 
     def __init__(self):
         self.self_node = SelfNode.load(os.getenv("NODE_TYPE"))
-        self.blockchain = BlockchainManager()
-        self.nodes = NodeManager()
-        self.tx_to_verified = TransactionToVerifyManager()
+        self.blockchain = Blockchain()
+        self.nodes = NodeService()
+        self.tx_to_verified = TransactionToVerify()
 
     def load(self, only_from_file: bool = False) -> None:
         hostname = socket.gethostname()
