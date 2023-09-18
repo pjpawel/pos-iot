@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from pos.network.node import Node
 from pos.network.transaction import Tx, TxCandidate, TxToVerify
-from test.blockchain.conftest import Helper
+from test.network.conftest import Helper
 
 
 def test_encode_and_decode(helper: Helper):

@@ -3,7 +3,7 @@ from hashlib import sha256
 
 from pos.network.transaction import TxCandidate
 from pos.network.block import Block, BlockCandidate
-from test.blockchain.conftest import Helper
+from test.network.conftest import Helper
 
 
 def test_encode_and_decode(helper: Helper):

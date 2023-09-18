@@ -8,7 +8,7 @@ from pos.network.service import Blockchain
 from pos.network.node import SelfNode, NodeType
 from pos.network.storage import decode_chain
 
-from test.blockchain.conftest import Helper
+from test.network.conftest import Helper
 
 
 def test_first_block_creation(helper: Helper):

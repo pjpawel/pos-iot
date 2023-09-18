@@ -2,7 +2,7 @@ import os
 
 from pos.network.node import SelfNode
 
-from test.blockchain.conftest import Helper
+from test.network.conftest import Helper
 
 
 def test_load(helper: Helper):

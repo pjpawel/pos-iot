@@ -6,7 +6,7 @@ from uuid import uuid4
 from pos.network.block import Block
 from pos.network.node import Node
 from pos.network.storage import BlocksStorage, TransactionStorage, NodeStorage
-from test.blockchain.conftest import Helper
+from test.network.conftest import Helper
 
 
 def test_blocks_storage_has_files(helper: Helper):

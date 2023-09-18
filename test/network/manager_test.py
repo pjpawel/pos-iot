@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from pos.network.manager import TransactionToVerifyManager
-from test.blockchain.conftest import Helper
+from test.network.conftest import Helper
 
 
 def test_transaction_verification(helper: Helper):
