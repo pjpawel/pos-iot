@@ -42,7 +42,7 @@ class TransactionVerifier:
                         break
 
                 if not tx_to_verify:
-                    logging.info(self.LOG_PREFIX + f"Nothing to verify")
+                    logging.debug(self.LOG_PREFIX + f"Nothing to verify")
                     continue
 
                 logging.info(self.LOG_PREFIX + f"Verifying transaction of id {tx_uuid.hex}")
@@ -54,7 +54,7 @@ class TransactionVerifier:
                 except Exception as e:
                     logging.error(self.LOG_PREFIX + f"Error while verifying transaction of id {tx_uuid.hex}. Error: {e}")
             else:
-                logging.info(self.LOG_PREFIX + "Nothing to verify")
+                logging.debug(self.LOG_PREFIX + "Nothing to verify")
                 sleep(1)
 
     def verify_transaction(self, tx: TxToVerify) -> bool:

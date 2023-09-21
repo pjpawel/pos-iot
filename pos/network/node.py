@@ -66,6 +66,15 @@ class Node:
     def __str__(self) -> str:
         return ':'.join(self.to_list())
 
+    @property
+    def __dict__(self) -> dict:
+        return {
+            "identifier": self.identifier.hex,
+            "type": self.type.name,
+            "host": self.host,
+            "port": self.port
+        }
+
 
 class SelfNode(Node):
     INFO_PATH = 'self_node.json'

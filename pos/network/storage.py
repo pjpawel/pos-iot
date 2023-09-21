@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pos.network.block import Block
 from pos.network.node import Node
-from pos.network.transaction import TxToVerify
+from pos.network.transaction import TxToVerify, Tx, TxVerified
 
 
 def encode_chain(blocks: list[Block]) -> bytes:
@@ -65,10 +65,11 @@ class Storage:
     def _set_lock(self) -> None:
         Path(self._lock).touch(0o777)
 
-    def _unlock(self) -> None:
-        os.remove(self._lock)
+    def unlock(self) -> None:
+        if self._is_set_lock():
+            os.remove(self._lock)
 
-    def _wait_for_set_lock(self, timeout: int = 10) -> None:
+    def wait_for_set_lock(self, timeout: int = 10) -> None:
         while self._is_set_lock():
             time.sleep(0.001)
         self._set_lock()
@@ -90,27 +91,27 @@ class BlocksStorage(Storage):
         return blocks
 
     def dump(self, blocks: list[Block]):
-        self._wait_for_set_lock()
+        self.wait_for_set_lock()
         logging.info(f"Writing {len(blocks)} {self.PATH} to storage")
         try:
             with open(self.path, 'wb') as f:
                 f.write(encode_chain(blocks))
             self.update_cache()
-            self._unlock()
+            self.unlock()
         except Exception as e:
-            self._unlock()
+            self.unlock()
             raise e
 
     def update(self, blocks: list[Block]):
-        self._wait_for_set_lock()
+        self.wait_for_set_lock()
         logging.info(f"Appending {len(blocks)} {self.PATH} to storage")
         try:
             with open(self.path, 'ab') as f:
                 f.write(encode_chain(blocks))
             self.update_cache()
-            self._unlock()
+            self.unlock()
         except Exception as e:
-            self._unlock()
+            self.unlock()
             raise e
 
     def load_from_file(self, f: BinaryIO) -> list[Block]:
@@ -133,37 +134,38 @@ class NodeStorage(Storage):
         return nodes
 
     def dump(self, nodes: list[Node]) -> None:
-        self._wait_for_set_lock()
+        self.wait_for_set_lock()
         logging.info(f"Writing {len(nodes)} {self.PATH} to storage")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
                 writer.writerows([node.to_list() for node in nodes])
             self.update_cache()
-            self._unlock()
+            self.unlock()
         except Exception as e:
-            self._unlock()
+            self.unlock()
             raise e
 
     def update(self, nodes: list[Node]) -> None:
-        self._wait_for_set_lock()
+        self.wait_for_set_lock()
         logging.info(f"Appending {len(nodes)} {self.PATH} to storage")
         try:
             with open(self.path, 'a') as f:
                 writer = csv.writer(f)
                 writer.writerows([node.to_list() for node in nodes])
             self.update_cache()
-            self._unlock()
+            self.unlock()
         except Exception as e:
-            self._unlock()
+            self.unlock()
             raise e
 
 
 class TransactionStorage(Storage):
     PATH = 'transaction'
 
-    def dump(self, txs: dict[UUID, TxToVerify]) -> None:
-        self._wait_for_set_lock()
+    def dump(self, txs: dict[UUID, TxToVerify], lock: bool = True) -> None:
+        if lock:
+            self.wait_for_set_lock()
         logging.info(f"Writing {len(txs)} {self.PATH} to storage")
         try:
             with open(self.path, 'w') as f:
@@ -171,13 +173,15 @@ class TransactionStorage(Storage):
                 for key in list(txs.keys()):
                     writer.writerow([key.hex, txs[key].__str__()])
             self.update_cache()
-            self._unlock()
+            if lock:
+                self.unlock()
         except Exception as e:
-            self._unlock()
+            if lock:
+                self.unlock()
             raise e
 
     def update(self, txs: dict[UUID, TxToVerify]) -> None:
-        self._wait_for_set_lock()
+        self.wait_for_set_lock()
         logging.info(f"Appending {len(txs)} {self.PATH} to storage")
         try:
             with open(self.path, 'a') as f:
@@ -185,9 +189,9 @@ class TransactionStorage(Storage):
                 for key in list(txs.keys()):
                     writer.writerow([key.hex, txs[key].__str__()])
             self.update_cache()
-            self._unlock()
+            self.unlock()
         except Exception as e:
-            self._unlock()
+            self.unlock()
             raise e
 
     def load(self) -> dict[UUID, TxToVerify]:
@@ -201,3 +205,48 @@ class TransactionStorage(Storage):
         self.update_cache()
         return txs
 
+
+class TransactionVerifiedStorage(Storage):
+    PATH = 'transaction_verified'
+
+    def load(self) -> dict[UUID, TxVerified]:
+        self._wait_for_lock()
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        with open(self.path, 'r') as f:
+            reader = csv.reader(f)
+            txs = {}
+            for row in reader:
+                txs[UUID(row[0])] = TxVerified.from_str(row[1])
+        self.update_cache()
+        return txs
+
+    def update(self, txs: dict[UUID, TxVerified]) -> None:
+        logging.info(f"Appending {len(txs)} {self.PATH} to storage")
+        self.wait_for_set_lock()
+        try:
+            with open(self.path, 'a') as f:
+                writer = csv.writer(f)
+                for key in list(txs.keys()):
+                    writer.writerow([key.hex, txs[key].__str__()])
+            self.update_cache()
+            self.unlock()
+        except Exception as e:
+            self.unlock()
+            raise e
+
+    def dump(self, txs: dict[UUID, TxVerified], lock: bool = True) -> None:
+        if lock:
+            self.wait_for_set_lock()
+        logging.info(f"Writing {len(txs)} {self.PATH} to storage")
+        try:
+            with open(self.path, 'w') as f:
+                writer = csv.writer(f)
+                for key in list(txs.keys()):
+                    writer.writerow([key.hex, txs[key].__str__()])
+            self.update_cache()
+            if lock:
+                self.unlock()
+        except Exception as e:
+            if lock:
+                self.unlock()
+            raise e

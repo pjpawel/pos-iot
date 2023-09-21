@@ -131,6 +131,23 @@ class TxCandidate:
         return Tx(self.version, self.timestamp, self.sender, signature, self.data)
 
 
+@dataclass()
+class TxVerified:
+    tx: Tx
+    time: int
+
+    def __str__(self) -> str:
+        return ':'.join([str(self.tx).replace(':', '_'), str(self.time)])
+
+    @classmethod
+    def from_str(cls, data: str):
+        split = data.split(':')
+        return cls(
+            Tx.from_str((split[0].replace('_', ':'))),
+            int(split[1])
+        )
+
+
 @dataclass
 class TxToVerify:
     tx: Tx
@@ -150,7 +167,7 @@ class TxToVerify:
     def add_verification_result(self, node: Node, result: bool) -> None:
         if node.identifier in list(self.voting.keys()):
             logging.warning(f"Voting is already saved from node {node.identifier.hex}")
-            #logging.info(f"Voting: " + '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]))
+            # logging.info(f"Voting: " + '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]))
             return
         self.voting[node.identifier] = result
         logging.info(f"Successfully added verification result {result} from {node.identifier.hex}")
@@ -195,3 +212,6 @@ class TxToVerify:
                 vote_split = vote.split('-')
                 tx.voting[UUID(vote_split[0])] = bool(vote_split[1])
         return tx
+
+    def get_verified_tx(self) -> TxVerified:
+        return TxVerified(self.tx, self.time)

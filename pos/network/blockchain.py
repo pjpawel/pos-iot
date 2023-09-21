@@ -137,7 +137,7 @@ class PoS:
             tx_to_verified = self.tx_to_verified.pop(uuid)
             assert isinstance(tx_to_verified, TxToVerify)
             if tx_to_verified.is_voting_positive():
-                self.blockchain.add_new_transaction(tx_to_verified.tx)
+                self.blockchain.add_new_transaction(uuid, tx_to_verified.get_verified_tx())
             else:
                 logging.info(f"Transaction {uuid.hex} was rejected")
 

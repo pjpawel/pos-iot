@@ -83,7 +83,8 @@ def get_transaction_to_verify():
             "node": tx_to_verify.node.identifier.hex,
             "voting": {
                 "result": tx_to_verify.get_positive_votes(),
-                "count": len(tx_to_verify.voting)
+                "count": len(tx_to_verify.voting),
+                "voting": [{"uuid": k.hex, "result": v}for k, v in tx_to_verify.voting.items()]
             }
         }
     return data
@@ -94,10 +95,11 @@ def get_transaction_verified():
     """
     :return:
     """
-    if not app.pos.blockchain.candidate:
+    txs = app.pos.blockchain.txs_verified.all()
+    if not txs:
         return {}
     return {
-        "transactions": [{"timestamp": tx.timestamp, "data": tx.data} for tx in app.pos.blockchain.candidate.transactions]
+        "transactions": [{"identifier": uid.hex, "timestamp": tx.time, "data": tx.tx.data} for uid, tx in txs.items()]
     }
 
 
