@@ -32,7 +32,7 @@ class Request:
             raise Exception(f"Cannot send populate verification result to host: {host}:{port}")
         return response.json()
 
-
+    @staticmethod
     def send_transaction_get_info(host: str, port: int, identifier: str) -> bytes:
         response = requests.get(f"http://{host}:{port}/transaction/{identifier}")
         if response.status_code != 200:
