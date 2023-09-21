@@ -172,7 +172,7 @@ class PoS:
 
     def transaction_get(self, identifier: str) -> bytes:
         self._validate_if_i_am_validator()
-        uuid = self._validate_get_uuid(identifier)
+        uuid = self._validate_create_uuid(identifier)
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
@@ -182,7 +182,7 @@ class PoS:
         return tx_to_verified.tx.encode()
 
     def transaction_populate(self, data: bytes, identifier: str) -> None:
-        uuid = self._validate_get_uuid(identifier)
+        uuid = self._validate_create_uuid(identifier)
         tx_to_verify = self.tx_to_verified.find(uuid)
         if tx_to_verify:
             logging.info(f"Transaction {uuid.hex} already registered")
@@ -201,13 +201,13 @@ class PoS:
     def transaction_populate_verify_result(self, verified: bool, identifier: str, remote_addr: str):
         self._validate_request_from_validator(remote_addr)
         node = self._get_node_from_request_addr(remote_addr)
-        uuid = self._validate_get_uuid(identifier)
+        uuid = self._validate_create_uuid(identifier)
         self.add_transaction_verification_result(uuid, node, verified)
 
     def populate_new_node(self, data: dict, request_addr: str) -> None:
         self._validate_request_from_validator(request_addr)
 
-        identifier = self._validate_get_uuid(data.get("identifier"))
+        identifier = self._validate_create_uuid(data.get("identifier"))
         host = data.get("host")
         port = int(data.get("port"))
         n_type = getattr(NodeType, data.get("type"))
@@ -315,7 +315,7 @@ class PoS:
         if not node:
             raise Exception(f"Node {identifier.hex} was not found")
 
-    def _validate_get_uuid(self, identifier: str) -> UUID:
+    def _validate_create_uuid(self, identifier: str) -> UUID:
         try:
             return UUID(identifier)
         except:
