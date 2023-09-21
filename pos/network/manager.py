@@ -191,6 +191,7 @@ class NodeManager(Manager):
         for node in self._nodes:
             if node.host == self_ip:
                 self._nodes.remove(node)
+                self._storage.dump(self._nodes)
                 return
 
 

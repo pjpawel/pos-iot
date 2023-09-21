@@ -28,7 +28,7 @@ def instant_sender(pos: PoS):
         if pos.nodes.len() == 0:
             continue
         logging.info(LOG_PREFIX + 'Available nodes to send to: ' +
-                     ''.join([node.identifier.hex for node in pos.nodes.all()]))
+                     ', '.join([node.identifier.hex for node in pos.nodes.all()]))
         node = get_random_from_list(pos.nodes.all())
         logging.info(LOG_PREFIX + f"Creating transaction to send")
         tx_can = TxCandidate({"t": "1", "d": random.randint(0, 546)})
