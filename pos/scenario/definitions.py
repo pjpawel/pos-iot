@@ -1,3 +1,4 @@
+import random
 from time import sleep
 from uuid import uuid4, UUID
 
@@ -30,7 +31,7 @@ def instant_sender(pos: PoS):
                      ''.join([node.identifier.hex for node in pos.nodes.all()]))
         node = get_random_from_list(pos.nodes.all())
         logging.info(LOG_PREFIX + f"Creating transaction to send")
-        tx_can = TxCandidate({"message": "abc", "id": uuid4().hex})
+        tx_can = TxCandidate({"t": "1", "d": random.randint(0, 546)})
         tx = tx_can.sign(pos.self_node)
         response = requests.post(f"http://{node.host}:{node.port}/transaction", tx.encode())
         if response.status_code == 200:
@@ -63,7 +64,7 @@ def simple_sender(pos: PoS):
                      ''.join([node.identifier.hex for node in pos.nodes.all()]))
         node = get_random_from_list(pos.nodes.all())
         logging.info(LOG_PREFIX + f"Creating transaction to send")
-        tx_can = TxCandidate({"message": "abc", "id": uuid4().hex})
+        tx_can = TxCandidate({"t": "1", "d": random.randint(0, 546)})
         tx = tx_can.sign(pos.self_node)
         response = requests.post(f"http://{node.host}:{node.port}/transaction", tx.encode())
         if response.status_code == 200:
