@@ -1,3 +1,6 @@
+from random import random
+from time import sleep
+
 from dotenv import load_dotenv
 
 from pos.start_node_flask import app
@@ -14,5 +17,7 @@ def main():
     Configuring logger
     """
     setup_logger()
+
+    sleep(random()/10.0)
 
     return app
