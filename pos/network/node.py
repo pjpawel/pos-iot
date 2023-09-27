@@ -39,6 +39,9 @@ class Node:
             n_type = getattr(NodeType, n_type.upper())
         self.type = n_type
 
+    def set_type(self, n_type: NodeType):
+        self.type = n_type
+
     def get_public_key(self) -> Ed25519PublicKey:
         return serialization.load_pem_public_key(Request.get_public_key(self.host, self.port))
 

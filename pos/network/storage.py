@@ -78,6 +78,10 @@ class Storage:
         while self._is_set_lock():
             time.sleep(0.001)
 
+    def invalidate_cache(self) -> None:
+        self._cached_size = 0
+        self._cached_mtime = 0
+
 
 class BlocksStorage(Storage):
     PATH = 'blockchain'
@@ -249,4 +253,29 @@ class TransactionVerifiedStorage(Storage):
         except Exception as e:
             if lock:
                 self.unlock()
+            raise e
+
+
+class ValidatorStorage(Storage):
+    PATH = 'validators'
+    SEPARATOR = ';'
+
+    def load(self) -> list[UUID]:
+        self._wait_for_lock()
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        with open(self.path) as f:
+            uuids = [UUID(hx) for hx in f.readline().split(self.SEPARATOR)]
+        self.update_cache()
+        return uuids
+
+    def dump(self, uuids: list[UUID]) -> None:
+        self.wait_for_set_lock()
+        logging.info(f"Writing {len(uuids)} {self.PATH} to storage")
+        try:
+            with open(self.path, 'w') as f:
+                f.write(self.SEPARATOR.join([uid.hex for uid in uuids]))
+            self.update_cache()
+            self.unlock()
+        except Exception as e:
+            self.unlock()
             raise e

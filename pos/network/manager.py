@@ -4,7 +4,8 @@ from uuid import UUID
 
 from .block import Block, BlockCandidate
 from .node import SelfNode, Node, NodeType
-from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage
+from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
+    ValidatorStorage
 from .transaction import TxToVerify, Tx, TxVerified
 
 
@@ -121,10 +122,12 @@ class TransactionToVerifyManager(Manager):
 class NodeManager(Manager):
     _nodes: list[Node]
     _storage: NodeStorage
+    _validator_storage: ValidatorStorage
 
     def __init__(self):
         self._nodes = []
         self._storage = NodeStorage()
+        self._validator_storage = ValidatorStorage()
 
     def to_dict(self) -> list[dict]:
         return [node.__dict__ for node in self._nodes]
@@ -176,6 +179,7 @@ class NodeManager(Manager):
 
     def refresh(self) -> None:
         self._nodes = [] if self._storage.is_empty() else self._storage.load()
+        self._update_validators()
 
     def count_validator_nodes(self, self_node: SelfNode) -> int:
         if not self._storage.is_up_to_date():
@@ -196,6 +200,18 @@ class NodeManager(Manager):
                 self._nodes.remove(node)
                 self._storage.dump(self._nodes)
                 return
+
+    def set_validators(self, validators: list[UUID]) -> None:
+        self._validator_storage.dump(validators)
+        self._validator_storage.invalidate_cache()
+        self.refresh()
+
+    def _update_validators(self) -> None:
+        if self._validator_storage.is_up_to_date():
+            return
+        validators_id = self._validator_storage.load()
+        for node in self._nodes:
+            node.set_type(NodeType.VALIDATOR if node.identifier in validators_id else NodeType.SENSOR)
 
 
 class TransactionVerifiedManager(Manager):
