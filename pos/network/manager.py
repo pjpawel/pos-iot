@@ -17,6 +17,9 @@ class Manager:
     def has_empty_files(self) -> bool:
         return self._storage.is_empty()
 
+    def get_storage(self):
+        return self._storage
+
 
 class BlockchainManager(Manager):
     _storage: BlocksStorage
