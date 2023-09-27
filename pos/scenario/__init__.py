@@ -31,6 +31,21 @@ class Scenario(StrEnum):
         thread.start()
 
 
+def get_scenarios(names_list: str) -> list[Scenario]:
+    scenarios = []
+    names = names_list.split(",")
+    for name in names:
+        try:
+            scenario_enum = getattr(Scenario, name)
+            logging.info(f"Running scenario {scenario_enum.name}")
+        except AttributeError:
+            mess = f'Error: There is no scenario with name: {name}'
+            print(mess)
+            raise ScenarioNotFound(mess)
+        scenarios.append(scenario_enum)
+    return scenarios
+
+
 def run_scenarios(names_list: str, pos: PoS):
     """
     Allow to call multiple scenarios
@@ -39,6 +54,8 @@ def run_scenarios(names_list: str, pos: PoS):
     :param names_list:
     :return:
     """
+    # for scenario in get_scenarios(names_list):
+    #     scenario.call(pos)
     names = names_list.split(",")
     for name in names:
         try:
