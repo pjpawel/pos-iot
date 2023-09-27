@@ -28,4 +28,4 @@ pos = PoS()
 pos.load(only_from_file=False)
 
 tx_verifier = TransactionVerifier(pos)
-tx_verifier.start()
+tx_verifier.process()

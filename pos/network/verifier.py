@@ -14,7 +14,7 @@ class TransactionVerifier:
     def __init__(self, pos: PoS):
         self.pos = pos
 
-    def start(self):
+    def start_thread(self):
         thread = Thread(target=self.process)
         thread.start()
 
