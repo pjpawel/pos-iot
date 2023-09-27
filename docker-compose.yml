@@ -7,6 +7,7 @@ services:
       - "5002:5000"
     volumes:
       - node0volume:/storage
+      - monitor/storage/:/mnt/dump
     networks:
       blockchain:
         ipv4_address: 172.18.0.2
