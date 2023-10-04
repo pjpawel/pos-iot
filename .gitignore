@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 env/
+venv/
 .pytest_cache/
 # IDE
 .idea/
