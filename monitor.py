@@ -43,15 +43,16 @@ def get_info_from_transactions_verified(path: str) -> dict:
         "len": len(txs)
     }
 
+cols_dict = {
+    'time': 'Time',
+    'number_of_nodes': 'Number of nodes',
+    'node_trust': 'Node trust',
+    'number_of_blocks': 'Number of blocks',
+    'number_of_transaction_to_verify': 'Number of transactions to verifiy',
+    'number_of_verified_transactions': 'Number of verified transactions',
+}
 
-cols = [
-    'time',
-    'number_of_nodes',
-    'node_trust',
-    'number_of_blocks',
-    'number_of_transaction_to_verify',
-    'number_of_verified_transactions',
-]
+cols = list(cols_dict.keys())
 
 first_time = None
 dfs = {}
