@@ -1,7 +1,8 @@
 from uuid import UUID
 
 from pos.network.block import BlockCandidate
-from pos.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager
+from pos.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
+    ValidatorAgreement
 from pos.network.transaction import TxVerified
 
 
@@ -20,7 +21,17 @@ class Blockchain(BlockchainManager):
 
 
 class Node(NodeManager):
-    pass
+    validator_agreement: ValidatorAgreement
+
+    def __init__(self):
+        super().__init__()
+        self.validator_agreement = ValidatorAgreement()
+
+    def is_agreement_started(self) -> bool:
+        pass
+
+    def get_agreement_list(self) -> list[UUID]:
+        return self.validator_agreement.all()
 
 
 class TransactionToVerify(TransactionToVerifyManager):

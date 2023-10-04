@@ -4,6 +4,7 @@
 
 rm -rf /storage/*
 
+python3 start_dump_worker.py &
 python3 start_scenario_job.py &
 python3 start_transaction_verifier_job.py &
 

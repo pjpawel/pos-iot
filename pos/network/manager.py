@@ -5,7 +5,7 @@ from uuid import UUID
 from .block import Block, BlockCandidate
 from .node import SelfNode, Node, NodeType
 from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
-    ValidatorStorage
+    ValidatorStorage, ValidatorAgreementStorage
 from .transaction import TxToVerify, Tx, TxVerified
 
 
@@ -243,3 +243,24 @@ class TransactionVerifiedManager(Manager):
 
     def delete(self, identifiers: list) -> list[TxVerified]:
         pass
+
+
+class ValidatorAgreement(Manager):
+    _storage = ValidatorAgreementStorage
+    uuids: list[UUID]
+
+    def __init__(self):
+        self._storage = ValidatorAgreementStorage()
+        self.uuids = []
+
+    def refresh(self) -> None:
+        self.uuids = [] if self._storage.is_empty() else self._storage.load()
+
+    def all(self) -> list[UUID]:
+        if not self._storage.is_up_to_date():
+            self.refresh()
+        return self.uuids
+
+    def set(self, uuids: list[UUID]) -> None:
+        self.uuids = uuids
+        self._storage.dump(uuids)

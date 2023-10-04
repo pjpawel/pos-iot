@@ -36,8 +36,8 @@ class Storage:
     _cached_mtime: float
     _cached_size: int
 
-    def __init__(self):
-        self._storage_dir = os.getenv("STORAGE_DIR")
+    def __init__(self, storage: str | None = None):
+        self._storage_dir = os.getenv("STORAGE_DIR") if not storage else storage
         self.path = os.path.join(self._storage_dir, self.PATH)
         self._lock = self.path + ".lock"
         Path(self.path).touch(0o777)
@@ -119,7 +119,10 @@ class BlocksStorage(Storage):
             raise e
 
     def load_from_file(self, f: BinaryIO) -> list[Block]:
-        return decode_chain(f.read(getsizeof(f)))
+        byt = f.read()
+        if len(byt) == 0:
+            return []
+        return decode_chain(byt)
 
     def load_from_bytes(self, b: bytes) -> list[Block]:
         return decode_chain(b)
@@ -279,3 +282,7 @@ class ValidatorStorage(Storage):
         except Exception as e:
             self.unlock()
             raise e
+
+
+class ValidatorAgreementStorage(ValidatorStorage):
+    PATH = 'validators_agreement'
