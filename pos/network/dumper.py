@@ -16,9 +16,13 @@ class Dumper:
             pos.nodes.get_storage().path,
             pos.tx_to_verified.get_storage().path
         ]
-        self.dump_dir = os.getenv("DUMP_DIR")
+        base_dump_dir = os.getenv("DUMP_DIR")
+        if not os.path.isdir(base_dump_dir):
+            os.mkdir(base_dump_dir)
+        self.dump_dir = os.path.join(base_dump_dir, str(int(time())))
         if not os.path.isdir(self.dump_dir):
             os.mkdir(self.dump_dir)
+        logging.info(f"Dumping files to directory: {self.dump_dir}")
 
     def dump(self) -> None:
         utime = int(time())
