@@ -201,3 +201,30 @@ def node_update():
     return app.pos.node_update(request.get_json())
 
 
+@app.post("/node/validator/agreement")
+def validator_agreement_post():
+    return app.pos.node_validator_agreement_start()
+
+
+@app.get("/node/validator/agreement")
+def validator_agreement_get():
+    return app.pos.node_validator_agreement_get()
+
+
+@app.get("/node/validator/agreement/list")
+def validator_agreement_list():
+    return app.pos.node_validator_agreement_list_get()
+
+
+@app.post("/node/validator/agreement/accept")
+def validator_agreement_accept():
+    return app.pos.node_validator_agreement_accept()
+
+
+@app.post("/node/validator/agreement/done")
+def validator_agreement_done():
+    return app.pos.node_validator_agreement_done()
+
+
+
+

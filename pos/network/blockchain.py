@@ -269,14 +269,18 @@ class PoS:
             "nodes": [node.__dict__ for node in nodes_to_show or self.nodes.all()]
         }
 
-    def node_validator_agreement_get(self):
-        pass
+    def node_validator_agreement_get(self) -> dict:
+        return {
+            "isStarted": self.nodes.is_agreement_started()
+        }
 
     def node_validator_agreement_start(self):
         pass
 
     def node_validator_agreement_list_get(self):
-        pass
+        return {
+            [node.hex for node in self.nodes.validator_agreement.all()]
+        }
 
     def node_validator_agreement_list_set(self):
         pass

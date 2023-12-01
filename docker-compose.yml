@@ -37,11 +37,31 @@ services:
       SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
       #POS_SCENARIOS: NONE
 
+  node2:
+    container_name: node2
+    build: .
+    depends_on:
+     - node0
+    ports:
+      - "5004:5000"
+    volumes:
+      - node2volume:/storage
+      - type: bind
+        source: monitor/storage/node2/
+        target: /mnt/dump
+    networks:
+      blockchain:
+#        ipv4_address: 172.18.0.2
+    environment:
+      SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
+      #POS_SCENARIOS: NONE
+
 volumes:
   node0volume:
     #external: true
   node1volume:
     #external: true
+  node2volume:
 
 networks:
   blockchain:
