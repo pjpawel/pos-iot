@@ -7,9 +7,9 @@ from uuid import uuid4, UUID
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 
-from pos.network.blockchain import PoS, PoSException
-from pos.network.node import NodeType
-from pos.utils import setup_logger
+from pot.network.blockchain import PoS, PoTException
+from pot.network.node import NodeType
+from pot.utils import setup_logger
 
 """
 Loading env values
@@ -33,8 +33,8 @@ app.pos = PoS()
 app.pos.load()
 
 
-@app.errorhandler(PoSException)
-def pos_error_handler(error: PoSException):
+@app.errorhandler(PoTException)
+def pos_error_handler(error: PoTException):
     return jsonify(error=error.message), error.code
 
 

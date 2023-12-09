@@ -1,6 +1,6 @@
 import requests
 
-from pos.network.exception import PublicKeyNotFoundException
+from pot.network.exception import PublicKeyNotFoundException
 
 
 class Request:

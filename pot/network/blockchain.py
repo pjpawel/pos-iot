@@ -12,7 +12,7 @@ from .storage import encode_chain
 from .transaction import Tx, TxToVerify
 from .node import Node, SelfNode, NodeType
 from .request import Request
-from .exception import PoSException
+from .exception import PoTException
 
 
 class PoS:
@@ -159,9 +159,9 @@ class PoS:
 
         tx_node = self.nodes.find_by_identifier(tx.sender)
         if not tx_node:
-            raise PoSException(f"Node not found with identifier {tx.sender.hex}", 404)
+            raise PoTException(f"Node not found with identifier {tx.sender.hex}", 404)
         if tx_node.host != request_addr:
-            raise PoSException(f"Node hostname ({tx_node.host}) different than remote_addr: ({request_addr})", 400)
+            raise PoTException(f"Node hostname ({tx_node.host}) different than remote_addr: ({request_addr})", 400)
 
         tx.validate(tx_node)
 
@@ -178,7 +178,7 @@ class PoS:
             logging.info(
                 f"Transaction not find {identifier} from "
                 f"{', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
-            raise PoSException(f"Cannot find transaction of given id {identifier}", 404)
+            raise PoTException(f"Cannot find transaction of given id {identifier}", 404)
         return tx_to_verified.tx.encode()
 
     def transaction_populate(self, data: bytes, identifier: str) -> None:
@@ -297,19 +297,19 @@ class PoS:
 
     def _validate_if_i_am_validator(self) -> None:
         if not self.self_node.type == NodeType.VALIDATOR:
-            raise PoSException("I am not validator", 400)
+            raise PoTException("I am not validator", 400)
 
     def _validate_request_from_validator(self, request_addr: str) -> None:
         node = self.nodes.find_by_request_addr(request_addr)
         if not node:
-            raise PoSException("Request came from unknown node", 400)
+            raise PoTException("Request came from unknown node", 400)
         if not node.type == NodeType.VALIDATOR:
-            raise PoSException("Request came from node which is not validator", 400)
+            raise PoTException("Request came from node which is not validator", 400)
 
     def _get_node_from_request_addr(self, request_addr: str) -> Node:
         node = self.nodes.find_by_request_addr(request_addr)
         if not node:
-            raise PoSException("Request came from unknown node", 400)
+            raise PoTException("Request came from unknown node", 400)
         return node
 
     def _get_node_by_identifier(self, identifier: UUID) -> Node:
@@ -325,4 +325,4 @@ class PoS:
         except:
             msg = f"Identifier {identifier} is not valid UUID"
             logging.info(msg)
-            raise PoSException(msg, 400)
+            raise PoTException(msg, 400)

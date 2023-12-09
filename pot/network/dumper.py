@@ -3,7 +3,7 @@ import os
 from time import time
 from shutil import copy
 
-from pos.network.blockchain import PoS
+from pot.network.blockchain import PoS
 
 
 class Dumper:

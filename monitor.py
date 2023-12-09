@@ -5,7 +5,7 @@ from matplotlib.pyplot import savefig
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from pos.network.storage import BlocksStorage, NodeStorage, TransactionStorage
+from pot.network.storage import BlocksStorage, NodeStorage, TransactionStorage
 
 storage_path = os.path.join(os.path.dirname(__file__), 'monitor', 'storage')
 result_path = os.path.join(os.path.dirname(__file__), 'monitor', 'result')

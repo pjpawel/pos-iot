@@ -3,8 +3,8 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pos.start_node_flask import app
-from pos.utils import setup_logger
+from pot.start_node_flask import app
+from pot.utils import setup_logger
 
 
 def main():

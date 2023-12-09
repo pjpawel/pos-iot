@@ -2,9 +2,9 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pos.network.blockchain import PoS
-from pos.network.dumper import Dumper
-from pos.utils import setup_logger
+from pot.network.blockchain import PoS
+from pot.network.dumper import Dumper
+from pot.utils import setup_logger
 
 
 print(f"Starting {__file__}")

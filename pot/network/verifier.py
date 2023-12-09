@@ -3,8 +3,8 @@ from threading import Thread
 from time import sleep
 from random import shuffle
 
-from pos.network.blockchain import PoS
-from pos.network.transaction import TxToVerify
+from pot.network.blockchain import PoS
+from pot.network.transaction import TxToVerify
 
 
 class TransactionVerifier:

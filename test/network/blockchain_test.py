@@ -3,10 +3,10 @@ from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pos.network.blockchain import PoS
-from pos.network.service import Blockchain
-from pos.network.node import SelfNode, NodeType
-from pos.network.storage import decode_chain
+from pot.network.blockchain import PoS
+from pot.network.service import Blockchain
+from pot.network.node import SelfNode, NodeType
+from pot.network.storage import decode_chain
 
 from test.network.conftest import Helper
 

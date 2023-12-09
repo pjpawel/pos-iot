@@ -1,8 +1,8 @@
 from uuid import UUID
 
-from pos.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
+from pot.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
     ValidatorAgreement
-from pos.network.transaction import TxVerified
+from pot.network.transaction import TxVerified
 
 
 class Blockchain(BlockchainManager):

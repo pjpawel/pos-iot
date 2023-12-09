@@ -1,6 +1,6 @@
 import os
 
-from pos.network.node import SelfNode
+from pot.network.node import SelfNode
 
 from test.network.conftest import Helper
 

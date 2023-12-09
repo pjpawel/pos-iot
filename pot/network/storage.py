@@ -8,9 +8,9 @@ from typing import BinaryIO
 from uuid import UUID
 from pathlib import Path
 
-from pos.network.block import Block
-from pos.network.node import Node
-from pos.network.transaction import TxToVerify, Tx, TxVerified
+from pot.network.block import Block
+from pot.network.node import Node
+from pot.network.transaction import TxToVerify, Tx, TxVerified
 
 
 def encode_chain(blocks: list[Block]) -> bytes:

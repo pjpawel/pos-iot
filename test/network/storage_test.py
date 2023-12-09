@@ -3,9 +3,9 @@ from copy import copy
 from time import sleep
 from uuid import uuid4
 
-from pos.network.block import Block
-from pos.network.node import Node
-from pos.network.storage import BlocksStorage, TransactionStorage, NodeStorage
+from pot.network.block import Block
+from pot.network.node import Node
+from pot.network.storage import BlocksStorage, TransactionStorage, NodeStorage
 from test.network.conftest import Helper
 
 

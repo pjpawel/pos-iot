@@ -1,5 +1,5 @@
 """
-Pytest fixtures for pos.blockchain test module
+Pytest fixtures for pot.blockchain test module
 """
 import os
 import socket
@@ -7,9 +7,9 @@ from hashlib import sha256
 
 import pytest
 
-from pos.network.block import Block, BlockCandidate
-from pos.network.node import SelfNode, NodeType
-from pos.network.transaction import TxCandidate, Tx, TxToVerify
+from pot.network.block import Block, BlockCandidate
+from pot.network.node import SelfNode, NodeType
+from pot.network.transaction import TxCandidate, Tx, TxToVerify
 
 
 class Helper:

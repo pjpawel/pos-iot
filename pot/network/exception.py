@@ -2,7 +2,7 @@ class PublicKeyNotFoundException(Exception):
     pass
 
 
-class PoSException(Exception):
+class PoTException(Exception):
     message: str
     code: int
 

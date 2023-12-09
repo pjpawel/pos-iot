@@ -4,7 +4,7 @@ from threading import Thread
 
 from .definitions import instant_sender, mad_sender, simple_sender, none_sender
 from .exception import ScenarioNotFound, ScenarioNotSupported
-from pos.network.blockchain import PoS
+from pot.network.blockchain import PoS
 
 
 class Scenario(StrEnum):
@@ -55,7 +55,7 @@ def run_scenarios(names_list: str, pos: PoS):
     :return:
     """
     # for scenario in get_scenarios(names_list):
-    #     scenario.call(pos)
+    #     scenario.call(pot)
     names = names_list.split(",")
     for name in names:
         try:

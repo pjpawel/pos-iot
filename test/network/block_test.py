@@ -1,8 +1,8 @@
 from io import BytesIO
 from hashlib import sha256
 
-from pos.network.transaction import TxCandidate
-from pos.network.block import Block, BlockCandidate
+from pot.network.transaction import TxCandidate
+from pot.network.block import Block, BlockCandidate
 from test.network.conftest import Helper
 
 

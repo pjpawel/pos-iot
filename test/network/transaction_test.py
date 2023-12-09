@@ -1,8 +1,8 @@
 from io import BytesIO
 from uuid import uuid4
 
-from pos.network.node import Node
-from pos.network.transaction import Tx, TxCandidate, TxToVerify
+from pot.network.node import Node
+from pot.network.transaction import Tx, TxCandidate, TxToVerify
 from test.network.conftest import Helper
 
 

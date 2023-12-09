@@ -3,9 +3,9 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pos.network.blockchain import PoS
-from pos.scenario import run_scenarios
-from pos.utils import setup_logger
+from pot.network.blockchain import PoS
+from pot.scenario import run_scenarios
+from pot.utils import setup_logger
 
 
 print(f"Starting {__file__}")

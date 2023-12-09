@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from pos.network.manager import TransactionToVerifyManager
+from pot.network.manager import TransactionToVerifyManager
 from test.network.conftest import Helper
 
 

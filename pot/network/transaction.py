@@ -8,7 +8,7 @@ from time import time
 
 from cryptography.exceptions import InvalidSignature
 
-from .exception import PoSException
+from .exception import PoTException
 from .node import SelfNode, Node
 from .utils import decode_int, decode_str, encode_int, encode_str, read_bytes
 
@@ -63,9 +63,9 @@ class Tx:
         except InvalidSignature as error:
             logging.error(error)
             logging.error(f"Transaction data: {b64encode(all_data)}, node public key: {node.get_public_key_str()}")
-            raise PoSException(f"Transaction not verified by identifier {self.sender.hex}", 400)
+            raise PoTException(f"Transaction not verified by identifier {self.sender.hex}", 400)
         except Exception as e:
-            raise PoSException(f"Validation error: {e}", 400)
+            raise PoTException(f"Validation error: {e}", 400)
 
     def validate_data(self) -> None:
         t = self.data.get("t")
