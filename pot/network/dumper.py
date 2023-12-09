@@ -3,18 +3,18 @@ import os
 from time import time
 from shutil import copy
 
-from pot.network.blockchain import PoS
+from pot.network.blockchain import PoT
 
 
 class Dumper:
     dump_dir: str
     paths: list[str]
 
-    def __init__(self, pos: PoS):
+    def __init__(self, pot: PoT):
         self.paths = [
-            pos.blockchain.get_storage().path,
-            pos.nodes.get_storage().path,
-            pos.tx_to_verified.get_storage().path
+            pot.blockchain.get_storage().path,
+            pot.nodes.get_storage().path,
+            pot.tx_to_verified.get_storage().path
         ]
         base_dump_dir = os.getenv("DUMP_DIR")
         if not os.path.isdir(base_dump_dir):

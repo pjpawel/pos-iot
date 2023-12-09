@@ -4,7 +4,7 @@ from threading import Thread
 
 from .definitions import instant_sender, mad_sender, simple_sender, none_sender
 from .exception import ScenarioNotFound, ScenarioNotSupported
-from pot.network.blockchain import PoS
+from pot.network.blockchain import PoT
 
 
 class Scenario(StrEnum):
@@ -26,8 +26,8 @@ class Scenario(StrEnum):
             case _:
                 raise ScenarioNotSupported(f"Scenario is not supported: {self.name}")
 
-    def call(self, pos: PoS):
-        thread = Thread(target=self.get_definition(), args=[pos])
+    def call(self, pot: PoT):
+        thread = Thread(target=self.get_definition(), args=[pot])
         thread.start()
 
 
@@ -46,11 +46,11 @@ def get_scenarios(names_list: str) -> list[Scenario]:
     return scenarios
 
 
-def run_scenarios(names_list: str, pos: PoS):
+def run_scenarios(names_list: str, pot: PoT):
     """
     Allow to call multiple scenarios
     Pass names as string divided with comma
-    :param pos:
+    :param pot:
     :param names_list:
     :return:
     """
@@ -65,4 +65,4 @@ def run_scenarios(names_list: str, pos: PoS):
             mess = f'Error: There is no scenario with name: {name}'
             print(mess)
             raise ScenarioNotFound(mess)
-        scenario_enum.call(pos)
+        scenario_enum.call(pot)

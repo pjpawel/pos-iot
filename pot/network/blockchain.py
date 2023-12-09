@@ -15,7 +15,7 @@ from .request import Request
 from .exception import PoTException
 
 
-class PoS:
+class PoT:
     blockchain: Blockchain
     nodes: NodeService
     tx_to_verified: TransactionToVerify

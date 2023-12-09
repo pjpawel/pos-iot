@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pot.network.blockchain import PoS
+from pot.network.blockchain import PoT
 from pot.network.service import Blockchain
 from pot.network.node import SelfNode, NodeType
 from pot.network.storage import decode_chain
@@ -31,18 +31,18 @@ def test_first_block_creation(helper: Helper):
     assert not blockchain.blocks[0].verify(public_key)
 
 
-def test_pos_load(helper: Helper):
+def test_pot_load(helper: Helper):
     """
-    Test if PoS is correctly loaded genesis node
+    Test if pot is correctly loaded genesis node
     :param helper:
     :return:
     """
     helper.put_genesis_node_env()
-    pos = PoS()
-    pos.load()
+    pot = PoT()
+    pot.load()
 
-    assert isinstance(pos.self_node, SelfNode)
-    assert len(pos.blockchain.blocks) == 1
+    assert isinstance(pot.self_node, SelfNode)
+    assert len(pot.blockchain.blocks) == 1
 
 
 def test_decode_blockchain(helper: Helper):
@@ -60,14 +60,14 @@ def test_decode_blockchain(helper: Helper):
 
 def test_node_register(helper: Helper):
     helper.put_genesis_node_env()
-    pos = PoS()
-    pos.load()
+    pot = PoT()
+    pot.load()
 
     uid = uuid4()
     ip = "192.168.1.200"
     port = 5000
     n_type = NodeType.VALIDATOR
-    response = pos.node_register(uid, ip, port, n_type)
+    response = pot.node_register(uid, ip, port, n_type)
 
     assert UUID(response.get("identifier"))
     assert response.get("host") == ip
@@ -76,12 +76,12 @@ def test_node_register(helper: Helper):
 
 def test_node_update(helper: Helper):
     helper.put_genesis_node_env()
-    pos = PoS()
-    pos.load()
+    pot = PoT()
+    pot.load()
 
-    assert len(pos.blockchain.blocks) == 1
+    assert len(pot.blockchain.blocks) == 1
 
-    response = pos.node_update({})
+    response = pot.node_update({})
 
     blockchain_b64encoded = response.get("blockchain")
     nodes = response.get("nodes")
@@ -90,6 +90,6 @@ def test_node_update(helper: Helper):
 
     chain = decode_chain(blockchain_byt)
 
-    assert pos.blockchain.blocks == chain
+    assert pot.blockchain.blocks == chain
 
     assert isinstance(nodes, list)
