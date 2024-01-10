@@ -203,22 +203,17 @@ def node_update():
 
 @app.post("/node/validator/agreement")
 def validator_agreement_post():
-    return app.pot.node_validator_agreement_start()
+    return app.pot.node_validator_agreement_start(request.remote_addr, request.get_json())
 
 
 @app.get("/node/validator/agreement")
 def validator_agreement_get():
-    return app.pot.node_validator_agreement_get()
+    return app.pot.node_validator_agreement_get(request.remote_addr)
 
 
-@app.get("/node/validator/agreement/list")
-def validator_agreement_list():
-    return app.pot.node_validator_agreement_list_get()
-
-
-@app.post("/node/validator/agreement/accept")
-def validator_agreement_accept():
-    return app.pot.node_validator_agreement_accept()
+@app.patch("/node/validator/agreement/vote")
+def validator_agreement_vote():
+    return app.pot.node_validator_agreement_vote(request.get_json())
 
 
 @app.post("/node/validator/agreement/done")

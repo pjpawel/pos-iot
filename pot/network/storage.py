@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import os
 import time
@@ -286,3 +287,27 @@ class ValidatorStorage(Storage):
 
 class ValidatorAgreementStorage(ValidatorStorage):
     PATH = 'validators_agreement'
+
+
+class ValidatorAgreementInfoStorage(Storage):
+    PATH = 'validators_agreement_info'
+
+    def load(self) -> dict:
+        self._wait_for_lock()
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        with open(self.path) as f:
+            data = json.load(f)
+        self.update_cache()
+        return data
+
+    def dump(self, data: dict) -> None:
+        self.wait_for_set_lock()
+        logging.info(f"Writing {str(data)} {self.PATH} to storage")
+        try:
+            with open(self.path, 'w') as f:
+                json.dump(data, f)
+            self.update_cache()
+            self.unlock()
+        except Exception as e:
+            self.unlock()
+            raise e

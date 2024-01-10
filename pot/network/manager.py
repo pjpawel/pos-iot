@@ -5,7 +5,7 @@ from uuid import UUID
 from .block import Block, BlockCandidate
 from .node import SelfNode, Node, NodeType
 from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
-    ValidatorStorage, ValidatorAgreementStorage
+    ValidatorStorage, ValidatorAgreementStorage, ValidatorAgreementInfoStorage
 from .transaction import TxToVerify, Tx, TxVerified
 
 
@@ -178,6 +178,8 @@ class NodeManager(Manager):
         return validators
 
     def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
         self._nodes = [] if self._storage.is_empty() else self._storage.load()
         self._update_validators()
 
@@ -242,25 +244,65 @@ class TransactionVerifiedManager(Manager):
         return self._txs
 
     def delete(self, identifiers: list) -> list[TxVerified]:
+        # TODO:
         pass
 
 
 class ValidatorAgreement(Manager):
     _storage = ValidatorAgreementStorage
+    _storage_info = ValidatorAgreementInfoStorage
+    is_started: bool
+    last_successful_agreement: int
+    leaders: list[UUID]
     uuids: list[UUID]
 
     def __init__(self):
         self._storage = ValidatorAgreementStorage()
+        self._storage_info = ValidatorAgreementInfoStorage()
         self.uuids = []
+        if self._storage_info.is_empty():
+            self.is_started = False
+            self.last_successful_agreement = 0
+            self.leaders = []
+            self._storage_info.dump(self.prepare_info_data())
+        self.refresh_info()
 
-    def refresh(self) -> None:
+    def refresh_list(self) -> None:
+        if self._storage_info.is_up_to_date():
+            return
         self.uuids = [] if self._storage.is_empty() else self._storage.load()
+
+    def refresh_info(self) -> None:
+        if self._storage_info.is_up_to_date():
+            return
+        data = self._storage_info.load()
+        self.is_started = data["isStarted"]
+        self.last_successful_agreement = data["last_successful_agreement"]
+        self.leaders = [UUID(identifier) for identifier in data["leaders"]]
 
     def all(self) -> list[UUID]:
         if not self._storage.is_up_to_date():
-            self.refresh()
+            self.refresh_list()
         return self.uuids
 
     def set(self, uuids: list[UUID]) -> None:
         self.uuids = uuids
         self._storage.dump(uuids)
+
+    def set_info_data(self, is_started: bool, leaders: list[UUID]) -> None:
+        self.refresh_info()
+        self.is_started = is_started
+        self.leaders = leaders
+        self._storage_info.dump(self.prepare_info_data())
+
+    def set_last_successful_agreement(self, last_successful_agreement: int):
+        self.refresh_info()
+        self.last_successful_agreement = last_successful_agreement
+        self._storage_info.dump(self.prepare_info_data())
+
+    def prepare_info_data(self) -> dict:
+        return {
+            "isStarted": self.is_started,
+            "last_successful_agreement": self.last_successful_agreement,
+            "leaders": [leader.hex for leader in self.leaders]
+        }

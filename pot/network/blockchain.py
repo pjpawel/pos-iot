@@ -3,6 +3,7 @@ import os
 import socket
 from base64 import b64encode, b64decode
 from io import BytesIO
+from time import time
 from uuid import uuid4, UUID
 
 import requests
@@ -269,27 +270,69 @@ class PoT:
             "nodes": [node.__dict__ for node in nodes_to_show or self.nodes.all()]
         }
 
-    def node_validator_agreement_get(self) -> dict:
+    def node_validator_agreement_get(self, remote_addr: str) -> dict:
+        self._validate_if_i_am_validator()
+        self._validate_request_from_validator(remote_addr)
+        is_started = self.nodes.is_agreement_started()
+        data = {
+            "isStarted": is_started
+        }
+        if is_started:
+            data["leader"] = self.nodes.get_agreement_leader().hex
+            data["list"] = [node.hex for node in self.nodes.get_agreement_list()]
+        return data
+
+    def node_validator_agreement_start(self, remote_addr: str, data: dict):
+        self._validate_if_i_am_validator()
+        self._validate_request_from_validator(remote_addr)
+
+        leader = self._get_node_from_request_addr(remote_addr)
+        if not self.nodes.is_validator(leader):
+            raise PoTException('Leader is not a validator', 400)
+
+        is_started = self.nodes.is_agreement_started()
+        if is_started:
+            raise PoTException('Validator agreement already stared', 400)
+
+        node_ids = data.get("list")
+        if not node_ids:
+            raise PoTException("Missing list from request", 400)
+        nodes = []
+        for node_id in node_ids:
+            uid = self._validate_create_uuid(node_id)
+            self._get_node_by_identifier(uid)
+            nodes.append(uid)
+
+        self.nodes.validator_agreement.set_info_data(True, nodes)
+
         return {
-            "isStarted": self.nodes.is_agreement_started()
+            "isStarted": is_started,
+            "leader": self.nodes.get_agreement_leader().hex,
+            "list": [node.hex for node in self.nodes.get_agreement_list()]
         }
 
-    def node_validator_agreement_start(self):
-        pass
+    def node_validator_agreement_list_set(self, uuids: list[UUID]):
+        valid_id_nodes = set(uuids).intersection(set(self.nodes.all()))
+        if len(valid_id_nodes) == len(uuids):
+            raise PoTException("Invalid validator agreement list", 400)
 
-    def node_validator_agreement_list_get(self):
-        return {
-            [node.hex for node in self.nodes.validator_agreement.all()]
-        }
+        self.nodes.set_agreement_list(uuids)
 
-    def node_validator_agreement_list_set(self):
-        pass
+    def node_validator_agreement_vote(self, data: dict):
+        vote = data.get("result")
+        if vote is None:
+          raise PoTException("Missing vote result", 400)
 
-    def node_validator_agreement_accept(self):
-        pass
+
+
+
 
     def node_validator_agreement_done(self):
-        pass
+        if self.nodes.is_agreement_started() is False or len(self.nodes.validator_agreement.all()) > 0:
+            raise PoTException("Agreement is not started or list is not send", 400)
+        self.nodes.set_validators(self.nodes.validator_agreement.all())
+        self.nodes.clear_agreement_list()
+        self.nodes.validator_agreement.set_last_successful_agreement(int(time()))
 
     """
     Internal API methods
