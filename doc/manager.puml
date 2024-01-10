@@ -1,0 +1,62 @@
+@startuml classes
+set namespaceSeparator none
+class "pot.network.manager.Manager" as pot.network.manager.Manager {
+  get_storage()
+  has_empty_files() -> bool
+  has_storage_files() -> bool
+}
+class "pot.network.manager.BlockchainManager" as pot.network.manager.BlockchainManager {
+  blocks : list[Block]
+  add(block: Block) -> None
+  blocks_to_dict() -> list[dict]
+  create_first_block(self_node: SelfNode) -> None
+  load_from_bytes(b: bytes) -> None
+  refresh() -> None
+}
+class "pot.network.manager.NodeManager" as pot.network.manager.NodeManager {
+  add(node: Node) -> None
+  all() -> list[Node]
+  count_validator_nodes(self_node: SelfNode) -> int
+  exclude_self_node(self_ip: str) -> None
+  find_by_identifier(identifier: UUID) -> Node | None
+  find_by_request_addr(request_addr: str) -> Node | None
+  get_validator_nodes() -> list[Node]
+  len() -> int
+  refresh() -> None
+  set_validators(validators: list[UUID]) -> None
+  to_dict() -> list[dict]
+  update_from_json(nodes_dict: list[dict]) -> None
+}
+class "pot.network.manager.TransactionToVerifyManager" as pot.network.manager.TransactionToVerifyManager {
+  add(identifier: UUID, tx: TxToVerify) -> None
+  add_verification_result(identifier: UUID, node: Node, result: bool) -> None
+  all() -> dict[UUID, TxToVerify]
+  find(identifier: UUID) -> TxToVerify | None
+  get(identifier: UUID) -> TxToVerify | None
+  pop(identifier: UUID) -> TxToVerify
+  refresh() -> None
+}
+class "pot.network.manager.TransactionVerifiedManager" as pot.network.manager.TransactionVerifiedManager {
+  add(identifier: UUID, tx: TxVerified) -> None
+  all() -> dict[UUID, TxVerified]
+  {abstract}delete(identifiers: list) -> list[TxVerified]
+  find(identifier: UUID) -> TxVerified | None
+  refresh() -> None
+}
+class "pot.network.manager.ValidatorAgreement" as pot.network.manager.ValidatorAgreement {
+  is_started : bool
+  last_successful_agreement : int
+  leaders : list[UUID]
+  uuids : list[UUID]
+  all() -> list[UUID]
+  prepare_info_data(is_started: bool, last_success_agreement: int, leaders: list[UUID]) -> dict
+  refresh_info() -> None
+  refresh_list() -> None
+  set(uuids: list[UUID]) -> None
+}
+pot.network.manager.BlockchainManager --|> pot.network.manager.Manager
+pot.network.manager.NodeManager --|> pot.network.manager.Manager
+pot.network.manager.TransactionToVerifyManager --|> pot.network.manager.Manager
+pot.network.manager.TransactionVerifiedManager --|> pot.network.manager.Manager
+pot.network.manager.ValidatorAgreement --|> pot.network.manager.Manager
+@enduml
