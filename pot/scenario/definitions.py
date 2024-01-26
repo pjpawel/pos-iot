@@ -40,7 +40,8 @@ def instant_sender(pot: PoT):
             pot.tx_to_verified.add(uuid, TxToVerify(tx, pot.self_node))
             logging.info(LOG_PREFIX + f"Transaction {uuid.hex} sent successfully")
         else:
-            logging.error(LOG_PREFIX + f"Error while sending transaction. Error: {response.text}")
+            logging.error(LOG_PREFIX + f"Error while sending transaction. Response: {response.text}. "
+                                       f"Code: {response.status_code}")
 
 
 @print_runtime_error

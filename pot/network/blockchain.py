@@ -41,6 +41,7 @@ class PoT:
             self.blockchain.refresh()
             self.nodes.refresh()
             self.tx_to_verified.refresh()
+            self.nodes.set_validators([self.self_node.identifier])
         elif ip != genesis_ip and not only_from_file:
             logging.info("Blockchain loading from genesis")
             self.load_from_validator_node(genesis_ip)
@@ -303,7 +304,10 @@ class PoT:
             self._get_node_by_identifier(uid)
             nodes.append(uid)
 
-        self.nodes.validator_agreement.set_info_data(True, nodes)
+        if self.nodes.calculate_validators_number() != len(nodes):
+            raise PoTException("Validator number is not correct", 400)
+
+        self.nodes.validator_agreement_info.set_info_data(True, nodes)
 
         return {
             "isStarted": is_started,
@@ -318,21 +322,26 @@ class PoT:
 
         self.nodes.set_agreement_list(uuids)
 
-    def node_validator_agreement_vote(self, data: dict):
+    def node_validator_agreement_vote(self, remote_addr: str, data: dict):
         vote = data.get("result")
         if vote is None:
-          raise PoTException("Missing vote result", 400)
-
-
-
-
+            raise PoTException("Missing vote result", 400)
+        node = self._get_node_from_request_addr(remote_addr)
+        # TODO: to be completed
 
     def node_validator_agreement_done(self):
         if self.nodes.is_agreement_started() is False or len(self.nodes.validator_agreement.all()) > 0:
             raise PoTException("Agreement is not started or list is not send", 400)
-        self.nodes.set_validators(self.nodes.validator_agreement.all())
+
+        if not self.nodes.is_agreement_voting_ended():
+            raise PoTException("Voting is not ended", 400)
+
         self.nodes.clear_agreement_list()
-        self.nodes.validator_agreement.set_last_successful_agreement(int(time()))
+        if self.nodes.is_agreement_result_success():
+            self.nodes.set_validators(self.nodes.validator_agreement.all())
+            self.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
+        else:
+            self.nodes.validator_agreement_info.add_leader(self.nodes.get_most_trusted_validator())
 
     """
     Internal API methods

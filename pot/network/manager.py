@@ -5,7 +5,8 @@ from uuid import UUID
 from .block import Block, BlockCandidate
 from .node import SelfNode, Node, NodeType
 from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
-    ValidatorStorage, ValidatorAgreementStorage, ValidatorAgreementInfoStorage
+    ValidatorStorage, ValidatorAgreementStorage, ValidatorAgreementInfoStorage, ValidatorAgreementResultStorage, \
+    NodeTrustStorage
 from .transaction import TxToVerify, Tx, TxVerified
 
 
@@ -216,6 +217,43 @@ class NodeManager(Manager):
             node.set_type(NodeType.VALIDATOR if node.identifier in validators_id else NodeType.SENSOR)
 
 
+class NodeTrust(Manager):
+    _storage = NodeTrustStorage
+    _trusts = {}
+
+    BASIC_TRUST = 300
+
+    def __init__(self):
+        self._trusts = {}
+        self._storage = NodeTrustStorage()
+
+    def refresh(self) -> None:
+        self._trusts = {} if self._storage.is_empty() else self._storage.load()
+
+    def add_new_node_trust(self, node: Node):
+        self.refresh()
+        self._storage.update({node.identifier: self.BASIC_TRUST})
+        self._trusts[node.identifier] = self.BASIC_TRUST
+
+    def add_trust_to_node(self, node: Node, new_trust: int) -> None:
+        self.refresh()
+        trust = self._trusts.get(node.identifier)
+        if trust is None:
+            self.add_new_node_trust(node)
+            self.refresh()
+        self._trusts[node.identifier] = self._trusts[node.identifier] + new_trust
+        self._storage.dump(self._trusts)
+
+    def get_node_trust(self, node: Node) -> int:
+        self.refresh()
+        trust = self._trusts.get(node.identifier)
+        if trust is None:
+            self.add_new_node_trust(node)
+            self.refresh()
+            trust = self.BASIC_TRUST
+        return trust
+
+
 class TransactionVerifiedManager(Manager):
     _storage = TransactionVerifiedStorage
     _txs: dict[UUID, TxVerified]
@@ -244,61 +282,97 @@ class TransactionVerifiedManager(Manager):
         return self._txs
 
     def delete(self, identifiers: list) -> list[TxVerified]:
-        # TODO:
+        # TODO: is necessary
         pass
+
+
+class ValidatorAgreementResult(Manager):
+    _storage = ValidatorAgreementResultStorage
+    _results = dict[UUID, bool]
+
+    def __init__(self):
+        self._storage = ValidatorAgreementResultStorage()
+        self.clear()
+
+    def add(self, identifier: UUID, result: bool) -> None:
+        if not self._storage.is_up_to_date():
+            self.refresh()
+        self._results[identifier] = result
+        self._storage.update({identifier: result})
+
+    def refresh(self) -> None:
+        self._results = {} if self._storage.is_empty() else self._storage.load()
+
+    def find(self, identifier: UUID) -> bool | None:
+        if not self._storage.is_up_to_date():
+            self.refresh()
+        return self._results.get(identifier)
+
+    def all(self) -> dict[UUID, bool]:
+        if not self._storage.is_up_to_date():
+            self.refresh()
+        return self._results
+
+    def clear(self) -> None:
+        self._results = {}
+        self._storage.dump(self._results)
 
 
 class ValidatorAgreement(Manager):
     _storage = ValidatorAgreementStorage
-    _storage_info = ValidatorAgreementInfoStorage
-    is_started: bool
-    last_successful_agreement: int
-    leaders: list[UUID]
     uuids: list[UUID]
 
     def __init__(self):
         self._storage = ValidatorAgreementStorage()
-        self._storage_info = ValidatorAgreementInfoStorage()
         self.uuids = []
-        if self._storage_info.is_empty():
-            self.is_started = False
-            self.last_successful_agreement = 0
-            self.leaders = []
-            self._storage_info.dump(self.prepare_info_data())
-        self.refresh_info()
 
-    def refresh_list(self) -> None:
-        if self._storage_info.is_up_to_date():
+    def refresh(self) -> None:
+        if self._storage.is_up_to_date():
             return
         self.uuids = [] if self._storage.is_empty() else self._storage.load()
 
-    def refresh_info(self) -> None:
-        if self._storage_info.is_up_to_date():
-            return
-        data = self._storage_info.load()
-        self.is_started = data["isStarted"]
-        self.last_successful_agreement = data["last_successful_agreement"]
-        self.leaders = [UUID(identifier) for identifier in data["leaders"]]
-
     def all(self) -> list[UUID]:
         if not self._storage.is_up_to_date():
-            self.refresh_list()
+            self.refresh()
         return self.uuids
 
     def set(self, uuids: list[UUID]) -> None:
         self.uuids = uuids
         self._storage.dump(uuids)
 
+
+class ValidatorAgreementInfoManager(Manager):
+    _storage = ValidatorAgreementInfoStorage
+    is_started: bool
+    last_successful_agreement: int
+    leaders: list[UUID]
+
+    def __init__(self):
+        self._storage = ValidatorAgreementInfoStorage()
+        if self._storage.is_empty():
+            self.is_started = False
+            self.last_successful_agreement = 0
+            self.leaders = []
+            self._storage.dump(self.prepare_info_data())
+
+    def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
+        data = self._storage.load()
+        self.is_started = data["isStarted"]
+        self.last_successful_agreement = data["last_successful_agreement"]
+        self.leaders = [UUID(identifier) for identifier in data["leaders"]]
+
     def set_info_data(self, is_started: bool, leaders: list[UUID]) -> None:
-        self.refresh_info()
+        self.refresh()
         self.is_started = is_started
         self.leaders = leaders
-        self._storage_info.dump(self.prepare_info_data())
+        self._storage.dump(self.prepare_info_data())
 
     def set_last_successful_agreement(self, last_successful_agreement: int):
-        self.refresh_info()
+        self.refresh()
         self.last_successful_agreement = last_successful_agreement
-        self._storage_info.dump(self.prepare_info_data())
+        self._storage.dump(self.prepare_info_data())
 
     def prepare_info_data(self) -> dict:
         return {
@@ -306,3 +380,7 @@ class ValidatorAgreement(Manager):
             "last_successful_agreement": self.last_successful_agreement,
             "leaders": [leader.hex for leader in self.leaders]
         }
+
+    def add_leader(self, node: Node) -> None:
+        self.refresh()
+        self.leaders.append(node.identifier)

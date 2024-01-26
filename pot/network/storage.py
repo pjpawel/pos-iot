@@ -168,6 +168,52 @@ class NodeStorage(Storage):
             raise e
 
 
+class NodeTrustStorage(Storage):
+    PATH = 'nodes_trust'
+
+    def load(self) -> dict[UUID, int]:
+        self._wait_for_lock()
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        with open(self.path, 'r') as f:
+            reader = csv.reader(f)
+            trusts = {}
+            for row in reader:
+                trusts[UUID(row[0])] = int(row[1])
+        self.update_cache()
+        return trusts
+
+    def update(self, trusts: dict[UUID, int]) -> None:
+        logging.info(f"Appending {len(trusts)} {self.PATH} to storage")
+        self.wait_for_set_lock()
+        try:
+            with open(self.path, 'a') as f:
+                writer = csv.writer(f)
+                for key in list(trusts.keys()):
+                    writer.writerow([key.hex, str(trusts[key])])
+            self.update_cache()
+            self.unlock()
+        except Exception as e:
+            self.unlock()
+            raise e
+
+    def dump(self, trusts: dict[UUID, int], lock: bool = True) -> None:
+        if lock:
+            self.wait_for_set_lock()
+        logging.info(f"Writing {len(trusts)} {self.PATH} to storage")
+        try:
+            with open(self.path, 'w') as f:
+                writer = csv.writer(f)
+                for key in list(trusts.keys()):
+                    writer.writerow([key.hex, str(trusts[key])])
+            self.update_cache()
+            if lock:
+                self.unlock()
+        except Exception as e:
+            if lock:
+                self.unlock()
+            raise e
+
+
 class TransactionStorage(Storage):
     PATH = 'transaction'
 
@@ -268,7 +314,7 @@ class ValidatorStorage(Storage):
         self._wait_for_lock()
         logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
         with open(self.path) as f:
-            uuids = [UUID(hx) for hx in f.readline().split(self.SEPARATOR)]
+            uuids = [UUID(hx) for hx in f.read().split(self.SEPARATOR)]
         self.update_cache()
         return uuids
 
@@ -310,4 +356,50 @@ class ValidatorAgreementInfoStorage(Storage):
             self.unlock()
         except Exception as e:
             self.unlock()
+            raise e
+
+
+class ValidatorAgreementResultStorage(Storage):
+    PATH = 'validator_agreement_result'
+
+    def load(self) -> dict[UUID, bool]:
+        self._wait_for_lock()
+        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        with open(self.path, 'r') as f:
+            reader = csv.reader(f)
+            txs = {}
+            for row in reader:
+                txs[UUID(row[0])] = bool(row[1])
+        self.update_cache()
+        return txs
+
+    def update(self, results: dict[UUID, bool]) -> None:
+        logging.info(f"Appending {len(results)} {self.PATH} to storage")
+        self.wait_for_set_lock()
+        try:
+            with open(self.path, 'a') as f:
+                writer = csv.writer(f)
+                for key in list(results.keys()):
+                    writer.writerow([key.hex, results[key].__str__()])
+            self.update_cache()
+            self.unlock()
+        except Exception as e:
+            self.unlock()
+            raise e
+
+    def dump(self, txs: dict[UUID, bool], lock: bool = True) -> None:
+        if lock:
+            self.wait_for_set_lock()
+        logging.info(f"Writing {len(txs)} {self.PATH} to storage")
+        try:
+            with open(self.path, 'w') as f:
+                writer = csv.writer(f)
+                for key in list(txs.keys()):
+                    writer.writerow([key.hex, txs[key].__str__()])
+            self.update_cache()
+            if lock:
+                self.unlock()
+        except Exception as e:
+            if lock:
+                self.unlock()
             raise e
