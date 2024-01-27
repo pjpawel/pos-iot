@@ -30,3 +30,8 @@ Full simulation can be start using docker configuration file `docker-compose.yam
 ```shell
 docker compose up
 ```
+
+Zatwierdzanie walidatorów:
+- 50% walidatorów nie może być taka sama.
+- urządzenie może się nie zgodzić na bycie walidatorem
+

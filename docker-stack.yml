@@ -1,0 +1,60 @@
+
+services:
+
+  node_genesis:
+    image: pot-iot
+    ports:
+      - "5010:5000"
+    volumes:
+      - type: bind
+        source: /home/pp/programs/magisterka/storage/
+        target: /mnt/storage
+    networks:
+      blockchain_swarm:
+    environment:
+      SECRET_KEY: 07f83cd2a279a2edc6b7ae1ced2ced8b77610efb2d2194813d7b446155d0b567
+      NODE_TYPE: VALIDATOR
+      START_ROLE: genesis
+      GENESIS_NODE: node_genesis
+
+  node_validator:
+    image: pot-iot
+    ports:
+      - "5011:5000"
+    volumes:
+      - type: bind
+        source: /home/pp/programs/magisterka/storage/
+        target: /mnt/storage
+    networks:
+      blockchain_swarm:
+    environment:
+      SECRET_KEY: 07f83cd2a279a2edc6b7ae1ced2cef4d325490efb2d2197813d7b446155d0c64
+      NODE_TYPE: VALIDATOR
+      GENESIS_NODE: node_genesis
+    deploy:
+      replicas: 1
+
+
+  node_normal:
+    image: pot-iot
+    ports:
+      - "5012:5000"
+    volumes:
+      - type: bind
+        source: /home/pp/programs/magisterka/storage/
+        target: /mnt/storage
+    networks:
+      blockchain_swarm:
+    environment:
+      SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f906c6edbbb194acdff4b
+      NODE_TYPE: SENSOR
+      GENESIS_NODE: node_genesis
+    deploy:
+      replicas: 1
+
+networks:
+  blockchain_swarm:
+#    ipam:
+#      config:
+#        - subnet: 172.18.0.0/16
+#          gateway: 172.18.0.1

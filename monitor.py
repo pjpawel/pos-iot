@@ -3,25 +3,26 @@ import os
 import pandas as pd
 from matplotlib.pyplot import savefig
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from pot.network.storage import BlocksStorage, NodeStorage, TransactionStorage
 
-storage_path = os.path.join(os.path.dirname(__file__), 'monitor', 'storage')
-result_path = os.path.join(os.path.dirname(__file__), 'monitor', 'result')
+storage_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'storage'))
+result_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'monitor', 'result'))
 
 
 def get_info_from_blockchain(path: str) -> dict:
     storage = BlocksStorage(path)
     blocks = storage.load()
     return {
-        "len": len(blocks)
+        "len": len(blocks),
+        "transaction_len": sum([len(block.transactions) for block in blocks])
     }
 
 
 def get_info_from_nodes(path: str) -> dict:
     storage = NodeStorage(path)
     nodes = storage.load()
+    # trust_storage
     return {
         "len": len(nodes),
         "trust": {f"{node.identifier.hex}": 0 for node in nodes}
@@ -43,12 +44,13 @@ def get_info_from_transactions_verified(path: str) -> dict:
         "len": len(txs)
     }
 
+
 cols_dict = {
     'time': 'Time',
     'number_of_nodes': 'Number of nodes',
     'node_trust': 'Node trust',
     'number_of_blocks': 'Number of blocks',
-    'number_of_transaction_to_verify': 'Number of transactions to verifiy',
+    'number_of_transaction_to_verify': 'Number of transactions to verify',
     'number_of_verified_transactions': 'Number of verified transactions',
 }
 
@@ -63,18 +65,20 @@ for node in os.listdir(storage_path):
     if node == '.gitignore':
         continue
 
+    print(f"Processing node {node}")
+
     df = pd.DataFrame(columns=cols)
     df.set_index('time', inplace=True)
 
-    dirs = [int(dir) for dir in os.listdir(os.path.join(storage_path, node))]
+    dirs = [int(time_dir) for time_dir in os.listdir(os.path.join(storage_path, node, 'dump'))]
     dirs.sort()
     for time in dirs:
         # list all time in dir
         if not first_time:
             first_time = time
 
-        storage_dir = os.path.join(storage_path, node, str(time))
-        print(f"Processing dir {storage_dir}")
+        storage_dir = os.path.join(storage_path, node, 'dump', str(time))
+        # print(f"Processing dir {storage_dir}")
 
         try:
             blocks_info = get_info_from_blockchain(storage_dir)
@@ -99,7 +103,6 @@ for node in os.listdir(storage_path):
 # check if all df has step by step info
 for col in cols[1:]:
     max_value = 0
-    index = None
     data = {}
     for node, df in dfs.items():
         data[node] = df[col]
@@ -109,13 +112,25 @@ for col in cols[1:]:
         #     index = df['time']
 
     df_show = pd.DataFrame(data)
+    print(f"Processing column {col}")
+    print(df_show.head())
+    # df_show.plot(
+    #     legend=True,
+    #     title=f"Plot {col} against time",
+    #     xlabel="Time [s]",
+    #     ylabel=col,
+    #     #        subplots=True,
+    #     ylim=(-max_value*0.1, max_value + max_value*0.1),
+    #     grid=True
+    # )
     df_show.plot(
+        # style=['+-', '.--'],
         legend=True,
         title=f"Plot {col} against time",
-        xlabel="Time",
+        xlabel="Time [s]",
         ylabel=col,
-#        subplots=True,
-        ylim=(-0.5, max_value + 2),
+        #        subplots=True,
+        ylim=(-max_value * 0.1, max_value + max_value * 0.1),
         grid=True
     )
     savefig(os.path.join(result_path, f"plot-{col}.png"))

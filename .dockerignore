@@ -10,5 +10,5 @@ venv/
 # Others
 test-scripts/
 storage/*
-log/*
+log
 test/

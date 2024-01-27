@@ -30,7 +30,7 @@ app = Flask(__name__)
 Load blockchain
 """
 app.pot = PoT()
-app.pot.load()
+app.pot.load(True)
 
 
 @app.errorhandler(PoTException)

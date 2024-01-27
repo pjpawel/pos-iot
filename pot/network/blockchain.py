@@ -31,7 +31,8 @@ class PoT:
     def load(self, only_from_file: bool = False) -> None:
         hostname = socket.gethostname()
         ip = socket.gethostbyname(hostname)
-        genesis_ip = os.getenv("GENESIS_NODE")
+        genesis_hostname = os.getenv("GENESIS_NODE")
+        genesis_ip = socket.gethostbyname(genesis_hostname)
 
         name = "genesis" if ip == genesis_ip else "node"
         logging.info(f"=== Running as {name} ===")
@@ -41,7 +42,6 @@ class PoT:
             self.blockchain.refresh()
             self.nodes.refresh()
             self.tx_to_verified.refresh()
-            self.nodes.set_validators([self.self_node.identifier])
         elif ip != genesis_ip and not only_from_file:
             logging.info("Blockchain loading from genesis")
             self.load_from_validator_node(genesis_ip)
@@ -82,10 +82,7 @@ class PoT:
 
     def send_transaction_populate(self, uuid: UUID, tx: Tx):
         tx_encoded = tx.encode()
-        for node in self.nodes.all():
-            if node.type == NodeType.VALIDATOR:
-                if node.identifier == self.self_node.identifier:
-                    continue
+        for node in self.nodes.get_validator_nodes():
             try:
                 Request.send_transaction_populate(node.host, node.port, uuid.hex, tx_encoded)
             except Exception as e:
@@ -96,9 +93,7 @@ class PoT:
             "result": verified,
             "message": message
         }
-        for node in self.nodes.all():
-            if node.identifier == self.self_node.identifier:
-                continue
+        for node in self.nodes.get_validator_nodes():
             try:
                 Request.send_populate_verification_result(node.host, node.port, uuid.hex, data_to_send)
             except Exception as e:
@@ -226,7 +221,7 @@ class PoT:
 
         for node in self.nodes.all():
             if node.host == node_ip and node.port == port:
-                return {"error": f"Node is already registered with identifier: {node.identifier}"}, 400
+                raise PoTException(f"Node is already registered with identifier: {node.identifier}", 400)
 
         new_node = Node(identifier, node_ip, 5000, n_type)
         data_to_send = {
@@ -236,11 +231,14 @@ class PoT:
             "type": n_type
         }
 
-        # Populate nodes
-        for node in self.nodes.get_validator_nodes():
+        self.nodes.add(new_node)
+
+        # Populate to all nodes
+        for node in self.nodes.all():
+            if node.identifier == new_node.identifier:
+                continue
             requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
 
-        self.nodes.add(new_node)
         return data_to_send
 
     def node_update(self, data: dict) -> dict | tuple:

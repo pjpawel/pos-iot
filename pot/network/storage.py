@@ -312,6 +312,9 @@ class ValidatorStorage(Storage):
 
     def load(self) -> list[UUID]:
         self._wait_for_lock()
+        if self.is_empty():
+            self.update_cache()
+            return []
         logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
         with open(self.path) as f:
             uuids = [UUID(hx) for hx in f.read().split(self.SEPARATOR)]
@@ -387,19 +390,16 @@ class ValidatorAgreementResultStorage(Storage):
             self.unlock()
             raise e
 
-    def dump(self, txs: dict[UUID, bool], lock: bool = True) -> None:
-        if lock:
-            self.wait_for_set_lock()
+    def dump(self, txs: dict[UUID, bool]) -> None:
         logging.info(f"Writing {len(txs)} {self.PATH} to storage")
+        self.wait_for_set_lock()
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
                 for key in list(txs.keys()):
                     writer.writerow([key.hex, txs[key].__str__()])
             self.update_cache()
-            if lock:
-                self.unlock()
+            self.unlock()
         except Exception as e:
-            if lock:
-                self.unlock()
+            self.unlock()
             raise e

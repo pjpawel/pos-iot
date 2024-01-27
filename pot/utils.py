@@ -8,7 +8,7 @@ def setup_logger(prefix: str = "") -> None:
     handler.suffix = "%Y%m%d"
     level = logging.getLevelName(os.getenv('LOG_LEVEL', 'INFO'))
     logging.basicConfig(
-        format=f"%(asctime)s-%(levelname)s:::%(filename)s.%(module)s.%(lineno)d:{prefix}: %(message)s",
+        format=f"%(asctime)s  %(process)d/{prefix}  %(module)s.%(lineno)d  %(levelname)s: %(message)s",
         level=level,
         handlers=[handler],
         encoding="UTF-8",
