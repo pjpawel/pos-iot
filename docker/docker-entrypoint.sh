@@ -13,10 +13,10 @@ ln -s "$STORAGE_PATH" /storage
 ln -s /storage/log log
 
 #Load all files
-python load_files.py
+#python load_files.py
 
 # Starting background jobs and gunicorn server
-gunicorn -w 2 -b 0.0.0.0:5000 'wsgi:main()' &
+gunicorn -w 1 -b 0.0.0.0:5000 'wsgi:main()' &
 
 python3 start_dump_worker.py &
 python3 start_scenario_job.py &
