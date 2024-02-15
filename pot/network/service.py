@@ -4,7 +4,7 @@ from uuid import UUID
 from pot.network.block import BlockCandidate, Block
 from pot.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
     ValidatorAgreement, ValidatorAgreementInfoManager, ValidatorAgreementResult, NodeTrust, ValidatorManager
-from pot.network.node import Node as NodeDto, SelfNode, NodeType
+from pot.network.node import Node as NodeDto, SelfNodeInfo, NodeType
 from pot.network.transaction import TxVerified
 
 
@@ -19,11 +19,11 @@ class Blockchain(BlockchainManager):
     def add_new_transaction(self, uuid: UUID, tx: TxVerified) -> None:
         self.txs_verified.add(uuid, tx)
 
-    def create_block(self, self_node: SelfNode) -> Block:
+    def create_block(self, self_node: SelfNodeInfo) -> Block:
         txs_verified = self.txs_verified.all()
         txs = [txs_verified.tx for txs_verified in txs_verified.values()]
         cblock = BlockCandidate.create_new(txs)
-        self.txs_verified.delete(txs_verified.keys())
+        self.txs_verified.delete(list(txs_verified.keys()))
         block = cblock.sign(
             self.get_last_prev_hash(),
             self_node.identifier,
@@ -32,7 +32,7 @@ class Blockchain(BlockchainManager):
         self.add(block)
         return block
 
-    def create_first_block(self, self_node: SelfNode) -> None:
+    def create_first_block(self, self_node: SelfNodeInfo) -> None:
         block = BlockCandidate.create_new([])
         self.add(block.sign(
             sha256(b'0000000000').digest(),

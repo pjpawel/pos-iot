@@ -1,13 +1,12 @@
 import random
 from time import sleep
-from uuid import uuid4, UUID
+from uuid import UUID
 
 import requests
 import logging
 
 from .utils import get_random_from_list, print_runtime_error
 from ..network.blockchain import PoT
-from ..network.node import SelfNode, Node
 from ..network.transaction import TxCandidate, TxToVerify
 
 LOG_PREFIX = 'SCENARIO: '
@@ -41,7 +40,8 @@ def instant_sender(pot: PoT):
         if response.status_code == 200:
             assert isinstance(response.json(), dict)
             uuid = UUID(response.json().get("id"))
-            pot.tx_to_verified.add(uuid, TxToVerify(tx, pot.self_node))
+            self_node = pot.nodes.find_by_identifier(pot.self_node.identifier)
+            pot.tx_to_verified.add(uuid, TxToVerify(tx, self_node))
             logging.info(LOG_PREFIX + f"Transaction {uuid.hex} sent successfully")
         else:
             logging.error(LOG_PREFIX + f"Error while sending transaction. Response: {response.text}. "

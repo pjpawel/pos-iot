@@ -81,11 +81,36 @@ class Node:
         }
 
 
-class SelfNode(Node):
+class SelfNodeInfo:
     INFO_PATH = 'self_node.json'
 
+    identifier: UUID
     public_key: Ed25519PublicKey
     private_key: Ed25519PrivateKey
+
+    def __init__(self):
+        self.identifier = uuid4()
+        storage = os.getenv('STORAGE_DIR')
+        key_path = os.path.join(storage, self.INFO_PATH)
+        if os.path.isfile(key_path):
+            with open(key_path) as f:
+                keys = json.load(f)
+            private_key_stream = bytes(keys.get("private"), "utf-8")
+            self.private_key = serialization.load_pem_private_key(private_key_stream, password=None)
+            public_key_stream = bytes(keys.get("public"), "utf-8")
+            self.public_key = serialization.load_pem_public_key(public_key_stream)
+        else:
+            self.private_key = Ed25519PrivateKey.generate()
+            self.public_key = self.private_key.public_key()
+            self.dump(storage)
+
+    def get_node(self) -> Node:
+        return Node(
+            self.identifier,
+            socket.gethostbyname(socket.gethostname()),
+            5000,
+            os.getenv("NODE_TYPE")
+        )
 
     def get_public_key(self) -> Ed25519PublicKey:
         return self.public_key
@@ -95,31 +120,6 @@ class SelfNode(Node):
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ).decode("utf-8")
-
-    @classmethod
-    def load(cls, n_type: NodeType | str | None = None):
-        if not n_type:
-            n_type = os.getenv("NODE_TYPE")
-        storage = os.getenv('STORAGE_DIR')
-        key_path = os.path.join(storage, cls.INFO_PATH)
-        own_ip = socket.gethostbyname(socket.gethostname())
-        if os.path.isfile(key_path):
-            with open(key_path) as f:
-                keys = json.load(f)
-            node = cls(bytes.fromhex(keys.get("identifier")), own_ip, 5000)
-            private_key_stream = bytes(keys.get("private"), "utf-8")
-            node.private_key = serialization.load_pem_private_key(private_key_stream, password=None)
-            public_key_stream = bytes(keys.get("public"), "utf-8")
-            node.public_key = serialization.load_pem_public_key(public_key_stream)
-        else:
-            node = cls(uuid4(), own_ip, 5000)
-            node.private_key = Ed25519PrivateKey.generate()
-            node.public_key = node.private_key.public_key()
-            node.dump(storage)
-        if isinstance(n_type, str):
-            n_type = getattr(NodeType, n_type)
-        node.type = n_type
-        return node
 
     def dump(self, storage_dir: str) -> None:
         private_key_pem = self.private_key.private_bytes(
@@ -137,6 +137,3 @@ class SelfNode(Node):
                 "private": private_key_pem.decode("utf-8"),
                 "identifier": self.identifier.bytes_le.hex()
             }, f)
-
-    def to_list(self) -> list[str]:
-        return [self.identifier.hex, self.host, str(self.port), str(self.type), '1']

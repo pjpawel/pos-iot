@@ -11,7 +11,7 @@ import requests
 from .service import Blockchain, Node as NodeService, TransactionToVerify
 from .storage import encode_chain
 from .transaction import Tx, TxToVerify
-from .node import Node, SelfNode, NodeType
+from .node import Node, SelfNodeInfo, NodeType
 from .request import Request
 from .exception import PoTException
 
@@ -20,10 +20,10 @@ class PoT:
     blockchain: Blockchain
     nodes: NodeService
     tx_to_verified: TransactionToVerify
-    self_node: SelfNode
+    self_node: SelfNodeInfo
 
     def __init__(self):
-        self.self_node = SelfNode.load(os.getenv("NODE_TYPE"))
+        self.self_node = SelfNodeInfo()
         self.blockchain = Blockchain()
         self.nodes = NodeService()
         self.tx_to_verified = TransactionToVerify()
@@ -50,10 +50,9 @@ class PoT:
             self.nodes.validators.set_validators([genesis_node.identifier])
             self.load_from_validator_node(genesis_ip)
 
-        # self.nodes.exclude_self_node(ip)
-
         if ip == genesis_ip and not self.blockchain.blocks:
-            self.nodes.add(self.self_node)
+            node = self.self_node.get_node()
+            self.nodes.add(node)
             self.blockchain.create_first_block(self.self_node)
             self.nodes.validators.set_validators([self.self_node.identifier])
 
@@ -68,10 +67,12 @@ class PoT:
     def load_from_validator_node(self, genesis_ip: str) -> None:
         if self.is_self_node_is_registered(genesis_ip):
             return
+        node = self.self_node.get_node()
+        self.nodes.add(node)
         data = {
-            "identifier": self.self_node.identifier.hex,
+            "identifier": node.identifier.hex,
             "port": 5000,
-            "type": self.self_node.type.name
+            "type": node.type.name
         }
         logging.info("Registering node")
         response = requests.post(f"http://{genesis_ip}:{5000}/node/register", json=data)
@@ -357,8 +358,7 @@ class PoT:
     """
 
     def _validate_if_i_am_validator(self) -> None:
-
-        if not self.nodes.is_validator(self.self_node):
+        if not self.nodes.is_validator(self._get_node_by_identifier(self.self_node.identifier)):
             raise PoTException("I am not validator", 400)
 
     def _validate_request_from_validator(self, request_addr: str) -> None:
@@ -375,11 +375,10 @@ class PoT:
         return node
 
     def _get_node_by_identifier(self, identifier: UUID) -> Node:
-        if self.self_node.identifier == identifier:
-            return self.self_node
         node = self.nodes.find_by_identifier(identifier)
         if not node:
             raise Exception(f"Node {identifier.hex} was not found")
+        return node
 
     def _validate_create_uuid(self, identifier: str) -> UUID:
         try:

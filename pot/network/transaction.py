@@ -9,7 +9,7 @@ from time import time
 from cryptography.exceptions import InvalidSignature
 
 from .exception import PoTException
-from .node import SelfNode, Node
+from .node import SelfNodeInfo, Node
 from .utils import decode_int, decode_str, encode_int, encode_str, read_bytes
 
 
@@ -125,7 +125,7 @@ class TxCandidate:
         out += [data_encoded]
         return b''.join(out)
 
-    def sign(self, self_node: SelfNode) -> Tx:
+    def sign(self, self_node: SelfNodeInfo) -> Tx:
         self.sender = self_node.identifier
         signature = self_node.private_key.sign(self.encode())
         return Tx(self.version, self.timestamp, self.sender, signature, self.data)
