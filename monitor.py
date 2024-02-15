@@ -2,12 +2,14 @@ import os
 
 import pandas as pd
 from matplotlib.pyplot import savefig
-import matplotlib.pyplot as plt
 
 from pot.network.storage import BlocksStorage, NodeStorage, TransactionStorage
 
 storage_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'storage'))
 result_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'monitor', 'result'))
+
+firsts_records = 100
+#firsts_records = None
 
 
 def get_info_from_blockchain(path: str) -> dict:
@@ -72,10 +74,14 @@ for node in os.listdir(storage_path):
 
     dirs = [int(time_dir) for time_dir in os.listdir(os.path.join(storage_path, node, 'dump'))]
     dirs.sort()
+    record_i = 0
     for time in dirs:
         # list all time in dir
         if not first_time:
             first_time = time
+
+        if firsts_records is not None and firsts_records < record_i:
+            break
 
         storage_dir = os.path.join(storage_path, node, 'dump', str(time))
         # print(f"Processing dir {storage_dir}")
@@ -96,6 +102,8 @@ for node in os.listdir(storage_path):
             txs_to_ver_info['len'],
             txs_ver_info['len']
         ]
+        record_i += 1
+
     # check if all df has step by step info
     df.to_excel(os.path.join(result_path, f"result-{node}.xlsx"))
     dfs[node] = df

@@ -29,7 +29,11 @@ def instant_sender(pot: PoT):
             continue
         logging.info(LOG_PREFIX + 'Available nodes to send to: ' +
                      ', '.join([node.identifier.hex for node in pot.nodes.all()]))
-        node = get_random_from_list(pot.nodes.all())
+        if pot.nodes.count_validator_nodes() < 2:
+            continue
+        node = get_random_from_list(pot.nodes.get_validator_nodes())
+        if node.identifier == pot.self_node.identifier:
+            continue
         logging.info(LOG_PREFIX + f"Creating transaction to send")
         tx_can = TxCandidate({"t": "1", "d": random.randint(0, 546)})
         tx = tx_can.sign(pot.self_node)
@@ -45,10 +49,10 @@ def instant_sender(pot: PoT):
 
 
 @print_runtime_error
-def mad_sender(self_node: SelfNode, nodes: list[Node]):
+def mad_sender(pot: PoT):
     while True:
         sleep(5)
-        node = get_random_from_list(nodes)
+        node = get_random_from_list(pot.nodes.get_validator_nodes())
         requests.post(f"http://{node.host}:{node.port}/transaction", {
             # TODO: generate random data with signature of sender
         })
@@ -63,7 +67,7 @@ def simple_sender(pot: PoT):
             continue
         logging.info(LOG_PREFIX + 'Available nodes to send to: ' +
                      ''.join([node.identifier.hex for node in pot.nodes.all()]))
-        node = get_random_from_list(pot.nodes.all())
+        node = get_random_from_list(pot.nodes.get_validator_nodes())
         logging.info(LOG_PREFIX + f"Creating transaction to send")
         tx_can = TxCandidate({"t": "1", "d": random.randint(0, 546)})
         tx = tx_can.sign(pot.self_node)

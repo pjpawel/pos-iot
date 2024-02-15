@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import time
+import traceback
 from io import BytesIO
 from sys import getsizeof
 from typing import BinaryIO
@@ -42,7 +43,7 @@ class Storage:
         self.path = os.path.join(self._storage_dir, self.PATH)
         self._lock = self.path + ".lock"
         Path(self.path).touch(0o777)
-        self.update_cache()
+        self.update_cache()  # TODO: Po nim nie może nastąpić is_up_to_date
 
     def is_up_to_date(self):
         return self._cached_mtime == os.path.getmtime(self.path) and self._cached_size == os.path.getsize(self.path)
@@ -143,7 +144,7 @@ class NodeStorage(Storage):
 
     def dump(self, nodes: list[Node]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Writing {len(nodes)} {self.PATH} to storage")
+        logging.info(f"Writing {len(nodes)} nodes to storage {self.PATH}")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
@@ -156,7 +157,7 @@ class NodeStorage(Storage):
 
     def update(self, nodes: list[Node]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Appending {len(nodes)} {self.PATH} to storage")
+        logging.info(f"Appending {len(nodes)} nodes to storage {self.PATH}")
         try:
             with open(self.path, 'a') as f:
                 writer = csv.writer(f)

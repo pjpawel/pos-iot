@@ -13,7 +13,7 @@ load_dotenv()
 """
 Configuring logger
 """
-setup_logger("LOADING")
+setup_logger("LOAD")
 
 """
 Load/create files

@@ -29,27 +29,29 @@ services:
        target: /mnt/storage
    networks:
      blockchain:
+       ipv4_address: 172.18.0.3
    environment:
      SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
      NODE_TYPE: VALIDATOR
      GENESIS_NODE: node_genesis
 
-#  node_normal:
-#    build: .
-#    depends_on:
-#      - node_genesis
-#    ports:
-#      - "5012:5000"
-#    volumes:
-#      - type: bind
-#        source: /home/pp/programs/magisterka/storage
-#        target: /mnt/storage
-#    networks:
-#      blockchain:
-#    environment:
-#      SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
-#      NODE_TYPE: VALIDATOR
-#      GENESIS_NODE: node_genesis
+  node_normal:
+    build: .
+    depends_on:
+      - node_validator
+    ports:
+      - "5012:5000"
+    volumes:
+      - type: bind
+        source: /home/pp/programs/magisterka/storage
+        target: /mnt/storage
+    networks:
+      blockchain:
+        ipv4_address: 172.18.0.4
+    environment:
+      SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
+      NODE_TYPE: VALIDATOR
+      GENESIS_NODE: node_genesis
 
 
 networks:

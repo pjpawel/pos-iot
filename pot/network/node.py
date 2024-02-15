@@ -1,4 +1,6 @@
+import logging
 import os
+import socket
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 import json
@@ -61,10 +63,10 @@ class Node:
 
     @classmethod
     def load_from_list(cls, data: list):
-        return cls(data[0], data[1], int(data[2]), data[3])
+        return cls(data[0], data[1], int(data[2]), NodeType.SENSOR)
 
     def to_list(self) -> list[str]:
-        return [self.identifier.hex, self.host, str(self.port), str(self.type), '0']
+        return [self.identifier.hex, self.host, str(self.port)]
 
     def __str__(self) -> str:
         return ':'.join(self.to_list())
@@ -100,16 +102,17 @@ class SelfNode(Node):
             n_type = os.getenv("NODE_TYPE")
         storage = os.getenv('STORAGE_DIR')
         key_path = os.path.join(storage, cls.INFO_PATH)
+        own_ip = socket.gethostbyname(socket.gethostname())
         if os.path.isfile(key_path):
             with open(key_path) as f:
                 keys = json.load(f)
-            node = cls(bytes.fromhex(keys.get("identifier")), "localhost", 5000)
+            node = cls(bytes.fromhex(keys.get("identifier")), own_ip, 5000)
             private_key_stream = bytes(keys.get("private"), "utf-8")
             node.private_key = serialization.load_pem_private_key(private_key_stream, password=None)
             public_key_stream = bytes(keys.get("public"), "utf-8")
             node.public_key = serialization.load_pem_public_key(public_key_stream)
         else:
-            node = cls(uuid4(), "localhost", 5000)
+            node = cls(uuid4(), own_ip, 5000)
             node.private_key = Ed25519PrivateKey.generate()
             node.public_key = node.private_key.public_key()
             node.dump(storage)

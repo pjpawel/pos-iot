@@ -1,6 +1,3 @@
-from random import random
-from time import sleep
-
 from dotenv import load_dotenv
 
 from pot.start_node_flask import app
@@ -11,13 +8,11 @@ def main():
     """
     Loading env values
     """
-    load_dotenv()
-
-    """
-    Configuring logger
-    """
-    setup_logger()
-
-    sleep(random()/10.0)
+    # load_dotenv()
+    #
+    # """
+    # Configuring logger
+    # """
+    # setup_logger()
 
     return app

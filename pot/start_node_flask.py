@@ -19,8 +19,7 @@ load_dotenv()
 """
 Configuring logger
 """
-setup_logger()
-
+setup_logger("API")
 
 """
 Run flask app
@@ -30,7 +29,7 @@ app = Flask(__name__)
 Load blockchain
 """
 app.pot = PoT()
-app.pot.load(True)
+app.pot.load()
 
 
 @app.errorhandler(PoTException)
@@ -84,7 +83,7 @@ def get_transaction_to_verify():
             "voting": {
                 "result": tx_to_verify.get_positive_votes(),
                 "count": len(tx_to_verify.voting),
-                "voting": [{"uuid": k.hex, "result": v}for k, v in tx_to_verify.voting.items()]
+                "voting": [{"uuid": k.hex, "result": v} for k, v in tx_to_verify.voting.items()]
             }
         }
     return data
@@ -110,8 +109,16 @@ def nodes():
     :return:
     """
     return {
-        "nodes": app.pot.nodes.to_dict()
+        "nodes": app.pot.nodes.prepare_all_nodes_info()
     }
+
+
+@app.get("/node/<identifier>")
+def node(identifier: str):
+    node_f = app.pot.nodes.find_by_identifier(UUID(identifier))
+    if node_f is None:
+        return "Node not found", 404
+    return node_f.__dict__
 
 
 @app.get("/public-key", endpoint='get_public_key')

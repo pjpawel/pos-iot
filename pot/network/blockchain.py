@@ -44,20 +44,30 @@ class PoT:
             self.tx_to_verified.refresh()
         elif ip != genesis_ip and not only_from_file:
             logging.info("Blockchain loading from genesis")
-            self.load_from_validator_node(genesis_ip)
             identifier_hex = Request.get_info(genesis_ip, 5000).get("identifier")
-            self.nodes.add(Node(identifier_hex, genesis_ip, 5000, NodeType.VALIDATOR))
+            genesis_node = Node(identifier_hex, genesis_ip, 5000, NodeType.VALIDATOR)
+            self.nodes.add(genesis_node)
+            self.nodes.validators.set_validators([genesis_node.identifier])
+            self.load_from_validator_node(genesis_ip)
 
-        self.nodes.exclude_self_node(ip)
+        # self.nodes.exclude_self_node(ip)
 
         if ip == genesis_ip and not self.blockchain.blocks:
+            self.nodes.add(self.self_node)
             self.blockchain.create_first_block(self.self_node)
+            self.nodes.validators.set_validators([self.self_node.identifier])
 
     """
     Internal methods
     """
 
+    def is_self_node_is_registered(self, genesis_ip: str) -> bool:
+        response = requests.get(f"http://{genesis_ip}:{5000}/node/{self.self_node.identifier.hex}")
+        return response.status_code == 200
+
     def load_from_validator_node(self, genesis_ip: str) -> None:
+        if self.is_self_node_is_registered(genesis_ip):
+            return
         data = {
             "identifier": self.self_node.identifier.hex,
             "port": 5000,
@@ -74,7 +84,7 @@ class PoT:
         data = {"port": 5000}
         response = requests.post(f"http://{genesis_ip}:{5000}/node/update", json=data)
         if response.status_code != 200:
-            raise Exception(f"Cannot register node in genesis node: {genesis_ip}:{5000} Code: {response.status_code} "
+            raise Exception(f"Cannot update from genesis node: {genesis_ip}:{5000} Code: {response.status_code} "
                             f"Response data: " + response.text)
         response_json = response.json()
         self.blockchain.load_from_bytes(b64decode(bytes.fromhex(response_json.get("blockchain"))))
@@ -129,7 +139,7 @@ class PoT:
         #     if tx_to_verified.is_voting_positive():
         #         self.blockchain.add_new_transaction(tx_to_verified.tx)
 
-        if len(tx_to_verified.voting) == self.nodes.count_validator_nodes(self.self_node):
+        if len(tx_to_verified.voting) == self.nodes.count_validator_nodes():
             logging.info(f"Transaction {uuid.hex} voting")
             tx_to_verified = self.tx_to_verified.pop(uuid)
             assert isinstance(tx_to_verified, TxToVerify)
@@ -142,7 +152,7 @@ class PoT:
         for node in self.nodes.all():
             if self.self_node.identifier == node.identifier:
                 continue
-            # Send validators list
+            # TODO: Send validators list
 
     """
     API methods
@@ -204,10 +214,12 @@ class PoT:
     def populate_new_node(self, data: dict, request_addr: str) -> None:
         self._validate_request_from_validator(request_addr)
 
+        self._validate_request_dict_keys(data, ["identifier", "host", "port", "type"])
         identifier = self._validate_create_uuid(data.get("identifier"))
         host = data.get("host")
         port = int(data.get("port"))
-        n_type = getattr(NodeType, data.get("type"))
+        #n_type = getattr(NodeType, data.get("type"))
+        n_type = NodeType.SENSOR
 
         # check if node is already register
         for node in self.nodes.all():
@@ -224,20 +236,19 @@ class PoT:
                 raise PoTException(f"Node is already registered with identifier: {node.identifier}", 400)
 
         new_node = Node(identifier, node_ip, 5000, n_type)
+        self.nodes.add(new_node)
+
+        # Populate to all nodes
         data_to_send = {
             "identifier": new_node.identifier.hex,
             "host": new_node.host,
             "port": new_node.port,
-            "type": n_type
+            #"type": n_type.value
         }
-
-        self.nodes.add(new_node)
-
-        # Populate to all nodes
         for node in self.nodes.all():
-            if node.identifier == new_node.identifier:
+            if node.identifier == new_node.identifier or node.identifier == self.self_node.identifier:
                 continue
-            requests.post(f"http://{node.host}:{node.port}/node/populate-new", data_to_send, timeout=15.0)
+            requests.post(f"http://{node.host}:{node.port}/node/populate-new", json=data_to_send, timeout=15)
 
         return data_to_send
 
@@ -266,7 +277,7 @@ class PoT:
         blocks_encoded = encode_chain(blocks_to_show or self.blockchain.blocks)
         return {
             "blockchain": b64encode(blocks_encoded).hex(),
-            "nodes": [node.__dict__ for node in nodes_to_show or self.nodes.all()]
+            "nodes": self.nodes.prepare_nodes_info(nodes_to_show or self.nodes.all())
         }
 
     def node_validator_agreement_get(self, remote_addr: str) -> dict:
@@ -317,7 +328,7 @@ class PoT:
         valid_id_nodes = set(uuids).intersection(set(self.nodes.all()))
         if len(valid_id_nodes) == len(uuids):
             raise PoTException("Invalid validator agreement list", 400)
-
+            # TODO: is correct
         self.nodes.set_agreement_list(uuids)
 
     def node_validator_agreement_vote(self, remote_addr: str, data: dict):
@@ -336,7 +347,7 @@ class PoT:
 
         self.nodes.clear_agreement_list()
         if self.nodes.is_agreement_result_success():
-            self.nodes.set_validators(self.nodes.validator_agreement.all())
+            self.nodes.validators.set_validators(self.nodes.validator_agreement.all())
             self.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
         else:
             self.nodes.validator_agreement_info.add_leader(self.nodes.get_most_trusted_validator())
@@ -346,7 +357,8 @@ class PoT:
     """
 
     def _validate_if_i_am_validator(self) -> None:
-        if not self.self_node.type == NodeType.VALIDATOR:
+
+        if not self.nodes.is_validator(self.self_node):
             raise PoTException("I am not validator", 400)
 
     def _validate_request_from_validator(self, request_addr: str) -> None:
@@ -376,3 +388,8 @@ class PoT:
             msg = f"Identifier {identifier} is not valid UUID"
             logging.info(msg)
             raise PoTException(msg, 400)
+
+    def _validate_request_dict_keys(self, data: dict, keys: list[str]) -> None:
+        data_keys = data.keys()
+        if not set(keys).issubset(data_keys):
+            raise PoTException("Missing required keys " + ', '.join(set(keys).difference(data_keys)), 400)

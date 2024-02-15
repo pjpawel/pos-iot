@@ -174,7 +174,7 @@ class TxToVerify:
 
     def is_voting_positive(self) -> bool:
         results = list(self.voting.values())
-        return results.count(True) > (len(results)/2)
+        return results.count(True) > (len(results) / 2)
 
     def get_positive_votes(self) -> int:
         return list(self.voting.values()).count(True)
@@ -201,7 +201,8 @@ class TxToVerify:
     def from_str(cls, data: str):
         split = data.split(':')
         node_info = split[1].split('_')
-        node = Node.load_from_list(node_info) if node_info[4] == '0' else SelfNode.load_from_list(node_info)
+        # node = Node.load_from_list(node_info) if node_info[4] == '0' else SelfNode.load_from_list(node_info)
+        node = Node.load_from_list(node_info)
         tx = cls(
             Tx.from_str((split[0].replace('_', ':'))),
             node

@@ -1,12 +1,15 @@
+from hashlib import sha256
 from uuid import UUID
 
+from pot.network.block import BlockCandidate, Block
 from pot.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
-    ValidatorAgreement, ValidatorAgreementInfoManager, ValidatorAgreementResult, NodeTrust
-from pot.network.node import Node as NodeDto
+    ValidatorAgreement, ValidatorAgreementInfoManager, ValidatorAgreementResult, NodeTrust, ValidatorManager
+from pot.network.node import Node as NodeDto, SelfNode, NodeType
 from pot.network.transaction import TxVerified
 
 
 class Blockchain(BlockchainManager):
+    VERSION = 1
     txs_verified: TransactionVerifiedManager
 
     def __init__(self):
@@ -16,9 +19,26 @@ class Blockchain(BlockchainManager):
     def add_new_transaction(self, uuid: UUID, tx: TxVerified) -> None:
         self.txs_verified.add(uuid, tx)
 
-    def create_block(self):
-        # TODO: is necessary?
-        pass
+    def create_block(self, self_node: SelfNode) -> Block:
+        txs_verified = self.txs_verified.all()
+        txs = [txs_verified.tx for txs_verified in txs_verified.values()]
+        cblock = BlockCandidate.create_new(txs)
+        self.txs_verified.delete(txs_verified.keys())
+        block = cblock.sign(
+            self.get_last_prev_hash(),
+            self_node.identifier,
+            self_node.private_key
+        )
+        self.add(block)
+        return block
+
+    def create_first_block(self, self_node: SelfNode) -> None:
+        block = BlockCandidate.create_new([])
+        self.add(block.sign(
+            sha256(b'0000000000').digest(),
+            self_node.identifier,
+            self_node.private_key
+        ))
 
 
 class Node(NodeManager):
@@ -26,6 +46,7 @@ class Node(NodeManager):
     validator_agreement_info: ValidatorAgreementInfoManager
     validator_agreement_result: ValidatorAgreementResult
     node_trust: NodeTrust
+    validators: ValidatorManager
 
     def __init__(self):
         super().__init__()
@@ -33,6 +54,46 @@ class Node(NodeManager):
         self.validator_agreement_info = ValidatorAgreementInfoManager()
         self.validator_agreement_result = ValidatorAgreementResult()
         self.node_trust = NodeTrust()
+        self.validators = ValidatorManager()
+
+    def prepare_all_nodes_info(self) -> list[dict]:
+        return self.prepare_nodes_info(self.all())
+
+    def prepare_nodes_info(self, nodes: list[NodeDto]) -> list[dict]:
+        self.validators.set_nodes_type(nodes)
+        info = []
+        for node in nodes:
+            node_info = node.__dict__
+            node_info["trust"] = self.node_trust.get_node_trust(node)
+            info.append(node_info)
+        return info
+
+    def update_from_json(self, nodes_dict: list[dict]) -> None:
+        nodes = []
+        validators = []
+        trust = {}
+        for node_dict in nodes_dict:
+            node = NodeDto.load_from_dict(node_dict)
+            if self.find_by_identifier(node.identifier) is None:
+                continue
+            trust[node.identifier] = node_dict.get("trust")
+            if getattr(NodeType, node_dict.get("type").upper()) == NodeType.VALIDATOR:
+                validators.append(node.identifier)
+            nodes.append(node)
+        self._nodes += nodes
+        self._storage.dump(self._nodes)
+
+    def get_validator_nodes(self) -> list[NodeDto]:
+        nodes = self.all()
+        validator_ids = self.validators.all()
+        validators = []
+        for node in nodes:
+            if node.identifier in validator_ids:
+                validators.append(node)
+        return validators
+
+    def count_validator_nodes(self) -> int:
+        return len(self.validators.all())
 
     def is_validator(self, node: NodeDto) -> bool:
         validators = self.get_validator_nodes()
@@ -86,5 +147,5 @@ class Node(NodeManager):
 
 
 class TransactionToVerify(TransactionToVerifyManager):
-    # TODO: is done
+    # TODO: is done?
     pass

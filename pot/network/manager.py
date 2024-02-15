@@ -1,13 +1,13 @@
 import logging
-from hashlib import sha256
+import traceback
 from uuid import UUID
 
-from .block import Block, BlockCandidate
-from .node import SelfNode, Node, NodeType
+from .block import Block
+from .node import Node, NodeType
 from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
     ValidatorStorage, ValidatorAgreementStorage, ValidatorAgreementInfoStorage, ValidatorAgreementResultStorage, \
     NodeTrustStorage
-from .transaction import TxToVerify, Tx, TxVerified
+from .transaction import TxToVerify, TxVerified
 
 
 class Manager:
@@ -28,30 +28,30 @@ class BlockchainManager(Manager):
     blocks: list[Block]
 
     def __init__(self):
-        self.blocks = []
         self._storage = BlocksStorage()
-
-    def create_first_block(self, self_node: SelfNode) -> None:
-        block = BlockCandidate.create_new([])
-        self.add(block.sign(
-            sha256(b'0000000000').digest(),
-            self_node.identifier,
-            self_node.private_key
-        ))
+        self.blocks = [] if self._storage.is_empty() else self._storage.load()
 
     def add(self, block: Block) -> None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         self.blocks.append(block)
         self._storage.update([block])
 
+    def all(self) -> list[Block]:
+        self.refresh()
+        return self.blocks
+
     def blocks_to_dict(self) -> list[dict]:
-        return [block.to_dict() for block in self.blocks]
+        return [block.to_dict() for block in self.all()]
 
     def load_from_bytes(self, b: bytes) -> None:
         self._storage.load_from_bytes(b)
 
+    def get_last_prev_hash(self) -> bytes:
+        return self.all()[-1].prev_hash
+
     def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
         self.blocks = [] if self._storage.is_empty() else self._storage.load()
 
 
@@ -60,36 +60,33 @@ class TransactionToVerifyManager(Manager):
     _txs: dict[UUID, TxToVerify]
 
     def __init__(self):
-        self._txs = {}
         self._storage = TransactionStorage()
+        self._txs = {} if self._storage.is_empty() else self._storage.load()
 
     def add(self, identifier: UUID, tx: TxToVerify) -> None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         self._txs[identifier] = tx
         self._storage.update({identifier: tx})
 
     def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
         self._txs = {} if self._storage.is_empty() else self._storage.load()
 
     def get(self, identifier: UUID) -> TxToVerify | None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._txs.get(identifier)
 
     def find(self, identifier: UUID) -> TxToVerify | None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._txs.get(identifier)
 
     def all(self) -> dict[UUID, TxToVerify]:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._txs
 
     def pop(self, identifier: UUID) -> TxToVerify:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         try:
             self._storage.wait_for_set_lock()
             txs = self._txs.pop(identifier)
@@ -107,8 +104,7 @@ class TransactionToVerifyManager(Manager):
         if tx.has_verification_result(node):
             logging.warning(f"Voting is already saved from node {node.identifier}")
             return
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         try:
             self._storage.wait_for_set_lock()
             self._txs[identifier].voting[node.identifier] = result
@@ -123,98 +119,81 @@ class TransactionToVerifyManager(Manager):
 class NodeManager(Manager):
     _nodes: list[Node]
     _storage: NodeStorage
-    _validator_storage: ValidatorStorage
 
     def __init__(self):
-        self._nodes = []
         self._storage = NodeStorage()
-        self._validator_storage = ValidatorStorage()
+        self._nodes = [] if self._storage.is_empty() else self._storage.load()
+
+    def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
+        self._nodes = [] if self._storage.is_empty() else self._storage.load()
 
     def to_dict(self) -> list[dict]:
-        return [node.__dict__ for node in self._nodes]
+        return [node.__dict__ for node in self.all()]
 
     def add(self, node: Node) -> None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         self._nodes.append(node)
         self._storage.update([node])
 
     def all(self) -> list[Node]:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._nodes
 
     def len(self) -> int:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return len(self._nodes)
 
     def find_by_identifier(self, identifier: UUID) -> Node | None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         for node in self._nodes:
             if node.identifier == identifier:
                 return node
         return None
 
     def find_by_request_addr(self, request_addr: str) -> Node | None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         for node in self._nodes:
             if node.host == request_addr:
                 return node
         return None
 
-    def update_from_json(self, nodes_dict: list[dict]) -> None:
-        self._nodes = [Node.load_from_dict(data) for data in nodes_dict]
-        self._storage.dump(self._nodes)
-
-    def get_validator_nodes(self) -> list[Node]:
-        if not self._storage.is_up_to_date():
-            self.refresh()
-        validators = []
-        for node in self._nodes:
-            if node.type == NodeType.VALIDATOR:
-                validators.append(node)
-        return validators
-
-    def refresh(self) -> None:
-        if self._storage.is_up_to_date():
-            return
-        self._nodes = [] if self._storage.is_empty() else self._storage.load()
-        self._update_validators()
-
-    def count_validator_nodes(self, self_node: SelfNode) -> int:
-        if not self._storage.is_up_to_date():
-            self.refresh()
-        count = 0
-        for node in self._nodes:
-            if node.type == NodeType.VALIDATOR:
-                count += 1
-        if self_node.type == NodeType.VALIDATOR:
-            count += 1
-        return count
-
     def exclude_self_node(self, self_ip: str) -> None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         for node in self._nodes:
             if node.host == self_ip:
                 self._nodes.remove(node)
                 self._storage.dump(self._nodes)
                 return
 
+
+class ValidatorManager(Manager):
+    _storage: ValidatorStorage
+    identifiers: list[UUID]
+
+    def __init__(self):
+        self._storage = ValidatorStorage()
+        self.identifiers = [] if self._storage.is_empty() else self._storage.load()
+
+    def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
+        self.identifiers = [] if self._storage.is_empty() else self._storage.load()
+
     def set_validators(self, validators: list[UUID]) -> None:
-        self._validator_storage.dump(validators)
-        self._validator_storage.invalidate_cache()
+        self._storage.dump(validators)
         self.refresh()
 
-    def _update_validators(self) -> None:
-        if self._validator_storage.is_up_to_date():
-            return
-        validators_id = self._validator_storage.load()
-        for node in self._nodes:
-            node.set_type(NodeType.VALIDATOR if node.identifier in validators_id else NodeType.SENSOR)
+    def set_nodes_type(self, nodes: list[Node]) -> None:
+        self.refresh()
+        for node in nodes:
+            if node.identifier in self.identifiers:
+                node.set_type(NodeType.VALIDATOR)
+
+    def all(self) -> list[UUID]:
+        self.refresh()
+        return self.identifiers
 
 
 class NodeTrust(Manager):
@@ -224,10 +203,13 @@ class NodeTrust(Manager):
     BASIC_TRUST = 300
 
     def __init__(self):
-        self._trusts = {}
         self._storage = NodeTrustStorage()
+        # First load must not be with is_up_to_date
+        self._trusts = {} if self._storage.is_empty() else self._storage.load()
 
     def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
         self._trusts = {} if self._storage.is_empty() else self._storage.load()
 
     def add_new_node_trust(self, node: Node):
@@ -259,30 +241,29 @@ class TransactionVerifiedManager(Manager):
     _txs: dict[UUID, TxVerified]
 
     def __init__(self):
-        self._txs = {}
         self._storage = TransactionVerifiedStorage()
+        self._txs = {} if self._storage.is_empty() else self._storage.load()
 
     def add(self, identifier: UUID, tx: TxVerified) -> None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         self._txs[identifier] = tx
         self._storage.update({identifier: tx})
 
     def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
         self._txs = {} if self._storage.is_empty() else self._storage.load()
 
     def find(self, identifier: UUID) -> TxVerified | None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._txs.get(identifier)
 
     def all(self) -> dict[UUID, TxVerified]:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._txs
 
-    def delete(self, identifiers: list) -> list[TxVerified]:
-        # TODO: is necessary
+    def delete(self, identifiers: list[UUID]) -> list[TxVerified]:
+        # TODO: is necessary? - add method on storage
         pass
 
 
@@ -295,22 +276,21 @@ class ValidatorAgreementResult(Manager):
         self.clear()
 
     def add(self, identifier: UUID, result: bool) -> None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         self._results[identifier] = result
         self._storage.update({identifier: result})
 
     def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
         self._results = {} if self._storage.is_empty() else self._storage.load()
 
     def find(self, identifier: UUID) -> bool | None:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._results.get(identifier)
 
     def all(self) -> dict[UUID, bool]:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self._results
 
     def clear(self) -> None:
@@ -332,13 +312,12 @@ class ValidatorAgreement(Manager):
         self.uuids = [] if self._storage.is_empty() else self._storage.load()
 
     def all(self) -> list[UUID]:
-        if not self._storage.is_up_to_date():
-            self.refresh()
+        self.refresh()
         return self.uuids
 
     def set(self, uuids: list[UUID]) -> None:
         self.uuids = uuids
-        self._storage.dump(uuids)
+        self._storage.dump(self.uuids)
 
 
 class ValidatorAgreementInfoManager(Manager):
