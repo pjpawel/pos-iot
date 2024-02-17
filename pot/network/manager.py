@@ -212,10 +212,12 @@ class NodeTrust(Manager):
             return
         self._trusts = {} if self._storage.is_empty() else self._storage.load()
 
-    def add_new_node_trust(self, node: Node):
+    def add_new_node_trust(self, node: Node, trust: None | int = None):
+        if trust is None:
+            trust = self.BASIC_TRUST
         self.refresh()
-        self._storage.update({node.identifier: self.BASIC_TRUST})
-        self._trusts[node.identifier] = self.BASIC_TRUST
+        self._storage.update({node.identifier: trust})
+        self._trusts[node.identifier] = trust
 
     def add_trust_to_node(self, node: Node, new_trust: int) -> None:
         self.refresh()

@@ -89,17 +89,19 @@ class SelfNodeInfo:
     private_key: Ed25519PrivateKey
 
     def __init__(self):
-        self.identifier = uuid4()
         storage = os.getenv('STORAGE_DIR')
         key_path = os.path.join(storage, self.INFO_PATH)
         if os.path.isfile(key_path):
             with open(key_path) as f:
                 keys = json.load(f)
+            str("abc")
+            self.identifier = UUID(bytes_le=bytes.fromhex(keys.get("identifier")))
             private_key_stream = bytes(keys.get("private"), "utf-8")
             self.private_key = serialization.load_pem_private_key(private_key_stream, password=None)
             public_key_stream = bytes(keys.get("public"), "utf-8")
             self.public_key = serialization.load_pem_public_key(public_key_stream)
         else:
+            self.identifier = uuid4()
             self.private_key = Ed25519PrivateKey.generate()
             self.public_key = self.private_key.public_key()
             self.dump(storage)

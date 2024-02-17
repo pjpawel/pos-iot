@@ -74,14 +74,15 @@ class Node(NodeManager):
         trust = {}
         for node_dict in nodes_dict:
             node = NodeDto.load_from_dict(node_dict)
-            if self.find_by_identifier(node.identifier) is None:
+            if self.find_by_identifier(node.identifier) is not None:
                 continue
-            trust[node.identifier] = node_dict.get("trust")
+            self.node_trust.add_new_node_trust(node, int(node_dict.get("trust")))
             if getattr(NodeType, node_dict.get("type").upper()) == NodeType.VALIDATOR:
                 validators.append(node.identifier)
             nodes.append(node)
         self._nodes += nodes
         self._storage.dump(self._nodes)
+
 
     def get_validator_nodes(self) -> list[NodeDto]:
         nodes = self.all()

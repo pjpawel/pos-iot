@@ -37,24 +37,26 @@ class PoT:
         name = "genesis" if ip == genesis_ip else "node"
         logging.info(f"=== Running as {name} ===")
 
-        if not self.nodes.has_empty_files():
-            logging.info("Blockchain loading from storage")
-            self.blockchain.refresh()
-            self.nodes.refresh()
-            self.tx_to_verified.refresh()
-        elif ip != genesis_ip and not only_from_file:
-            logging.info("Blockchain loading from genesis")
-            identifier_hex = Request.get_info(genesis_ip, 5000).get("identifier")
-            genesis_node = Node(identifier_hex, genesis_ip, 5000, NodeType.VALIDATOR)
-            self.nodes.add(genesis_node)
-            self.nodes.validators.set_validators([genesis_node.identifier])
-            self.load_from_validator_node(genesis_ip)
-
-        if ip == genesis_ip and not self.blockchain.blocks:
+        if self.nodes.find_by_identifier(self.self_node.identifier) is None:
             node = self.self_node.get_node()
             self.nodes.add(node)
-            self.blockchain.create_first_block(self.self_node)
+
+        self.blockchain.refresh()
+        self.nodes.refresh()
+        self.tx_to_verified.refresh()
+
+        if ip == genesis_ip:
+            if len(self.blockchain.all()) == 0:
+                self.blockchain.create_first_block(self.self_node)
             self.nodes.validators.set_validators([self.self_node.identifier])
+        else:
+            if not only_from_file:
+                logging.info("Blockchain loading from genesis")
+                identifier_hex = Request.get_info(genesis_ip, 5000).get("identifier")
+                genesis_node = Node(identifier_hex, genesis_ip, 5000, NodeType.VALIDATOR)
+                self.nodes.add(genesis_node)
+                self.nodes.validators.set_validators([genesis_node.identifier])
+                self.load_from_validator_node(genesis_ip)
 
     """
     Internal methods
@@ -67,8 +69,7 @@ class PoT:
     def load_from_validator_node(self, genesis_ip: str) -> None:
         if self.is_self_node_is_registered(genesis_ip):
             return
-        node = self.self_node.get_node()
-        self.nodes.add(node)
+        node = self.nodes.find_by_identifier(self.self_node.identifier)
         data = {
             "identifier": node.identifier.hex,
             "port": 5000,
@@ -223,9 +224,10 @@ class PoT:
         n_type = NodeType.SENSOR
 
         # check if node is already register
-        for node in self.nodes.all():
-            if node.host == host and node.port == port:
-                raise Exception(f"Node is already registered with identifier: {node.identifier}")
+        node_f = self.nodes.find_by_identifier(identifier)
+        if node_f is not None:
+        #if node.host == host and node.port == port:
+            raise Exception(f"Node is already registered with identifier: {node.identifier}")
 
         self.nodes.add(Node(identifier, host, port, n_type))
 
