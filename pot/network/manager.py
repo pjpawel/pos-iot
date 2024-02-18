@@ -153,6 +153,7 @@ class NodeManager(Manager):
         return None
 
     def find_by_request_addr(self, request_addr: str) -> Node | None:
+        #logging
         self.refresh()
         for node in self._nodes:
             if node.host == request_addr:

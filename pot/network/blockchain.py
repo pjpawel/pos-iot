@@ -214,20 +214,21 @@ class PoT:
         self.add_transaction_verification_result(uuid, node, verified)
 
     def populate_new_node(self, data: dict, request_addr: str) -> None:
+        logging.info("Getting new node from " + request_addr)
         self._validate_request_from_validator(request_addr)
 
-        self._validate_request_dict_keys(data, ["identifier", "host", "port", "type"])
+        self._validate_request_dict_keys(data, ["identifier", "host", "port"])
         identifier = self._validate_create_uuid(data.get("identifier"))
         host = data.get("host")
         port = int(data.get("port"))
         #n_type = getattr(NodeType, data.get("type"))
         n_type = NodeType.SENSOR
+        logging.info("Getting new node " + identifier.hex)
 
         # check if node is already register
         node_f = self.nodes.find_by_identifier(identifier)
-        if node_f is not None:
-        #if node.host == host and node.port == port:
-            raise Exception(f"Node is already registered with identifier: {node.identifier}")
+        if node_f is not None:  # if node.host == host and node.port == port:
+            raise Exception(f"Node is already registered with identifier: {node_f.identifier}")
 
         self.nodes.add(Node(identifier, host, port, n_type))
 
@@ -251,7 +252,9 @@ class PoT:
         for node in self.nodes.all():
             if node.identifier == new_node.identifier or node.identifier == self.self_node.identifier:
                 continue
-            requests.post(f"http://{node.host}:{node.port}/node/populate-new", json=data_to_send, timeout=15)
+            logging.info(f"Populating node {new_node.identifier.hex} to node {node.identifier}")
+            res = requests.post(f"http://{node.host}:{node.port}/node/populate-new", json=data_to_send, timeout=15)
+            logging.info(f"Response of populate {res.status_code} {res.text}")
 
         return data_to_send
 
@@ -367,7 +370,8 @@ class PoT:
         node = self.nodes.find_by_request_addr(request_addr)
         if not node:
             raise PoTException("Request came from unknown node", 400)
-        if not node.type == NodeType.VALIDATOR:
+
+        if not self.nodes.is_validator(node):
             raise PoTException("Request came from node which is not validator", 400)
 
     def _get_node_from_request_addr(self, request_addr: str) -> Node:
