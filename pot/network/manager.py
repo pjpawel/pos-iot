@@ -1,5 +1,4 @@
 import logging
-import traceback
 from uuid import UUID
 
 from .block import Block
@@ -29,7 +28,7 @@ class BlockchainManager(Manager):
 
     def __init__(self):
         self._storage = BlocksStorage()
-        self.blocks = [] if self._storage.is_empty() else self._storage.load()
+        self.blocks = self._storage.load()
 
     def add(self, block: Block) -> None:
         self.refresh()
@@ -52,7 +51,7 @@ class BlockchainManager(Manager):
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self.blocks = [] if self._storage.is_empty() else self._storage.load()
+        self.blocks = self._storage.load()
 
 
 class TransactionToVerifyManager(Manager):
@@ -61,7 +60,7 @@ class TransactionToVerifyManager(Manager):
 
     def __init__(self):
         self._storage = TransactionStorage()
-        self._txs = {} if self._storage.is_empty() else self._storage.load()
+        self._txs = self._storage.load()
 
     def add(self, identifier: UUID, tx: TxToVerify) -> None:
         self.refresh()
@@ -71,7 +70,7 @@ class TransactionToVerifyManager(Manager):
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self._txs = {} if self._storage.is_empty() else self._storage.load()
+        self._txs = self._storage.load()
 
     def get(self, identifier: UUID) -> TxToVerify | None:
         self.refresh()
@@ -122,12 +121,12 @@ class NodeManager(Manager):
 
     def __init__(self):
         self._storage = NodeStorage()
-        self._nodes = [] if self._storage.is_empty() else self._storage.load()
+        self._nodes = self._storage.load()
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self._nodes = [] if self._storage.is_empty() else self._storage.load()
+        self._nodes = self._storage.load()
 
     def to_dict(self) -> list[dict]:
         return [node.__dict__ for node in self.all()]
@@ -153,7 +152,6 @@ class NodeManager(Manager):
         return None
 
     def find_by_request_addr(self, request_addr: str) -> Node | None:
-        #logging
         self.refresh()
         for node in self._nodes:
             if node.host == request_addr:
@@ -175,16 +173,16 @@ class ValidatorManager(Manager):
 
     def __init__(self):
         self._storage = ValidatorStorage()
-        self.identifiers = [] if self._storage.is_empty() else self._storage.load()
+        self.identifiers = self._storage.load()
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self.identifiers = [] if self._storage.is_empty() else self._storage.load()
+        self.identifiers = self._storage.load()
 
     def set_validators(self, validators: list[UUID]) -> None:
-        self._storage.dump(validators)
         self.refresh()
+        self._storage.dump(validators)
 
     def set_nodes_type(self, nodes: list[Node]) -> None:
         self.refresh()
@@ -205,13 +203,12 @@ class NodeTrust(Manager):
 
     def __init__(self):
         self._storage = NodeTrustStorage()
-        # First load must not be with is_up_to_date
-        self._trusts = {} if self._storage.is_empty() else self._storage.load()
+        self._trusts = self._storage.load()
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self._trusts = {} if self._storage.is_empty() else self._storage.load()
+        self._trusts = self._storage.load()
 
     def add_new_node_trust(self, node: Node, trust: None | int = None):
         if trust is None:
@@ -245,7 +242,7 @@ class TransactionVerifiedManager(Manager):
 
     def __init__(self):
         self._storage = TransactionVerifiedStorage()
-        self._txs = {} if self._storage.is_empty() else self._storage.load()
+        self._txs = self._storage.load()
 
     def add(self, identifier: UUID, tx: TxVerified) -> None:
         self.refresh()
@@ -255,7 +252,7 @@ class TransactionVerifiedManager(Manager):
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self._txs = {} if self._storage.is_empty() else self._storage.load()
+        self._txs = self._storage.load()
 
     def find(self, identifier: UUID) -> TxVerified | None:
         self.refresh()
@@ -286,7 +283,7 @@ class ValidatorAgreementResult(Manager):
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self._results = {} if self._storage.is_empty() else self._storage.load()
+        self._results = self._storage.load()
 
     def find(self, identifier: UUID) -> bool | None:
         self.refresh()
@@ -312,7 +309,7 @@ class ValidatorAgreement(Manager):
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
             return
-        self.uuids = [] if self._storage.is_empty() else self._storage.load()
+        self.uuids = self._storage.load()
 
     def all(self) -> list[UUID]:
         self.refresh()

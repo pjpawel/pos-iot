@@ -43,7 +43,7 @@ class Storage:
         self.path = os.path.join(self._storage_dir, self.PATH)
         self._lock = self.path + ".lock"
         Path(self.path).touch(0o777)
-        self.update_cache()  # TODO: Po nim nie może nastąpić is_up_to_date
+        self.invalidate_cache()  # TODO: Po nim nie może nastąpić is_up_to_date
 
     def is_up_to_date(self):
         return self._cached_mtime == os.path.getmtime(self.path) and self._cached_size == os.path.getsize(self.path)
@@ -90,7 +90,10 @@ class BlocksStorage(Storage):
 
     def load(self) -> list[Block]:
         self._wait_for_lock()
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return []
         with open(self.path, "rb") as f:
             blocks = self.load_from_file(f)
         self.update_cache()
@@ -135,7 +138,10 @@ class NodeStorage(Storage):
 
     def load(self) -> list[Node]:
         self._wait_for_lock()
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return []
         with open(self.path) as f:
             reader = csv.reader(f)
             nodes = [Node.load_from_list(data) for data in reader]
@@ -174,7 +180,10 @@ class NodeTrustStorage(Storage):
 
     def load(self) -> dict[UUID, int]:
         self._wait_for_lock()
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return {}
         with open(self.path, 'r') as f:
             reader = csv.reader(f)
             trusts = {}
@@ -221,7 +230,7 @@ class TransactionStorage(Storage):
     def dump(self, txs: dict[UUID, TxToVerify], lock: bool = True) -> None:
         if lock:
             self.wait_for_set_lock()
-        logging.info(f"Writing {len(txs)} {self.PATH} to storage")
+        logging.info(f"Writing {len(txs)} '{self.PATH}' to storage")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
@@ -251,7 +260,10 @@ class TransactionStorage(Storage):
 
     def load(self) -> dict[UUID, TxToVerify]:
         self._wait_for_lock()
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return {}
         with open(self.path, 'r') as f:
             reader = csv.reader(f)
             txs = {}
@@ -266,7 +278,10 @@ class TransactionVerifiedStorage(Storage):
 
     def load(self) -> dict[UUID, TxVerified]:
         self._wait_for_lock()
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return {}
         with open(self.path, 'r') as f:
             reader = csv.reader(f)
             txs = {}
@@ -292,7 +307,7 @@ class TransactionVerifiedStorage(Storage):
     def dump(self, txs: dict[UUID, TxVerified], lock: bool = True) -> None:
         if lock:
             self.wait_for_set_lock()
-        logging.info(f"Writing {len(txs)} {self.PATH} to storage")
+        logging.info(f"Writing {len(txs)} '{self.PATH}' to storage")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
@@ -316,7 +331,7 @@ class ValidatorStorage(Storage):
         if self.is_empty():
             self.update_cache()
             return []
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
         with open(self.path) as f:
             uuids = [UUID(hx) for hx in f.read().split(self.SEPARATOR)]
         self.update_cache()
@@ -324,7 +339,7 @@ class ValidatorStorage(Storage):
 
     def dump(self, uuids: list[UUID]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Writing {len(uuids)} {self.PATH} to storage")
+        logging.info(f"Writing {len(uuids)} '{self.PATH}' to storage")
         try:
             with open(self.path, 'w') as f:
                 f.write(self.SEPARATOR.join([uid.hex for uid in uuids]))
@@ -344,7 +359,10 @@ class ValidatorAgreementInfoStorage(Storage):
 
     def load(self) -> dict:
         self._wait_for_lock()
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return {}
         with open(self.path) as f:
             data = json.load(f)
         self.update_cache()
@@ -368,7 +386,10 @@ class ValidatorAgreementResultStorage(Storage):
 
     def load(self) -> dict[UUID, bool]:
         self._wait_for_lock()
-        logging.info(f"Loading {self.PATH} from storage of size: {self.get_size()}")
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return {}
         with open(self.path, 'r') as f:
             reader = csv.reader(f)
             txs = {}
@@ -392,7 +413,7 @@ class ValidatorAgreementResultStorage(Storage):
             raise e
 
     def dump(self, txs: dict[UUID, bool]) -> None:
-        logging.info(f"Writing {len(txs)} {self.PATH} to storage")
+        logging.info(f"Writing {len(txs)} '{self.PATH}' to storage")
         self.wait_for_set_lock()
         try:
             with open(self.path, 'w') as f:

@@ -71,7 +71,6 @@ class Node(NodeManager):
     def update_from_json(self, nodes_dict: list[dict]) -> None:
         nodes = []
         validators = []
-        trust = {}
         for node_dict in nodes_dict:
             node = NodeDto.load_from_dict(node_dict)
             if self.find_by_identifier(node.identifier) is not None:
@@ -82,7 +81,6 @@ class Node(NodeManager):
             nodes.append(node)
         self._nodes += nodes
         self._storage.dump(self._nodes)
-
 
     def get_validator_nodes(self) -> list[NodeDto]:
         nodes = self.all()
@@ -97,11 +95,12 @@ class Node(NodeManager):
         return len(self.validators.all())
 
     def is_validator(self, node: NodeDto) -> bool:
-        validators = self.get_validator_nodes()
-        for validator in validators:
-            if validator.identifier == node.identifier:
-                return True
-        return False
+        return node.identifier in self.validators.all()
+        # validators = self.get_validator_nodes()
+        # for validator in validators:
+        #     if validator.identifier == node.identifier:
+        #         return True
+        # return False
 
     def get_most_trusted_validator(self) -> NodeDto:
         trusts = {}

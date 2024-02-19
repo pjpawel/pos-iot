@@ -34,6 +34,7 @@ app.pot.load()
 
 @app.errorhandler(PoTException)
 def pot_error_handler(error: PoTException):
+    logging.error(f"POT EXCEPTION: {error.message} - {error.code}")
     return jsonify(error=error.message), error.code
 
 
@@ -161,6 +162,7 @@ def populate_new_node():
     :return:
     """
     app.pot.populate_new_node(request.get_json(), request.remote_addr)
+    return ""
 
 
 """

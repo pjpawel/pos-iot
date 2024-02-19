@@ -156,6 +156,10 @@ class PoT:
                 continue
             # TODO: Send validators list
 
+    # def genesis_first_validators(self):
+    #     nodes = self.nodes.all()
+    #     self.nodes.calculate_validators_number()
+
     """
     API methods
     """
@@ -370,9 +374,9 @@ class PoT:
         node = self.nodes.find_by_request_addr(request_addr)
         if not node:
             raise PoTException("Request came from unknown node", 400)
-
         if not self.nodes.is_validator(node):
-            raise PoTException("Request came from node which is not validator", 400)
+            logging.info("Validators" + ''.join([ident.hex for ident in self.nodes.validators.all()]))
+            raise PoTException(f"Request came from node '{node.identifier.hex}' which is not validator", 400)
 
     def _get_node_from_request_addr(self, request_addr: str) -> Node:
         node = self.nodes.find_by_request_addr(request_addr)
