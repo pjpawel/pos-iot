@@ -328,13 +328,13 @@ class ValidatorStorage(Storage):
 
     def load(self) -> list[UUID]:
         self._wait_for_lock()
-        if self.is_empty():
-            self.update_cache()
-            return []
         logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.unlock()
+            return []
         with open(self.path) as f:
             uuids = [UUID(hx) for hx in f.read().split(self.SEPARATOR)]
-        self.update_cache()
+        self.unlock()
         return uuids
 
     def dump(self, uuids: list[UUID]) -> None:

@@ -8,7 +8,7 @@ from test.network.conftest import Helper
 
 def test_encode_and_decode(helper: Helper):
 
-    self_node = helper.get_self_node()
+    self_node = helper.get_self_node_info()
 
     tx_c = TxCandidate({"d": "abc", "t": "5"})
     tx = tx_c.sign(self_node)

@@ -4,7 +4,7 @@ TIME=$(date +%s)
 mkdir -p ../storage-archive/"$TIME"
 mv ../storage/* ../storage-archive/"$TIME"
 
-NODE_NUMBER=$((3 + 11))
+NODE_NUMBER=$((6 + 11))
 
 # docker compose up --build
 

@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from pot.network.blockchain import PoT
 from pot.network.service import Blockchain
-from pot.network.node import SelfNode, NodeType
+from pot.network.node import SelfNodeInfo, NodeType
 from pot.network.storage import decode_chain
 
 from test.network.conftest import Helper
@@ -18,7 +18,7 @@ def test_first_block_creation(helper: Helper):
     helper.delete_storage_key()
 
     blockchain = Blockchain()
-    self_node = SelfNode.load()
+    self_node = SelfNodeInfo()
 
     blockchain.create_first_block(self_node)
 
@@ -41,7 +41,7 @@ def test_pot_load(helper: Helper):
     pot = PoT()
     pot.load()
 
-    assert isinstance(pot.self_node, SelfNode)
+    assert isinstance(pot.self_node, SelfNodeInfo)
     assert len(pot.blockchain.blocks) == 1
 
 

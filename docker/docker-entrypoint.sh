@@ -30,8 +30,8 @@ sleep 10
 
 echo "Starting dump worker"
 python3 start_dump_worker.py &
-#echo "Starting scenario worker"
-#python3 start_scenario_job.py &
+echo "Starting scenario worker"
+python3 start_scenario_job.py &
 echo "Starting transaction verifier worker"
 python3 start_transaction_verifier_job.py &
 #echo "Starting update nodes info worker"

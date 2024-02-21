@@ -1,4 +1,3 @@
-import logging
 import os
 import socket
 from dataclasses import dataclass
@@ -55,11 +54,7 @@ class Node:
 
     @classmethod
     def load_from_dict(cls, data: dict):
-        return cls(
-            UUID(data.get("identifier")),
-            data.get("host"),
-            data.get("port")
-        )
+        return cls(UUID(data.get("identifier")), data.get("host"), data.get("port"))
 
     @classmethod
     def load_from_list(cls, data: list):
@@ -94,7 +89,6 @@ class SelfNodeInfo:
         if os.path.isfile(key_path):
             with open(key_path) as f:
                 keys = json.load(f)
-            str("abc")
             self.identifier = UUID(bytes_le=bytes.fromhex(keys.get("identifier")))
             private_key_stream = bytes(keys.get("private"), "utf-8")
             self.private_key = serialization.load_pem_private_key(private_key_stream, password=None)
@@ -139,3 +133,19 @@ class SelfNodeInfo:
                 "private": private_key_pem.decode("utf-8"),
                 "identifier": self.identifier.bytes_le.hex()
             }, f)
+
+
+class SelfNode(Node):
+    public_key: Ed25519PublicKey
+    private_key: Ed25519PrivateKey
+
+    def __init__(self, node: Node, self_node_info: SelfNodeInfo):
+        super().__init__(node.identifier, node.host, node.port, node.type)
+        self.public_key = self_node_info.public_key
+        self.private_key = self_node_info.private_key
+
+    def get_public_key(self) -> Ed25519PublicKey:
+        return self.public_key
+
+    def get_node(self) -> Node:
+        return Node(self.identifier, self.host, self.port, self.type)

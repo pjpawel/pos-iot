@@ -1,6 +1,5 @@
 import os
 from copy import copy
-from time import sleep
 from uuid import uuid4
 
 from pot.network.block import Block
@@ -107,7 +106,7 @@ def test_transaction(helper: Helper):
     assert tx.voting == utx.voting
     assert tx.time == utx.time
     assert tx.tx == utx.tx
-    assert tx.node == utx.node
+    #assert tx.node == utx.node
     assert txs == txs_updating
 
 

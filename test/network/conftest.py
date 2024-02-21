@@ -4,11 +4,12 @@ Pytest fixtures for pot.blockchain test module
 import os
 import socket
 from hashlib import sha256
+from uuid import uuid4
 
 import pytest
 
 from pot.network.block import Block, BlockCandidate
-from pot.network.node import SelfNode, NodeType
+from pot.network.node import SelfNodeInfo, NodeType, Node, SelfNode
 from pot.network.transaction import TxCandidate, Tx, TxToVerify
 
 
@@ -20,7 +21,7 @@ class Helper:
 
     @staticmethod
     def get_storage_key_path() -> str:
-        return os.path.join(Helper.get_storage_dir(), SelfNode.INFO_PATH)
+        return os.path.join(Helper.get_storage_dir(), SelfNodeInfo.INFO_PATH)
 
     @staticmethod
     def delete_storage_key() -> None:
@@ -50,14 +51,19 @@ class Helper:
         os.environ["NODE_TYPE"] = n_type.name
 
     @staticmethod
-    def get_self_node(n_type=None) -> SelfNode:
+    def get_self_node_info() -> SelfNodeInfo:
         Helper.put_storage_env()
         Helper.delete_storage_key()
-        return SelfNode.load(n_type)
+        return SelfNodeInfo()
+
+    @staticmethod
+    def get_self_node(n_type: None | NodeType = None) -> SelfNode:
+        node = Node(uuid4(), "localhost", 5000, n_type)
+        return SelfNode(node, Helper.get_self_node_info())
 
     @staticmethod
     def create_block() -> Block:
-        self_node = Helper.get_self_node()
+        self_node = Helper.get_self_node_info()
 
         tx_c = TxCandidate({"d": "abc", "t": "1"})
         tx = tx_c.sign(self_node)
@@ -71,13 +77,13 @@ class Helper:
 
     @staticmethod
     def create_transaction() -> Tx:
-        self_node = Helper.get_self_node()
+        self_node = Helper.get_self_node_info()
         tx_c = TxCandidate({"d": "abc", "t": "1"})
         return tx_c.sign(self_node)
 
     @staticmethod
     def create_tx_to_verify() -> TxToVerify:
-        return TxToVerify(Helper.create_transaction(), Helper.get_self_node())
+        return TxToVerify(Helper.create_transaction(), Helper.get_self_node().get_node())
 
 
 @pytest.fixture()

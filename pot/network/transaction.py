@@ -9,7 +9,7 @@ from time import time
 from cryptography.exceptions import InvalidSignature
 
 from .exception import PoTException
-from .node import SelfNodeInfo, Node
+from .node import SelfNodeInfo, Node, SelfNode
 from .utils import decode_int, decode_str, encode_int, encode_str, read_bytes
 
 
@@ -61,7 +61,7 @@ class Tx:
             self.validate_data()
             node.get_public_key().verify(self.signature, data)
         except InvalidSignature as error:
-            logging.error(error)
+            logging.error(f"Invalid signature error {error}")
             logging.error(f"Transaction data: {b64encode(all_data)}, node public key: {node.get_public_key_str()}")
             raise PoTException(f"Transaction not verified by identifier {self.sender.hex}", 400)
         except Exception as e:
@@ -125,7 +125,7 @@ class TxCandidate:
         out += [data_encoded]
         return b''.join(out)
 
-    def sign(self, self_node: SelfNodeInfo) -> Tx:
+    def sign(self, self_node: SelfNodeInfo | SelfNode) -> Tx:
         self.sender = self_node.identifier
         signature = self_node.private_key.sign(self.encode())
         return Tx(self.version, self.timestamp, self.sender, signature, self.data)

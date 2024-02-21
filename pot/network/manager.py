@@ -182,7 +182,8 @@ class ValidatorManager(Manager):
 
     def set_validators(self, validators: list[UUID]) -> None:
         self.refresh()
-        self._storage.dump(validators)
+        self.identifiers = validators
+        self._storage.dump(self.identifiers)
 
     def set_nodes_type(self, nodes: list[Node]) -> None:
         self.refresh()

@@ -26,8 +26,8 @@ def instant_sender(pot: PoT):
         sleep(5)
         if pot.nodes.len() == 0:
             continue
-        logging.info(LOG_PREFIX + 'Available nodes to send to: ' +
-                     ', '.join([node.identifier.hex for node in pot.nodes.all()]))
+        logging.debug(LOG_PREFIX + 'Available nodes to send to: ' +
+                      ', '.join([node.identifier.hex for node in pot.nodes.all()]))
         if pot.nodes.count_validator_nodes() < 2:
             continue
         node = get_random_from_list(pot.nodes.get_validator_nodes())

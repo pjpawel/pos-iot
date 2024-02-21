@@ -34,6 +34,8 @@ class Dumper:
         os.mkdir(dump_time_dir)
 
         for path in list(os.scandir(self.storage_dir)):
+            if path.name.endswith('.lock'):
+                continue
             copy(path, dump_time_dir)
 
         # for path in self.paths:
