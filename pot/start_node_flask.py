@@ -227,4 +227,5 @@ def validator_agreement_vote():
 
 @app.post("/node/validator/agreement/done")
 def validator_agreement_done():
-    return app.pot.node_validator_agreement_done()
+    app.pot.node_validator_agreement_done(request.get_json())
+    return {}

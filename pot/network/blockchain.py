@@ -348,19 +348,42 @@ class PoT:
         node = self._get_node_from_request_addr(remote_addr)
         # TODO: to be completed
 
-    def node_validator_agreement_done(self):
-        if self.nodes.is_agreement_started() is False or len(self.nodes.validator_agreement.all()) > 0:
-            raise PoTException("Agreement is not started or list is not send", 400)
+    def node_validator_agreement_done(self, data: dict):
+        validator_list = data.get("validators")
+        if validator_list is None:
+            raise PoTException("Missing validators list", 400)
+        validator_list = [self._validate_create_uuid(ident) for ident in validator_list]
+        if validator_list == self.nodes.validators.all():
+            return
 
-        if not self.nodes.is_agreement_voting_ended():
-            raise PoTException("Voting is not ended", 400)
+        self_node = self.nodes.find_by_identifier(self.self_node.identifier)
+        if self.nodes.is_validator(self_node):
+            if self.nodes.is_agreement_started() is False or len(self.nodes.validator_agreement.all()) > 0:
+                raise PoTException("Agreement is not started or list is not send", 400)
+            if validator_list != self.nodes.validator_agreement.all():
+                raise PoTException("List is not the same as in agreement", 400)
+            # TODO check if could be ended
+            if not self.nodes.is_agreement_voting_ended():
+                raise PoTException("Voting is not ended", 400)
 
         self.nodes.clear_agreement_list()
         if self.nodes.is_agreement_result_success():
-            self.nodes.validators.set_validators(self.nodes.validator_agreement.all())
+            self.nodes.validators.set_validators(validator_list)
             self.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
         else:
             self.nodes.validator_agreement_info.add_leader(self.nodes.get_most_trusted_validator())
+
+    def send_validators_list(self):
+        data = {
+            "validators": [identifier.hex for identifier in self.nodes.validators.all()]
+        }
+        for node in self.nodes.all():
+            if node.identifier == self.self_node.identifier:
+                continue
+            logging.info(f"Sending validators list to node {node.identifier.hex}")
+            response = requests.post(f"http://{node.host}:{node.port}/node/validator/agreement/done", json=data)
+            if response.status_code != 200:
+                logging.error(f"Error while sending validators list to node {node.identifier.hex}. Error: {response.text}")
 
     """
     Internal API methods

@@ -33,7 +33,7 @@ def instant_sender(pot: PoT):
         node = get_random_from_list(pot.nodes.get_validator_nodes())
         if node.identifier == pot.self_node.identifier:
             continue
-        logging.info(LOG_PREFIX + f"Creating transaction to send")
+        logging.info(LOG_PREFIX + f"Creating transaction to send to node {node.identifier.hex}")
         tx_can = TxCandidate({"t": "1", "d": random.randint(0, 546)})
         tx = tx_can.sign(pot.self_node)
         response = requests.post(f"http://{node.host}:{node.port}/transaction", tx.encode())

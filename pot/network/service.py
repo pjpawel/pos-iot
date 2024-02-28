@@ -143,7 +143,10 @@ class Node(NodeManager):
         return len(self.get_validator_nodes())
 
     def calculate_validators_number(self) -> int:
-        return min(30, len(self.all()))
+        nnodes = self.len()
+        if nnodes < 2:
+            return nnodes
+        return max(2, min(int(nnodes/5), int(nnodes/2)))
 
 
 class TransactionToVerify(TransactionToVerifyManager):
