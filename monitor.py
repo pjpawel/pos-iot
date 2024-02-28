@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from matplotlib.pyplot import savefig
 
-from pot.network.storage import BlocksStorage, NodeStorage, TransactionStorage
+from pot.network.storage import BlocksStorage, NodeStorage, TransactionStorage, NodeTrustStorage, ValidatorStorage
 
 storage_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'storage'))
 result_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'monitor', 'result'))
@@ -24,10 +24,18 @@ def get_info_from_blockchain(path: str) -> dict:
 def get_info_from_nodes(path: str) -> dict:
     storage = NodeStorage(path)
     nodes = storage.load()
-    # trust_storage
+    #trust_storage = NodeTrustStorage(path)
     return {
         "len": len(nodes),
         "trust": {f"{node.identifier.hex}": 0 for node in nodes}
+    }
+
+
+def get_info_from_validators(path: str) -> dict:
+    storage = ValidatorStorage(path)
+    validators = storage.load()
+    return {
+        "len": len(validators)
     }
 
 
@@ -50,6 +58,7 @@ def get_info_from_transactions_verified(path: str) -> dict:
 cols_dict = {
     'time': 'Time',
     'number_of_nodes': 'Number of nodes',
+    'number_of_validators': 'Number of validators',
     'node_trust': 'Node trust',
     'number_of_blocks': 'Number of blocks',
     'number_of_transaction_to_verify': 'Number of transactions to verify',
@@ -89,6 +98,7 @@ for node in os.listdir(storage_path):
         try:
             blocks_info = get_info_from_blockchain(storage_dir)
             nodes_info = get_info_from_nodes(storage_dir)
+            validators_info = get_info_from_validators(storage_dir)
             txs_to_ver_info = get_info_from_transactions_to_verify(storage_dir)
             txs_ver_info = get_info_from_transactions_verified(storage_dir)
         except Exception as e:
@@ -97,6 +107,7 @@ for node in os.listdir(storage_path):
 
         df.loc[time - first_time] = [
             nodes_info['len'],
+            validators_info['len'],
             0,
             blocks_info['len'],
             txs_to_ver_info['len'],
