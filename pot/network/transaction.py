@@ -93,6 +93,9 @@ class Tx:
     def __str__(self):
         return b64encode(self.encode()).hex()
 
+    def __hash__(self):
+        return self.encode().__hash__()
+
     @classmethod
     def from_str(cls, data: str):
         return cls.decode(BytesIO(b64decode(bytes.fromhex(data))))
@@ -136,16 +139,17 @@ class TxVerified:
     tx: Tx
     time: int
 
+    def __init__(self, tx: Tx, time: int):
+        self.tx = tx
+        self.time = time
+
     def __str__(self) -> str:
         return ':'.join([str(self.tx).replace(':', '_'), str(self.time)])
 
     @classmethod
     def from_str(cls, data: str):
         split = data.split(':')
-        return cls(
-            Tx.from_str((split[0].replace('_', ':'))),
-            int(split[1])
-        )
+        return cls(Tx.from_str((split[0].replace('_', ':'))), int(split[1]))
 
 
 @dataclass

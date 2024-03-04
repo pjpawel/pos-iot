@@ -25,7 +25,7 @@ class Blockchain(BlockchainManager):
         cblock = BlockCandidate.create_new(txs)
         self.txs_verified.delete(list(txs_verified.keys()))
         block = cblock.sign(
-            self.get_last_prev_hash(),
+            self.get_last_block().hash(),
             self_node.identifier,
             self_node.private_key
         )
@@ -81,6 +81,7 @@ class Node(NodeManager):
             nodes.append(node)
         self._nodes += nodes
         self._storage.dump(self._nodes)
+        #self.validators.set_validators(validators)
 
     def get_validator_nodes(self) -> list[NodeDto]:
         nodes = self.all()

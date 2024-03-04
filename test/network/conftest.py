@@ -76,9 +76,11 @@ class Helper:
         return block_p.sign(sha256(b'12345').digest(), self_node.identifier, self_node.private_key)
 
     @staticmethod
-    def create_transaction() -> Tx:
+    def create_transaction(add_time: int | None = None) -> Tx:
         self_node = Helper.get_self_node_info()
         tx_c = TxCandidate({"d": "abc", "t": "1"})
+        if add_time:
+            tx_c.timestamp += add_time
         return tx_c.sign(self_node)
 
     @staticmethod

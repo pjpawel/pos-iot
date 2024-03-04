@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 from uuid import UUID
 
 from .block import Block
@@ -45,8 +46,11 @@ class BlockchainManager(Manager):
     def load_from_bytes(self, b: bytes) -> None:
         self._storage.load_from_bytes(b)
 
+    def get_last_block(self) -> Block:
+        return self.all()[-1]
+
     def get_last_prev_hash(self) -> bytes:
-        return self.all()[-1].prev_hash
+        return self.get_last_block().prev_hash
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
@@ -263,9 +267,17 @@ class TransactionVerifiedManager(Manager):
         self.refresh()
         return self._txs
 
+    @staticmethod
+    def sort_tx_by_time(txs: dict[UUID, TxVerified]) -> dict[UUID, TxVerified]:
+        return OrderedDict(sorted(txs.items(), key=lambda item: item[1].time, reverse=True))
+
     def delete(self, identifiers: list[UUID]) -> list[TxVerified]:
-        # TODO: is necessary? - add method on storage
-        pass
+        self.refresh()
+        txs = []
+        for ident in identifiers:
+            txs.append(self._txs.pop(ident))
+        self._storage.dump(self._txs)
+        return txs
 
 
 class ValidatorAgreementResult(Manager):

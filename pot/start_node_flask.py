@@ -165,6 +165,17 @@ def populate_new_node():
     return ""
 
 
+@app.post("/blockchain/block/new", endpoint='blockchain_block_populate_node')
+def populate_new_block():
+    return app.pot.add_new_block(request.get_data(False), request.remote_addr)
+
+
+@app.post("/node/validator/new", endpoint='inform_about_new_validator')
+def new_validators():
+    app.pot.node_new_validators(request.remote_addr, request.get_json())
+    return ""
+
+
 """
 =================== Validator API ===================
 """

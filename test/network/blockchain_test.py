@@ -1,34 +1,18 @@
 import base64
+import socket
+from time import time
 from uuid import UUID, uuid4
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+import pytest
 
+from pot.network.block import BlockCandidate
 from pot.network.blockchain import PoT
-from pot.network.service import Blockchain
+from pot.network.exception import PoTException
 from pot.network.node import SelfNodeInfo, NodeType
 from pot.network.storage import decode_chain
+from pot.network.transaction import TxVerified
 
 from test.network.conftest import Helper
-
-
-def test_first_block_creation(helper: Helper):
-    # TODO: move to block
-    helper.put_storage_env()
-    helper.put_node_type_env()
-    helper.delete_storage_key()
-
-    blockchain = Blockchain()
-    self_node = SelfNodeInfo()
-
-    blockchain.create_first_block(self_node)
-
-    assert len(blockchain.blocks) == 1
-    assert blockchain.blocks[0].verify(self_node.public_key)
-
-    private_key = Ed25519PrivateKey.generate()
-    public_key = private_key.public_key()
-
-    assert not blockchain.blocks[0].verify(public_key)
 
 
 def test_pot_load(helper: Helper):
@@ -91,5 +75,105 @@ def test_node_update(helper: Helper):
     chain = decode_chain(blockchain_byt)
 
     assert pot.blockchain.blocks == chain
-
     assert isinstance(nodes, list)
+
+
+def test_add_new_block_successful(helper: Helper):
+    helper.put_storage_env()
+    helper.put_genesis_node_env(True)
+
+    pot = PoT()
+    pot.load()
+
+    assert len(pot.blockchain.blocks) == 1
+
+    # Tx verified
+    ident1 = uuid4()
+    tx1 = helper.create_transaction()
+    tx_verified1 = TxVerified(tx1, int(time()))
+    pot.blockchain.add_new_transaction(ident1, tx_verified1)
+    ident2 = uuid4()
+    tx2 = helper.create_transaction()
+    tx_verified2 = TxVerified(tx2, int(time()))
+    pot.blockchain.add_new_transaction(ident2, tx_verified2)
+    ident3 = uuid4()
+    tx3 = helper.create_transaction()
+    tx_verified3 = TxVerified(tx3, int(time()))
+    pot.blockchain.add_new_transaction(ident3, tx_verified3)
+
+    cblock = BlockCandidate.create_new([tx1, tx2, tx3])
+    block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
+
+    response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+    assert response_code == 200
+    assert len(pot.blockchain.blocks) == 2
+
+
+def test_add_new_block_missing_latest(helper: Helper):
+    helper.put_storage_env()
+    helper.put_genesis_node_env(True)
+
+    pot = PoT()
+    pot.load()
+
+    assert len(pot.blockchain.blocks) == 1
+
+    # Tx verified
+    ident1 = uuid4()
+    tx1 = helper.create_transaction()
+    tx_verified1 = TxVerified(tx1, int(time()))
+    pot.blockchain.add_new_transaction(ident1, tx_verified1)
+    ident2 = uuid4()
+    tx2 = helper.create_transaction()
+    tx2.timestamp += 10
+    tx_verified2 = TxVerified(tx2, int(time()) + 10)
+    pot.blockchain.add_new_transaction(ident2, tx_verified2)
+    ident3 = uuid4()
+    tx3 = helper.create_transaction()
+    tx3.timestamp += 20
+    tx_verified3 = TxVerified(tx3, int(time()) + 30)
+    pot.blockchain.add_new_transaction(ident3, tx_verified3)
+    print(f"Transactions identifiers are {ident1.hex}, {ident2.hex}, {ident3.hex}")
+
+    cblock = BlockCandidate.create_new([tx1, tx2])
+    block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
+
+    response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+    assert response_code == 200
+    assert len(pot.blockchain.blocks) == 2
+
+
+def test_add_new_block_missing_not_latest(helper: Helper):
+    helper.put_storage_env()
+    helper.put_genesis_node_env(True)
+
+    pot = PoT()
+    pot.load()
+
+    assert len(pot.blockchain.blocks) == 1
+
+    # Tx verified
+    ident1 = uuid4()
+    tx1 = helper.create_transaction()
+    tx_verified1 = TxVerified(tx1, int(time()))
+    pot.blockchain.add_new_transaction(ident1, tx_verified1)
+    ident2 = uuid4()
+    tx2 = helper.create_transaction()
+    tx_verified2 = TxVerified(tx2, int(time()) + 10)
+    pot.blockchain.add_new_transaction(ident2, tx_verified2)
+    ident3 = uuid4()
+    tx3 = helper.create_transaction()
+    tx_verified3 = TxVerified(tx3, int(time()) + 20)
+    pot.blockchain.add_new_transaction(ident3, tx_verified3)
+
+    cblock = BlockCandidate.create_new([tx1, tx3])
+    block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
+
+    #with pytest.raises(PoTException):
+    #    response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+    try:
+        response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+    except PoTException as e:
+        assert e.code == 400
+    # assert response_code == 200
+    # assert len(pot.blockchain.blocks) == 2

@@ -1,5 +1,6 @@
 from base64 import b64encode
 from dataclasses import dataclass
+from hashlib import sha256
 from io import BytesIO
 from time import time
 from uuid import UUID
@@ -56,6 +57,9 @@ class Block:
         if len(self.transactions) > 0:
             out += [b''.join([tx.encode() for tx in self.transactions])]
         return b''.join(out)
+
+    def hash(self) -> bytes:
+        return sha256(self.encode()).digest()
 
     def verify(self, public_key: Ed25519PublicKey) -> bool:
         all_data = bytearray(self.encode())

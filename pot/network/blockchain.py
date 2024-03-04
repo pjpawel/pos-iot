@@ -9,7 +9,7 @@ from uuid import uuid4, UUID
 import requests
 
 from .service import Blockchain, Node as NodeService, TransactionToVerify
-from .storage import encode_chain
+from .storage import encode_chain, decode_chain
 from .transaction import Tx, TxToVerify
 from .node import Node, SelfNodeInfo, NodeType
 from .request import Request
@@ -217,6 +217,47 @@ class PoT:
         uuid = self._validate_create_uuid(identifier)
         self.add_transaction_verification_result(uuid, node, verified)
 
+    def add_new_block(self, data: bytes, request_addr: str):
+        self._validate_request_from_validator(request_addr)
+        block = decode_chain(data)[0]
+        if block.prev_hash == self.blockchain.get_last_block().hash():
+            txs_verified_with_ident = self.blockchain.txs_verified.sort_tx_by_time(self.blockchain.txs_verified.all())
+            txs_verified = [tx_verified.tx for tx_verified in list(txs_verified_with_ident.values())]
+            txs_verified_set = set(txs_verified)
+            b_txs = set(block.transactions)
+            # Check if all transactions in block are verified
+            diff = b_txs.difference(txs_verified)
+            if diff:
+                raise PoTException(f"Transactions {', '.join([str(tx) for tx in diff])} are not verified", 400)
+            diff = txs_verified_set.difference(b_txs)
+            if diff:
+                diff_count = []
+                # Check if missing transactions are latest in verified list
+                for tx in txs_verified:
+                    if tx in diff:
+                        diff_count.append(tx)
+                    else:
+                        diff_count = set(diff_count)
+                        if diff_count != diff:
+                            idents = []
+                            for tx_diff in diff.difference(diff_count):
+                                for ident, tx_verified in txs_verified_with_ident.items():
+                                    if tx_verified.tx == tx_diff:
+                                        idents.append(ident)
+                                        break
+                            txs_str = ', '.join([ident.hex for ident in idents])
+                            raise PoTException(f"Transactions {txs_str} are not latest", 400)
+                        break
+
+            self.blockchain.add(block)
+            return "Block added successfully", 200
+
+        block_hash = block.hash()
+        for b in self.blockchain.all():
+            if b.hash() == block_hash:
+                return "Block is already in blockchain", 200
+        raise PoTException("Block is not valid", 400)
+
     def populate_new_node(self, data: dict, request_addr: str) -> None:
         logging.info("Getting new node from " + request_addr)
         self._validate_request_from_validator(request_addr)
@@ -264,11 +305,11 @@ class PoT:
 
     def node_update(self, data: dict) -> dict | tuple:
         self._validate_if_i_am_validator()
+        logging.info(f"Updating nodes data {data}")
 
         last_block_hash = data.get("lastBlock", None)
         excluded_nodes = data.get("nodeIdentifiers", [])
 
-        blocks_to_show = None
         if last_block_hash is not None:
             blocks_to_show = []
             for block in self.blockchain.blocks[::-1]:
@@ -276,18 +317,20 @@ class PoT:
                 if block.prev_hash == last_block_hash:
                     break
             blocks_to_show.reverse()
+        else:
+            blocks_to_show = self.blockchain.all()
 
-        nodes_to_show = None
         if excluded_nodes:
             nodes_to_show = []
             for node in self.nodes.all():
                 if node.identifier.hex not in excluded_nodes:
                     nodes_to_show.append(node)
+        else:
+            nodes_to_show = self.nodes.all()
 
-        blocks_encoded = encode_chain(blocks_to_show or self.blockchain.blocks)
         return {
-            "blockchain": b64encode(blocks_encoded).hex(),
-            "nodes": self.nodes.prepare_nodes_info(nodes_to_show or self.nodes.all())
+            "blockchain": b64encode(encode_chain(blocks_to_show)).hex(),
+            "nodes": self.nodes.prepare_nodes_info(nodes_to_show)
         }
 
     def node_validator_agreement_get(self, remote_addr: str) -> dict:
@@ -349,10 +392,9 @@ class PoT:
         # TODO: to be completed
 
     def node_validator_agreement_done(self, data: dict):
-        validator_list = data.get("validators")
-        if validator_list is None:
-            raise PoTException("Missing validators list", 400)
-        validator_list = [self._validate_create_uuid(ident) for ident in validator_list]
+        logging.info(f"Validator agreement done {data}")
+        self._validate_request_dict_keys(data, ["validators"])
+        validator_list = [self._validate_create_uuid(ident) for ident in data.get("validators")]
         if validator_list == self.nodes.validators.all():
             return
 
@@ -373,6 +415,16 @@ class PoT:
         else:
             self.nodes.validator_agreement_info.add_leader(self.nodes.get_most_trusted_validator())
 
+    def node_new_validators(self, remote_addr: str, data: dict):
+        self._validate_request_from_validator(remote_addr)
+        self._validate_request_dict_keys(data, ["validators"])
+        for ident in data.get("validators"):
+            node = self.nodes.find_by_identifier(self._validate_create_uuid(ident))
+            try:
+                self.update_from_validator_node(node.host)
+            except Exception as e:
+                pass
+
     def send_validators_list(self):
         data = {
             "validators": [identifier.hex for identifier in self.nodes.validators.all()]
@@ -380,8 +432,8 @@ class PoT:
         for node in self.nodes.all():
             if node.identifier == self.self_node.identifier:
                 continue
-            logging.info(f"Sending validators list to node {node.identifier.hex}")
-            response = requests.post(f"http://{node.host}:{node.port}/node/validator/agreement/done", json=data)
+            logging.info(f"Sending validators list to node {node.identifier.hex} {data}")
+            response = requests.post(f"http://{node.host}:{node.port}/node/validator/new", json=data)
             if response.status_code != 200:
                 logging.error(f"Error while sending validators list to node {node.identifier.hex}. Error: {response.text}")
 
