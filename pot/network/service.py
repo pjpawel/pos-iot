@@ -5,7 +5,7 @@ from pot.network.block import BlockCandidate, Block
 from pot.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
     ValidatorAgreement, ValidatorAgreementInfoManager, ValidatorAgreementResult, NodeTrust, ValidatorManager
 from pot.network.node import Node as NodeDto, SelfNodeInfo, NodeType
-from pot.network.transaction import TxVerified
+from pot.network.transaction import TxVerified, Tx
 
 
 class Blockchain(BlockchainManager):
@@ -39,6 +39,55 @@ class Blockchain(BlockchainManager):
             self_node.identifier,
             self_node.private_key
         ))
+
+    def find_last_transactions_values_for_node(self, node: NodeDto, t_type: str | None = None) -> list[dict]:
+        n_count = 0
+        include_type = t_type is not None
+        txs_verified = self.txs_verified.all().values()
+        txs_values = []
+        # TODO: correct
+
+        def get_value_from_tx(tx: Tx) -> dict | None:
+            global n_count
+            if tx.sender != node.identifier:
+                return None
+            tx_type = tx.data.get(Tx.TYPE_KEY)
+            if include_type and tx_type != type:
+                return None
+            txs_values.append({
+                "type": tx_type,
+                "data": tx.data
+            })
+            n_count += 1
+
+        for tx_verified in txs_verified:
+            if n_count >= 100:
+                break
+            tx = tx_verified.tx
+            if tx.sender == node.identifier:
+                tx_type = tx.data.get(Tx.TYPE_KEY)
+                if include_type and tx_type != type:
+                    continue
+                txs_values.append({
+                    "type": tx_type,
+                    "data": tx.data
+                })
+                n_count += 1
+        blocks = self.all()
+        for block in blocks:
+            if n_count >= 100:
+                break
+            for tx in block.transactions:
+                if tx.sender == node.identifier:
+                    tx_type = tx.data.get(Tx.TYPE_KEY)
+                    if include_type and tx_type != type:
+                        continue
+                    txs_values.append({
+                        "type": tx_type,
+                        "data": tx.data
+                    })
+                    n_count += 1
+        return txs_values
 
 
 class Node(NodeManager):

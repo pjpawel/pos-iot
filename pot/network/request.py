@@ -38,3 +38,9 @@ class Request:
         if response.status_code != 200:
             raise Exception(f"Cannot get transaction from host: {host}:{port}")
         return response.content
+
+    @staticmethod
+    def send_blockchain_new_block(host: str, port: int, data: bytes) -> None:
+        response = requests.post(f"http://{host}:{port}/blockchain/block/new", data)
+        if response.status_code != 200:
+            raise Exception(f"Cannot send new block to host: {host}:{port}")

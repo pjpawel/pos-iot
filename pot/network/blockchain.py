@@ -83,8 +83,7 @@ class PoT:
         self.update_from_validator_node(genesis_ip)
 
     def update_from_validator_node(self, genesis_ip: str) -> None:
-        data = {"port": 5000}
-        response = requests.post(f"http://{genesis_ip}:{5000}/node/update", json=data)
+        response = requests.get(f"http://{genesis_ip}:{5000}/node/update")
         if response.status_code != 200:
             raise Exception(f"Cannot update from genesis node: {genesis_ip}:{5000} Code: {response.status_code} "
                             f"Response data: " + response.text)
@@ -250,7 +249,7 @@ class PoT:
                         break
 
             self.blockchain.add(block)
-            return "Block added successfully", 200
+            return "", 204
 
         block_hash = block.hash()
         for b in self.blockchain.all():
@@ -266,7 +265,6 @@ class PoT:
         identifier = self._validate_create_uuid(data.get("identifier"))
         host = data.get("host")
         port = int(data.get("port"))
-        #n_type = getattr(NodeType, data.get("type"))
         n_type = NodeType.SENSOR
         logging.info("Getting new node " + identifier.hex)
 
@@ -420,8 +418,10 @@ class PoT:
         self._validate_request_dict_keys(data, ["validators"])
         for ident in data.get("validators"):
             node = self.nodes.find_by_identifier(self._validate_create_uuid(ident))
+            # TODO: should be saving validators list?
             try:
                 self.update_from_validator_node(node.host)
+                # TODO: why update from genesis?
             except Exception as e:
                 pass
 

@@ -29,7 +29,7 @@ app = Flask(__name__)
 Load blockchain
 """
 app.pot = PoT()
-app.pot.load()
+#app.pot.load()
 
 
 @app.errorhandler(PoTException)
@@ -49,7 +49,6 @@ def info():
     Show info about node
     status: active/synchronizing/inactive
     ip: host ip
-    :return:
     """
     hostname = socket.gethostname()
     ip = socket.gethostbyname(hostname)
@@ -70,11 +69,8 @@ def get_blockchain():
     return {"blockchain": app.pot.blockchain.blocks_to_dict()}
 
 
-@app.get("/blockchain/to-verify")
+@app.get("/transaction/to-verify")
 def get_transaction_to_verify():
-    """
-    :return:
-    """
     data = {}
     for uuid, tx_to_verify in app.pot.tx_to_verified.all().items():
         data[uuid.hex] = {
@@ -92,23 +88,16 @@ def get_transaction_to_verify():
 
 @app.get("/blockchain/verified")
 def get_transaction_verified():
-    """
-    :return:
-    """
-    txs = app.pot.blockchain.txs_verified.all()
-    if not txs:
-        return {}
     return {
-        "transactions": [{"identifier": uid.hex, "timestamp": tx.time, "data": tx.tx.data} for uid, tx in txs.items()]
+        "transactions": [
+            {"identifier": uid.hex, "timestamp": tx.time, "data": tx.tx.data}
+            for uid, tx in app.pot.blockchain.txs_verified.all().items()
+        ]
     }
 
 
 @app.get("/node/list")
 def nodes():
-    """
-    Show nodes in network
-    :return:
-    """
     return {
         "nodes": app.pot.nodes.prepare_all_nodes_info()
     }
@@ -119,15 +108,11 @@ def node(identifier: str):
     node_f = app.pot.nodes.find_by_identifier(UUID(identifier))
     if node_f is None:
         return "Node not found", 404
-    return node_f.__dict__
+    return app.pot.nodes.prepare_nodes_info([node_f])[0]
 
 
 @app.get("/public-key", endpoint='get_public_key')
 def get_public_key():
-    """
-    Get node public key
-    :return:
-    """
     return app.pot.self_node.get_public_key_str()
 
 
@@ -138,13 +123,9 @@ def get_public_key():
 
 @app.post("/transaction", endpoint='new_transaction')
 def transaction_new():
-    """
-    Add new transaction to block candidate
-    :return:
-    """
     try:
-        # request.content_length
-        # TODO: check content_length
+        if request.content_length >= 1024:
+            return "Transaction data is too long", 400
         return app.pot.transaction_new(request.get_data(as_text=False), request.remote_addr)
     except Exception:
         logging.exception("Error registering new transaction")
@@ -189,14 +170,14 @@ def transaction_get(identifier: str):
 @app.post("/transaction/<identifier>/populate")
 def transaction_populate(identifier: str):
     app.pot.transaction_populate(request.get_data(as_text=False), identifier)
-    return {}
+    return ""
 
 
 @app.post("/transaction/<identifier>/verifyResult")
 def transaction_verify_result(identifier: str):
     request_json = request.get_json()
     app.pot.transaction_populate_verify_result(request_json.get("result"), identifier, request.remote_addr)
-    return {}
+    return ""
 
 
 @app.post("/node/register", endpoint='node_register')
@@ -212,13 +193,13 @@ def node_register():
     return app.pot.node_register(identifier, request.remote_addr, port, n_type)
 
 
-@app.post("/node/update", endpoint='node_update')
+@app.get("/node/update", endpoint='node_update')
 def node_update():
     """
     Node identifier must be valid uuid hex
     :return:
     """
-    return app.pot.node_update(request.get_json())
+    return app.pot.node_update(request.args)
 
 
 @app.post("/node/validator/agreement")

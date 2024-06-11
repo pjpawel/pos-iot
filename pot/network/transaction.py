@@ -21,6 +21,10 @@ class Tx:
     signature: bytes
     data: dict
 
+    TYPE_KEY = "t"
+    DATA_KEY = "d"
+    NOTE_KEY = "n"
+
     @classmethod
     def decode(cls, s: BytesIO):
         """
@@ -68,17 +72,17 @@ class Tx:
             raise PoTException(f"Validation error: {e}", 400)
 
     def validate_data(self) -> None:
-        t = self.data.get("t")
+        t = self.data.get(self.TYPE_KEY)
         if not t:
             raise Exception("Missing 'type' (t) of data in transaction")
         if not isinstance(t, str):
             raise Exception("Invalid type of 'type' (t) in transaction. Must be string")
-        data = self.data.get("d")
+        data = self.data.get(self.DATA_KEY)
         if not data:
             raise Exception("Missing 'data' (d) in transaction")
         if not isinstance(data, float) and not isinstance(data, int) and not isinstance(data, str):
             raise Exception("Invalid type of 'data' (d) in transaction. Must be int, float or str")
-        note = self.data.get("n")
+        note = self.data.get(self.NOTE_KEY)
         if note and not isinstance(note, str):
             raise Exception("Invalid type of 'note' (n) in transaction. Must be string")
 
