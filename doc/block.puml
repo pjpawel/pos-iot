@@ -1,0 +1,31 @@
+@startuml classes
+set namespaceSeparator none
+class "pot.network.node.Node" as pot.network.node.Node {
+  host : str
+  identifier : UUID
+  port : int
+  type
+  get_public_key() -> Ed25519PublicKey
+  get_public_key_str() -> str
+  load_from_dict(data: dict)
+  load_from_list(data: list)
+  set_type(n_type: NodeType)
+  to_list() -> list[str]
+}
+class "pot.network.node.NodeType" as pot.network.node.NodeType {
+  name
+}
+class "pot.network.node.SelfNode" as pot.network.node.SelfNode {
+  INFO_PATH : str
+  private_key
+  public_key
+  type : NodeType | str | None
+  dump(storage_dir: str) -> None
+  get_public_key() -> Ed25519PublicKey
+  get_public_key_str()
+  load(n_type: NodeType | str | None)
+  to_list() -> list[str]
+}
+pot.network.node.NodeType --* pot.network.node.Node : type
+pot.network.node.SelfNode --|> pot.network.node.Node
+@enduml

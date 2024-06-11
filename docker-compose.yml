@@ -1,41 +1,58 @@
 
 services:
-  node0:
-    container_name: node0
+  node_genesis:
     build: .
     ports:
-      - "5002:5000"
+      - "5010:5000"
     volumes:
-      - node0volume:/storage
+      - type: bind
+        source: /home/pp/programs/magisterka/storage
+        target: /mnt/storage
     networks:
       blockchain:
         ipv4_address: 172.18.0.2
     environment:
-      # Generate using:
-      # import nacl.secret
-      # nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE).hex()
       SECRET_KEY: 07f83cd2a279a2edc6b7ae1ced2cef4d325490efb2d2194813d7b446155d0c64
-  node1:
-    container_name: node1
+      NODE_TYPE: VALIDATOR
+      START_ROLE: genesis
+      GENESIS_NODE: node_genesis
+
+  node_validator:
+   build: .
+   depends_on:
+    - node_genesis
+   ports:
+     - "5011:5000"
+   volumes:
+     - type: bind
+       source: /home/pp/programs/magisterka/storage
+       target: /mnt/storage
+   networks:
+     blockchain:
+       ipv4_address: 172.18.0.3
+   environment:
+     SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
+     NODE_TYPE: VALIDATOR
+     GENESIS_NODE: node_genesis
+
+  node_normal:
     build: .
     depends_on:
-     - node0
+      - node_validator
     ports:
-      - "5003:5000"
+      - "5012:5000"
     volumes:
-      - node1volume:/storage
+      - type: bind
+        source: /home/pp/programs/magisterka/storage
+        target: /mnt/storage
     networks:
       blockchain:
-#        ipv4_address: 172.18.0.2
+        ipv4_address: 172.18.0.4
     environment:
       SECRET_KEY: ee7e58b69fca387a17dd8b7761c1ad3eb0a93808165f986c6edbbb194acdff4b
-      #POS_SCENARIOS: NONE
+      NODE_TYPE: VALIDATOR
+      GENESIS_NODE: node_genesis
 
-volumes:
-  node0volume:
-    #external: true
-  node1volume:
-    #external: true
 
 networks:
   blockchain:

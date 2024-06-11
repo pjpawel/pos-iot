@@ -2,9 +2,9 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pos.blockchain.blockchain import PoS
-from pos.blockchain.verifier import TransactionVerifier
-from pos.utils import setup_logger
+from pot.network.blockchain import PoT
+from pot.network.verifier import TransactionVerifier
+from pot.utils import setup_logger
 
 
 print(f"Starting {__file__}")
@@ -17,15 +17,15 @@ load_dotenv()
 """
 Configuring logger
 """
-setup_logger()
+setup_logger("VERIFY")
 
 sleep(10.0)
 
 """
 Run verification of transactions
 """
-pos = PoS()
-pos.load(only_from_file=False)
+pot = PoT()
+pot.load(only_from_file=True)
 
-tx_verifier = TransactionVerifier(pos)
-tx_verifier.start()
+tx_verifier = TransactionVerifier(pot)
+tx_verifier.process()

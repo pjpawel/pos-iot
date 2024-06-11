@@ -1,0 +1,75 @@
+@startuml packages
+set namespaceSeparator none
+package "pot" as pot {
+}
+package "pot.network" as pot.network {
+}
+package "pot.network.block" as pot.network.block {
+}
+package "pot.network.blockchain" as pot.network.blockchain {
+}
+package "pot.network.dumper" as pot.network.dumper {
+}
+package "pot.network.exception" as pot.network.exception {
+}
+package "pot.network.manager" as pot.network.manager {
+}
+package "pot.network.node" as pot.network.node {
+}
+package "pot.network.request" as pot.network.request {
+}
+package "pot.network.service" as pot.network.service {
+}
+package "pot.network.storage" as pot.network.storage {
+}
+package "pot.network.transaction" as pot.network.transaction {
+}
+package "pot.network.utils" as pot.network.utils {
+}
+package "pot.network.verifier" as pot.network.verifier {
+}
+package "pot.scenario" as pot.scenario {
+}
+package "pot.scenario.definitions" as pot.scenario.definitions {
+}
+package "pot.scenario.exception" as pot.scenario.exception {
+}
+package "pot.scenario.utils" as pot.scenario.utils {
+}
+package "pot.start_node_flask" as pot.start_node_flask {
+}
+package "pot.utils" as pot.utils {
+}
+pot.network.block --> pot.network.transaction
+pot.network.block --> pot.network.utils
+pot.network.blockchain --> pot.network.exception
+pot.network.blockchain --> pot.network.node
+pot.network.blockchain --> pot.network.request
+pot.network.blockchain --> pot.network.service
+pot.network.blockchain --> pot.network.storage
+pot.network.blockchain --> pot.network.transaction
+pot.network.dumper --> pot.network.blockchain
+pot.network.manager --> pot.network.block
+pot.network.manager --> pot.network.node
+pot.network.manager --> pot.network.storage
+pot.network.manager --> pot.network.transaction
+pot.network.node --> pot.network.request
+pot.network.request --> pot.network.exception
+pot.network.service --> pot.network.manager
+pot.network.service --> pot.network.transaction
+pot.network.storage --> pot.network.block
+pot.network.storage --> pot.network.node
+pot.network.storage --> pot.network.transaction
+pot.network.transaction --> pot.network.exception
+pot.network.transaction --> pot.network.node
+pot.network.transaction --> pot.network.utils
+pot.network.verifier --> pot.network.blockchain
+pot.network.verifier --> pot.network.transaction
+pot.scenario --> pot.network.blockchain
+pot.scenario --> pot.scenario.definitions
+pot.scenario --> pot.scenario.exception
+pot.scenario.definitions --> pot.scenario.utils
+pot.start_node_flask --> pot.network.blockchain
+pot.start_node_flask --> pot.network.node
+pot.start_node_flask --> pot.utils
+@enduml

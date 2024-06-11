@@ -1,10 +1,9 @@
-import os
 from time import sleep
 
 from dotenv import load_dotenv
 
 from pot.network.blockchain import PoT
-from pot.scenario import run_scenarios
+from pot.network.dumper import Dumper
 from pot.utils import setup_logger
 
 
@@ -18,15 +17,21 @@ load_dotenv()
 """
 Configuring logger
 """
-setup_logger("SCENARIO")
+setup_logger("DUMP")
 
-sleep(10.0)
+sleep(0.001)
 
-
-"""
-Run scenarios
-"""
 pot = PoT()
 pot.load(only_from_file=True)
 
-run_scenarios(os.getenv('POT_SCENARIOS'), pot)
+dumper = Dumper(pot)
+while True:
+    dumper.dump()
+    sleep(1.0)
+
+
+
+
+
+
+

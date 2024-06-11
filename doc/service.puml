@@ -1,0 +1,73 @@
+@startuml classes
+set namespaceSeparator none
+class "pot.network.blockchain.PoT" as pot.network.blockchain.PoT {
+  blockchain
+  nodes
+  self_node
+  tx_to_verified
+  add_transaction_verification_result(uuid: UUID, node: Node, result: bool)
+  load(only_from_file: bool) -> None
+  load_from_validator_node(genesis_ip: str) -> None
+  node_register(identifier: UUID, node_ip: str, port: int, n_type: NodeType) -> dict | tuple
+  node_update(data: dict) -> dict | tuple
+  {abstract}node_validator_agreement_accept()
+  node_validator_agreement_done()
+  node_validator_agreement_get() -> dict
+  node_validator_agreement_list_get()
+  node_validator_agreement_list_send()
+  node_validator_agreement_list_set(uuids: list[UUID])
+  node_validator_agreement_start()
+  populate_new_node(data: dict, request_addr: str) -> None
+  send_transaction_populate(uuid: UUID, tx: Tx)
+  send_transaction_verification(uuid: UUID, verified: bool, message: str | None)
+  transaction_get(identifier: str) -> bytes
+  transaction_new(data: bytes, request_addr: str) -> dict
+  transaction_populate(data: bytes, identifier: str) -> None
+  transaction_populate_verify_result(verified: bool, identifier: str, remote_addr: str)
+  update_from_validator_node(genesis_ip: str) -> None
+}
+class "pot.network.manager.Manager" as pot.network.manager.Manager {
+  get_storage()
+  has_empty_files() -> bool
+  has_storage_files() -> bool
+}
+class "pot.network.storage.Storage" as pot.network.storage.Storage {
+  PATH : str
+  path : str
+  get_size() -> int
+  has_files() -> bool
+  invalidate_cache() -> None
+  is_empty() -> bool
+  is_up_to_date()
+  unlock() -> None
+  update_cache()
+  wait_for_set_lock(timeout: int) -> None
+}
+class "pot.network.service.Blockchain" as pot.network.service.Blockchain {
+  txs_verified
+  add_new_transaction(uuid: UUID, tx: TxVerified) -> None
+  {abstract}create_block()
+}
+class "pot.network.manager.BlockchainManager" as pot.network.manager.BlockchainManager {
+  blocks : list[Block]
+  add(block: Block) -> None
+  blocks_to_dict() -> list[dict]
+  create_first_block(self_node: SelfNode) -> None
+  load_from_bytes(b: bytes) -> None
+  refresh() -> None
+}
+class "pot.network.storage.BlocksStorage" as pot.network.storage.BlocksStorage {
+  PATH : str
+  dump(blocks: list[Block])
+  load() -> list[Block]
+  load_from_bytes(b: bytes) -> list[Block]
+  load_from_file(f: BinaryIO) -> list[Block]
+  update(blocks: list[Block])
+}
+pot.network.storage.BlocksStorage --|> pot.network.storage.Storage
+pot.network.manager.BlockchainManager --|> pot.network.manager.Manager
+pot.network.storage.BlocksStorage --* pot.network.manager.BlockchainManager : _storage
+pot.network.storage.Storage --* pot.network.manager.Manager : _storage
+pot.network.service.Blockchain --|> pot.network.manager.BlockchainManager
+pot.network.service.Blockchain --* pot.network.blockchain.PoT : blockchain
+@enduml

@@ -1,0 +1,308 @@
+@startuml classes
+set namespaceSeparator none
+class "pot.network.block.Block" as pot.network.block.Block {
+  prev_hash : bytes
+  signature : bytes
+  timestamp : int
+  transactions : list[Tx]
+  validator : UUID
+  version : int
+  decode(s: BytesIO)
+  encode() -> bytes
+  to_dict()
+  verify(public_key: Ed25519PublicKey) -> bool
+}
+class "pot.network.block.BlockCandidate" as pot.network.block.BlockCandidate {
+  prev_hash : bytes | None
+  timestamp : int
+  transactions : list[Tx]
+  validator : UUID | None
+  version : int
+  add_transaction(tx: Tx) -> None
+  create_new(txs: list[Tx])
+  decode(s: BytesIO)
+  encode() -> bytes
+  sign(prev_hash: bytes, validator: UUID, private_key: Ed25519PrivateKey) -> Block
+}
+class "pot.network.blockchain.PoT" as pot.network.blockchain.PoT {
+  blockchain
+  nodes
+  self_node
+  tx_to_verified
+  add_transaction_verification_result(uuid: UUID, node: Node, result: bool)
+  load(only_from_file: bool) -> None
+  load_from_validator_node(genesis_ip: str) -> None
+  node_register(identifier: UUID, node_ip: str, port: int, n_type: NodeType) -> dict | tuple
+  node_update(data: dict) -> dict | tuple
+  {abstract}node_validator_agreement_accept()
+  node_validator_agreement_done()
+  node_validator_agreement_get() -> dict
+  node_validator_agreement_list_get()
+  node_validator_agreement_list_send()
+  node_validator_agreement_list_set(uuids: list[UUID])
+  node_validator_agreement_start()
+  populate_new_node(data: dict, request_addr: str) -> None
+  send_transaction_populate(uuid: UUID, tx: Tx)
+  send_transaction_verification(uuid: UUID, verified: bool, message: str | None)
+  transaction_get(identifier: str) -> bytes
+  transaction_new(data: bytes, request_addr: str) -> dict
+  transaction_populate(data: bytes, identifier: str) -> None
+  transaction_populate_verify_result(verified: bool, identifier: str, remote_addr: str)
+  update_from_validator_node(genesis_ip: str) -> None
+}
+class "pot.network.dumper.Dumper" as pot.network.dumper.Dumper {
+  dump_dir : str
+  paths : list[str]
+  dump() -> None
+}
+class "<color:red>pot.network.exception.PoTException</color>" as pot.network.exception.PoTException {
+  code : int
+  message : str
+}
+class "<color:red>pot.network.exception.PublicKeyNotFoundException</color>" as pot.network.exception.PublicKeyNotFoundException {
+}
+class "pot.network.manager.BlockchainManager" as pot.network.manager.BlockchainManager {
+  blocks : list[Block]
+  add(block: Block) -> None
+  blocks_to_dict() -> list[dict]
+  create_first_block(self_node: SelfNode) -> None
+  load_from_bytes(b: bytes) -> None
+  refresh() -> None
+}
+class "pot.network.manager.Manager" as pot.network.manager.Manager {
+  get_storage()
+  has_empty_files() -> bool
+  has_storage_files() -> bool
+}
+class "pot.network.manager.NodeManager" as pot.network.manager.NodeManager {
+  add(node: Node) -> None
+  all() -> list[Node]
+  count_validator_nodes(self_node: SelfNode) -> int
+  exclude_self_node(self_ip: str) -> None
+  find_by_identifier(identifier: UUID) -> Node | None
+  find_by_request_addr(request_addr: str) -> Node | None
+  get_validator_nodes() -> list[Node]
+  len() -> int
+  refresh() -> None
+  set_validators(validators: list[UUID]) -> None
+  to_dict() -> list[dict]
+  update_from_json(nodes_dict: list[dict]) -> None
+}
+class "pot.network.manager.TransactionToVerifyManager" as pot.network.manager.TransactionToVerifyManager {
+  add(identifier: UUID, tx: TxToVerify) -> None
+  add_verification_result(identifier: UUID, node: Node, result: bool) -> None
+  all() -> dict[UUID, TxToVerify]
+  find(identifier: UUID) -> TxToVerify | None
+  get(identifier: UUID) -> TxToVerify | None
+  pop(identifier: UUID) -> TxToVerify
+  refresh() -> None
+}
+class "pot.network.manager.TransactionVerifiedManager" as pot.network.manager.TransactionVerifiedManager {
+  add(identifier: UUID, tx: TxVerified) -> None
+  all() -> dict[UUID, TxVerified]
+  {abstract}delete(identifiers: list) -> list[TxVerified]
+  find(identifier: UUID) -> TxVerified | None
+  refresh() -> None
+}
+class "pot.network.manager.ValidatorAgreement" as pot.network.manager.ValidatorAgreement {
+  is_started : bool
+  last_successful_agreement : int
+  leaders : list[UUID]
+  uuids : list[UUID]
+  all() -> list[UUID]
+  prepare_info_data(is_started: bool, last_success_agreement: int, leaders: list[UUID]) -> dict
+  refresh_info() -> None
+  refresh_list() -> None
+  set(uuids: list[UUID]) -> None
+}
+class "pot.network.node.Node" as pot.network.node.Node {
+  host : str
+  identifier : UUID
+  port : int
+  type
+  get_public_key() -> Ed25519PublicKey
+  get_public_key_str() -> str
+  load_from_dict(data: dict)
+  load_from_list(data: list)
+  set_type(n_type: NodeType)
+  to_list() -> list[str]
+}
+class "pot.network.node.NodeType" as pot.network.node.NodeType {
+  name
+}
+class "pot.network.node.SelfNode" as pot.network.node.SelfNode {
+  INFO_PATH : str
+  private_key
+  public_key
+  type : NodeType | str | None
+  dump(storage_dir: str) -> None
+  get_public_key() -> Ed25519PublicKey
+  get_public_key_str()
+  load(n_type: NodeType | str | None)
+  to_list() -> list[str]
+}
+class "pot.network.request.Request" as pot.network.request.Request {
+  get_info(host: str, port: int) -> dict
+  get_public_key(host: str, port: int) -> bytes
+  send_populate_verification_result(host: str, port: int, identifier: str, data: dict) -> None
+  send_transaction_get_info(host: str, port: int, identifier: str) -> bytes
+  send_transaction_populate(host: str, port: int, identifier: str, data: bytes) -> None
+}
+class "pot.network.service.Blockchain" as pot.network.service.Blockchain {
+  txs_verified
+  add_new_transaction(uuid: UUID, tx: TxVerified) -> None
+  {abstract}create_block()
+}
+class "pot.network.service.Node" as pot.network.service.Node {
+  validator_agreement
+  clear_agreement_list()
+  get_agreement_leader()
+  get_agreement_list() -> list[UUID]
+  is_agreement_started() -> bool
+  set_agreement_list(uuids: list[UUID])
+}
+class "pot.network.service.TransactionToVerify" as pot.network.service.TransactionToVerify {
+}
+class "pot.network.storage.BlocksStorage" as pot.network.storage.BlocksStorage {
+  PATH : str
+  dump(blocks: list[Block])
+  load() -> list[Block]
+  load_from_bytes(b: bytes) -> list[Block]
+  load_from_file(f: BinaryIO) -> list[Block]
+  update(blocks: list[Block])
+}
+class "pot.network.storage.NodeStorage" as pot.network.storage.NodeStorage {
+  PATH : str
+  dump(nodes: list[Node]) -> None
+  load() -> list[Node]
+  update(nodes: list[Node]) -> None
+}
+class "pot.network.storage.Storage" as pot.network.storage.Storage {
+  PATH : str
+  path : str
+  get_size() -> int
+  has_files() -> bool
+  invalidate_cache() -> None
+  is_empty() -> bool
+  is_up_to_date()
+  unlock() -> None
+  update_cache()
+  wait_for_set_lock(timeout: int) -> None
+}
+class "pot.network.storage.TransactionStorage" as pot.network.storage.TransactionStorage {
+  PATH : str
+  dump(txs: dict[UUID, TxToVerify], lock: bool) -> None
+  load() -> dict[UUID, TxToVerify]
+  update(txs: dict[UUID, TxToVerify]) -> None
+}
+class "pot.network.storage.TransactionVerifiedStorage" as pot.network.storage.TransactionVerifiedStorage {
+  PATH : str
+  dump(txs: dict[UUID, TxVerified], lock: bool) -> None
+  load() -> dict[UUID, TxVerified]
+  update(txs: dict[UUID, TxVerified]) -> None
+}
+class "pot.network.storage.ValidatorAgreementInfoStorage" as pot.network.storage.ValidatorAgreementInfoStorage {
+  PATH : str
+  dump(data: dict) -> None
+  load() -> dict
+}
+class "pot.network.storage.ValidatorAgreementStorage" as pot.network.storage.ValidatorAgreementStorage {
+  PATH : str
+}
+class "pot.network.storage.ValidatorStorage" as pot.network.storage.ValidatorStorage {
+  PATH : str
+  SEPARATOR : str
+  dump(uuids: list[UUID]) -> None
+  load() -> list[UUID]
+}
+class "pot.network.transaction.Tx" as pot.network.transaction.Tx {
+  data : dict
+  sender : UUID
+  signature : bytes
+  timestamp : int
+  version : int
+  decode(s: BytesIO)
+  encode() -> bytes
+  from_str(data: str)
+  to_dict()
+  validate(node: Node) -> None
+  validate_data() -> None
+}
+class "pot.network.transaction.TxCandidate" as pot.network.transaction.TxCandidate {
+  data : dict
+  sender : UUID | None
+  timestamp : int
+  version : int
+  encode()
+  sign(self_node: SelfNode) -> Tx
+}
+class "pot.network.transaction.TxToVerify" as pot.network.transaction.TxToVerify {
+  node
+  time : int
+  tx
+  voting : dict[UUID, bool]
+  add_verification_result(node: Node, result: bool) -> None
+  from_str(data: str)
+  get_positive_votes() -> int
+  get_verified_tx() -> TxVerified
+  has_verification_result(node: Node) -> bool
+  is_ready_to_vote(n_voters: int) -> bool
+  is_voting_positive() -> bool
+}
+class "pot.network.transaction.TxVerified" as pot.network.transaction.TxVerified {
+  time : int
+  tx
+  from_str(data: str)
+}
+class "pot.network.verifier.TransactionVerifier" as pot.network.verifier.TransactionVerifier {
+  LOG_PREFIX : str
+  pot
+  process()
+  start_thread()
+  verify_transaction(tx: TxToVerify) -> bool
+}
+class "pot.scenario.Scenario" as pot.scenario.Scenario {
+  name
+  call(pot: PoT)
+  get_definition()
+}
+class "<color:red>pot.scenario.exception.ScenarioNotFound</color>" as pot.scenario.exception.ScenarioNotFound {
+}
+class "<color:red>pot.scenario.exception.ScenarioNotSupported</color>" as pot.scenario.exception.ScenarioNotSupported {
+}
+pot.network.manager.BlockchainManager --|> pot.network.manager.Manager
+pot.network.manager.NodeManager --|> pot.network.manager.Manager
+pot.network.manager.TransactionToVerifyManager --|> pot.network.manager.Manager
+pot.network.manager.TransactionVerifiedManager --|> pot.network.manager.Manager
+pot.network.manager.ValidatorAgreement --|> pot.network.manager.Manager
+pot.network.node.SelfNode --|> pot.network.node.Node
+pot.network.service.Blockchain --|> pot.network.manager.BlockchainManager
+pot.network.service.Node --|> pot.network.manager.NodeManager
+pot.network.service.TransactionToVerify --|> pot.network.manager.TransactionToVerifyManager
+pot.network.storage.BlocksStorage --|> pot.network.storage.Storage
+pot.network.storage.NodeStorage --|> pot.network.storage.Storage
+pot.network.storage.TransactionStorage --|> pot.network.storage.Storage
+pot.network.storage.TransactionVerifiedStorage --|> pot.network.storage.Storage
+pot.network.storage.ValidatorAgreementInfoStorage --|> pot.network.storage.Storage
+pot.network.storage.ValidatorAgreementStorage --|> pot.network.storage.ValidatorStorage
+pot.network.storage.ValidatorStorage --|> pot.network.storage.Storage
+pot.network.blockchain.PoT --* pot.network.verifier.TransactionVerifier : pot
+pot.network.manager.TransactionVerifiedManager --* pot.network.service.Blockchain : txs_verified
+pot.network.manager.ValidatorAgreement --* pot.network.service.Node : validator_agreement
+pot.network.node.Node --* pot.network.transaction.TxToVerify : node
+pot.network.node.NodeType --* pot.network.node.Node : type
+pot.network.node.SelfNode --* pot.network.blockchain.PoT : self_node
+pot.network.service.Blockchain --* pot.network.blockchain.PoT : blockchain
+pot.network.service.Node --* pot.network.blockchain.PoT : nodes
+pot.network.service.TransactionToVerify --* pot.network.blockchain.PoT : tx_to_verified
+pot.network.storage.BlocksStorage --* pot.network.manager.BlockchainManager : _storage
+pot.network.storage.NodeStorage --* pot.network.manager.NodeManager : _storage
+pot.network.storage.Storage --* pot.network.manager.Manager : _storage
+pot.network.storage.TransactionStorage --* pot.network.manager.TransactionToVerifyManager : _storage
+pot.network.storage.TransactionVerifiedStorage --* pot.network.manager.TransactionVerifiedManager : _storage
+pot.network.storage.ValidatorAgreementInfoStorage --* pot.network.manager.ValidatorAgreement : _storage_info
+pot.network.storage.ValidatorAgreementStorage --* pot.network.manager.ValidatorAgreement : _storage
+pot.network.storage.ValidatorStorage --* pot.network.manager.NodeManager : _validator_storage
+pot.network.transaction.Tx --* pot.network.transaction.TxToVerify : tx
+pot.network.transaction.Tx --* pot.network.trclassansaction.TxVerified : tx
+@enduml

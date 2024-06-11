@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 env/
+venv/
 .pytest_cache/
 # IDE
 .idea/
@@ -9,5 +10,5 @@ env/
 # Others
 test-scripts/
 storage/*
-log/*
+log
 test/
