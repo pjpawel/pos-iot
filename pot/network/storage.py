@@ -129,9 +129,6 @@ class BlocksStorage(Storage):
             return []
         return decode_chain(byt)
 
-    def load_from_bytes(self, b: bytes) -> list[Block]:
-        return decode_chain(b)
-
 
 class NodeStorage(Storage):
     PATH = 'nodes'

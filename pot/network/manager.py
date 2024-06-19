@@ -6,7 +6,7 @@ from .block import Block
 from .node import Node, NodeType
 from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
     ValidatorStorage, ValidatorAgreementStorage, ValidatorAgreementInfoStorage, ValidatorAgreementResultStorage, \
-    NodeTrustStorage
+    NodeTrustStorage, decode_chain
 from .transaction import TxToVerify, TxVerified
 
 
@@ -44,7 +44,8 @@ class BlockchainManager(Manager):
         return [block.to_dict() for block in self.all()]
 
     def load_from_bytes(self, b: bytes) -> None:
-        self._storage.load_from_bytes(b)
+        self.blocks = decode_chain(b)
+        self._storage.dump(self.blocks)
 
     def get_last_block(self) -> Block:
         return self.all()[-1]

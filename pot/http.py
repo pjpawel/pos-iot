@@ -29,7 +29,7 @@ app = Flask(__name__)
 Load blockchain
 """
 app.pot = PoT()
-#app.pot.load()
+app.pot.load()
 
 
 @app.errorhandler(PoTException)
@@ -164,11 +164,13 @@ def new_validators():
 
 @app.get("/transaction/<identifier>")
 def transaction_get(identifier: str):
+    # TODO: nie jest VALIDATOR
     return app.pot.transaction_get(identifier)
 
 
 @app.post("/transaction/<identifier>/populate")
 def transaction_populate(identifier: str):
+    #TODO: nie jest VALIDATOR
     app.pot.transaction_populate(request.get_data(as_text=False), identifier)
     return ""
 

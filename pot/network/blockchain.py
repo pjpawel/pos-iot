@@ -132,15 +132,8 @@ class PoT:
         tx_to_verified = self.tx_to_verified.find(uuid)
         logging.info(f"Printing result verification for transaction {uuid.hex}: {tx_to_verified.voting}")
 
-        # n_validators = self.nodes.count_validator_nodes(self.self_node)
-        # if tx_to_verified.is_ready_to_vote(n_validators):
-        #     logging.info(f"Transaction {uuid.hex} voting")
-        #     tx_to_verified = self.tx_to_verified.pop(uuid)
-        #     assert isinstance(tx_to_verified, TxToVerify)
-        #     if tx_to_verified.is_voting_positive():
-        #         self.blockchain.add_new_transaction(tx_to_verified.tx)
-
         if len(tx_to_verified.voting) == self.nodes.count_validator_nodes():
+            # TODO: remove/add trust
             logging.info(f"Transaction {uuid.hex} voting")
             tx_to_verified = self.tx_to_verified.pop(uuid)
             assert isinstance(tx_to_verified, TxToVerify)
@@ -347,13 +340,13 @@ class PoT:
         self._validate_if_i_am_validator()
         self._validate_request_from_validator(remote_addr)
 
-        leader = self._get_node_from_request_addr(remote_addr)
-        if not self.nodes.is_validator(leader):
-            raise PoTException('Leader is not a validator', 400)
-
         is_started = self.nodes.is_agreement_started()
         if is_started:
             raise PoTException('Validator agreement already stared', 400)
+
+        leader = self._get_node_from_request_addr(remote_addr)
+        if not self.nodes.is_validator(leader):
+            raise PoTException('Leader is not a validator', 400)
 
         node_ids = data.get("list")
         if not node_ids:
