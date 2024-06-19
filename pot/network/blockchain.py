@@ -5,8 +5,10 @@ from base64 import b64encode, b64decode
 from io import BytesIO
 from time import time
 from uuid import uuid4, UUID
+import json
 
 import requests
+#import pycurl
 
 from .service import Blockchain, Node as NodeService, TransactionToVerify
 from .storage import encode_chain, decode_chain
@@ -409,19 +411,26 @@ class PoT:
     def node_new_validators(self, remote_addr: str, data: dict):
         self._validate_request_from_validator(remote_addr)
         self._validate_request_dict_keys(data, ["validators"])
-        for ident in data.get("validators"):
-            node = self.nodes.find_by_identifier(self._validate_create_uuid(ident))
-            # TODO: should be saving validators list?
-            try:
-                self.update_from_validator_node(node.host)
-                # TODO: why update from genesis?
-            except Exception as e:
-                pass
+        validators = data.get("validators")
+        identifiers = []
+        for ident in validators:
+            uuid = self._validate_create_uuid(ident)
+            node = self.nodes.find_by_identifier(uuid)
+            if not node:
+                msg = f""
+                logging.warning(msg)
+                raise PoTException(msg, 400)
+            identifiers.append(uuid)
+
+        self.nodes.validators.set_validators(identifiers)
 
     def send_validators_list(self):
-        data = {
+        data = json.dumps({
             "validators": [identifier.hex for identifier in self.nodes.validators.all()]
-        }
+        })
+        #curl_multi = pycurl.CurlMulti()
+        #n_handles = 0
+        logging.info("available nodes: " + ''.join([node.identifier.hex for node in self.nodes.all()]))
         for node in self.nodes.all():
             if node.identifier == self.self_node.identifier:
                 continue
@@ -429,6 +438,36 @@ class PoT:
             response = requests.post(f"http://{node.host}:{node.port}/node/validator/new", json=data)
             if response.status_code != 200:
                 logging.error(f"Error while sending validators list to node {node.identifier.hex}. Error: {response.text}")
+        #     curl = pycurl.Curl()
+        #     curl.setopt(pycurl.URL, f"http://{node.host}:{node.port}/node/validator/new")
+        #     curl.setopt(pycurl.POST, 1)
+        #     curl.setopt(pycurl.HTTPHEADER, ['Content-Type: application/json'])
+        #     curl.setopt(pycurl.POSTFIELDS, data)
+        #     curl_multi.add_handle(curl)
+        #     n_handles =+ 1
+        #
+        # while True:
+        #     ret, num_handles = curl_multi.perform()
+        #     if ret != pycurl.E_CALL_MULTI_PERFORM:
+        #         break
+        #
+        # ret = curl_multi.select(1)
+        # while True:
+        #     num_q, ok_list, err_list = curl_multi.info_read()
+        #
+        #     for curl in ok_list:
+        #         code = curl.getinfo(pycurl.HTTP_CODE)
+        #         if code != 200:
+        #             logging.error(
+        #                 f"Error while sending validators list to node {curl.getinfo(pycurl.URL)}. Error: {response.text}")
+        #         curl.getinfo(pycurl.RES)
+        #         curl_multi.remove_handle(curl)
+        #     for curl in err_list:
+        #         logging.error(
+        #             f"Error while sending validators list to node {curl.getinfo(pycurl.URL)}. Error: {response.text}")
+        #         curl_multi.remove_handle(curl)
+        #     if num_q == 0:
+        #         break
 
     """
     Internal API methods

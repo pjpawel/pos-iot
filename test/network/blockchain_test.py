@@ -8,7 +8,7 @@ import pytest
 from pot.network.block import BlockCandidate
 from pot.network.blockchain import PoT
 from pot.network.exception import PoTException
-from pot.network.node import SelfNodeInfo, NodeType
+from pot.network.node import SelfNodeInfo, NodeType, Node
 from pot.network.storage import decode_chain
 from pot.network.transaction import TxVerified
 
@@ -177,3 +177,24 @@ def test_add_new_block_missing_not_latest(helper: Helper):
         assert e.code == 400
     # assert response_code == 200
     # assert len(pot.blockchain.blocks) == 2
+
+
+def test_set_new_validators(helper: Helper):
+    helper.put_storage_env()
+    helper.put_genesis_node_env(True)
+
+    pot = PoT()
+    pot.load()
+
+    identifier = uuid4()
+    pot.nodes.add(Node(identifier, '12345', 5000))
+
+    old_validators = pot.nodes.validators.all()
+
+    pot.node_new_validators(pot.self_node.get_node().host, {"validators": [identifier.hex]})
+
+    new_validators = pot.nodes.validators.all()
+    assert len(new_validators) == 1
+    assert new_validators[0] == identifier
+
+

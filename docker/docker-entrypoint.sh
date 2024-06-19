@@ -35,7 +35,7 @@ python3 start_scenario_job.py &
 echo "Starting transaction verifier worker"
 python3 start_transaction_verifier_job.py &
 echo "Starting worker set random validators"
-#python3 work_set_random_validators.py &
+python3 work_set_random_validators.py &
 echo "Starting worker create block"
 python3 work_create_block.py &
 
