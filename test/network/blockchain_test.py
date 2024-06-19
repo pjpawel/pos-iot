@@ -105,7 +105,7 @@ def test_add_new_block_successful(helper: Helper):
     block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
 
     response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
-    assert response_code == 200
+    assert response_code == 204
     assert len(pot.blockchain.blocks) == 2
 
 
@@ -139,7 +139,7 @@ def test_add_new_block_missing_latest(helper: Helper):
     block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
 
     response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
-    assert response_code == 200
+    assert response_code == 204
     assert len(pot.blockchain.blocks) == 2
 
 
