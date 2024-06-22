@@ -36,7 +36,7 @@ if ip != genesis_ip:
     exit()
 
 sleep(70.0)
-
+logging.info("Starting setting new validators")
 validators_number = pot.nodes.calculate_validators_number()
 
 identifiers = []

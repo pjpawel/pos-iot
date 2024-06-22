@@ -425,9 +425,9 @@ class PoT:
         self.nodes.validators.set_validators(identifiers)
 
     def send_validators_list(self):
-        data = json.dumps({
+        data = {
             "validators": [identifier.hex for identifier in self.nodes.validators.all()]
-        })
+        }
         #curl_multi = pycurl.CurlMulti()
         #n_handles = 0
         logging.info("available nodes: " + ''.join([node.identifier.hex for node in self.nodes.all()]))
@@ -506,6 +506,8 @@ class PoT:
             raise PoTException(msg, 400)
 
     def _validate_request_dict_keys(self, data: dict, keys: list[str]) -> None:
+        if not isinstance(data, dict):
+            raise PoTException("Given data: " + str(data) + " should be dict, but is type of " + str(type(data)), 400)
         data_keys = data.keys()
         if not set(keys).issubset(data_keys):
             raise PoTException("Missing required keys " + ', '.join(set(keys).difference(data_keys)), 400)
