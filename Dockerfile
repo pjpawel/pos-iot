@@ -1,4 +1,5 @@
 FROM python:3.11-alpine
+RUN --mount=type=cache,target=/root/.cache/pip
 
 WORKDIR /app
 
