@@ -1,13 +1,15 @@
 import logging
 from collections import OrderedDict
+from time import time
 from uuid import UUID
 
 from .block import Block
 from .node import Node, NodeType
 from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
     ValidatorStorage, ValidatorAgreementStorage, ValidatorAgreementInfoStorage, ValidatorAgreementResultStorage, \
-    NodeTrustStorage, decode_chain
+    NodeTrustStorage, decode_chain, NodeTrustHistory
 from .transaction import TxToVerify, TxVerified
+from .trust import NodeTrustChange
 
 
 class Manager:
@@ -93,13 +95,13 @@ class TransactionToVerifyManager(Manager):
         self.refresh()
         try:
             self._storage.wait_for_set_lock()
-            txs = self._txs.pop(identifier)
+            tx = self._txs.pop(identifier)
             self._storage.dump(self._txs, False)
             self._storage.unlock()
         except Exception as e:
             self._storage.unlock()
             raise e
-        return txs
+        return tx
 
     def add_verification_result(self, identifier: UUID, node: Node, result: bool) -> None:
         tx = self.find(identifier)
@@ -229,7 +231,8 @@ class NodeTrust(Manager):
         if trust is None:
             self.add_new_node_trust(node)
             self.refresh()
-        self._trusts[node.identifier] = self._trusts[node.identifier] + new_trust
+            trust = self._trusts.get(node.identifier)
+        self._trusts[node.identifier] = trust + new_trust
         self._storage.dump(self._trusts)
 
     def get_node_trust(self, node: Node) -> int:
@@ -377,3 +380,51 @@ class ValidatorAgreementInfoManager(Manager):
     def add_leader(self, node: Node) -> None:
         self.refresh()
         self.leaders.append(node.identifier)
+
+
+class NodeTrustHistoryManager(Manager):
+    TRUST_PURGE_INTERVAL = 60
+
+    _storage = NodeTrustHistory
+    node_trusts: list[NodeTrustChange]
+
+    def __init__(self):
+        self._storage = NodeTrustHistory()
+        self.node_trusts = []
+
+    def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
+        self.node_trusts = self._storage.load()
+
+    def all(self) -> list[NodeTrustChange]:
+        self.refresh()
+        return self.node_trusts
+
+    def set(self, node_trusts: list[NodeTrustChange]) -> None:
+        self._storage.dump(node_trusts)
+        self.node_trusts = node_trusts
+
+    def purge_old_history(self) -> None:
+        purge_timestamp = int(time()) - self.TRUST_PURGE_INTERVAL
+        self.refresh()
+        node_trusts_to_remove = []
+        for node_trust in self.all():
+            if node_trust.timestamp < purge_timestamp:
+                node_trusts_to_remove.append(node_trust)
+
+        if len(node_trusts_to_remove) > 0:
+            node_trusts = list(set(self.node_trusts).difference(set(node_trusts_to_remove)))
+            self.set(node_trusts)
+
+    def has_node_trust(self, new_node_trust: NodeTrustChange) -> bool:
+        self.refresh()
+        for node_trust in self.all():
+            if node_trust == new_node_trust:
+                return True
+        return False
+
+    def add(self, node_trust: NodeTrustChange) -> None:
+        self.refresh()
+        self._storage.update([node_trust])
+        self.node_trusts.append(node_trust)

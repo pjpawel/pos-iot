@@ -24,9 +24,6 @@ setup_logger("SET_RANDOM_VALIDATORS")
 
 sleep(0.1)
 
-pot = PoT()
-pot.load(only_from_file=True)
-
 hostname = socket.gethostname()
 ip = socket.gethostbyname(hostname)
 
@@ -34,6 +31,9 @@ genesis_hostname = os.getenv("GENESIS_NODE")
 genesis_ip = socket.gethostbyname(genesis_hostname)
 if ip != genesis_ip:
     exit()
+
+pot = PoT()
+pot.load(only_from_file=True)
 
 sleep(70.0)
 logging.info("Starting setting new validators")

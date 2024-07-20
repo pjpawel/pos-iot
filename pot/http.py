@@ -132,6 +132,27 @@ def transaction_new():
         return "Invalid transaction data", 400
 
 
+@app.post("/transaction/<identifier>/verified", endpoint='populate_transaction_verified')
+def transaction_new(identifier: str):
+    try:
+        if request.content_length >= 1024:
+            return "Transaction data is too long", 400
+        app.pot.transaction_verified_new(identifier, request.get_data(as_text=True), request.remote_addr)
+        return ""
+    except Exception:
+        logging.exception("Error registering new transaction verified")
+        return "Invalid transaction data", 400
+
+
+@app.post("/block", endpoint='populate_block')
+def block_new():
+    try:
+        app.pot.block_new(request.get_data(), request.remote_addr)
+        return ""
+    except Exception:
+        logging.exception("Error registering new block")
+        return "Invalid block data", 400
+
 @app.post("/node/populate-new", endpoint='populate_node')
 def populate_new_node():
     """
@@ -154,6 +175,12 @@ def populate_new_block():
 @app.post("/node/validator/new", endpoint='inform_about_new_validator')
 def new_validators():
     app.pot.node_new_validators(request.remote_addr, request.get_json())
+    return ""
+
+
+@app.patch("/node/<identifier>/trust", endpoint='node_trust_change')
+def node_trust_change(identifier: str):
+    app.pot.node_trust_change(identifier, request.get_json())
     return ""
 
 

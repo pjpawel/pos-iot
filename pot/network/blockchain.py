@@ -3,19 +3,19 @@ import os
 import socket
 from base64 import b64encode, b64decode
 from io import BytesIO
+from threading import Thread
 from time import time
 from uuid import uuid4, UUID
-import json
 
 import requests
-#import pycurl
 
 from .service import Blockchain, Node as NodeService, TransactionToVerify
 from .storage import encode_chain, decode_chain
-from .transaction import Tx, TxToVerify
+from .transaction import Tx, TxToVerify, TxVerified
 from .node import Node, SelfNodeInfo, NodeType
 from .request import Request
 from .exception import PoTException
+from .trust import NodeTrustChange, TrustChangeType
 
 
 class PoT:
@@ -50,9 +50,10 @@ class PoT:
         if ip == genesis_ip:
             if len(self.blockchain.all()) == 0:
                 self.blockchain.create_first_block(self.self_node)
-            self.nodes.validators.set_validators([self.self_node.identifier])
+            if self.nodes.count_validator_nodes() < 1:
+                self.nodes.validators.set_validators([self.self_node.identifier])
         else:
-            if not only_from_file:
+            if len(self.nodes.all()) < 2 and not only_from_file:
                 logging.info("Blockchain loading from genesis")
                 identifier_hex = Request.get_info(genesis_ip, 5000).get("identifier")
                 genesis_node = Node(identifier_hex, genesis_ip, 5000, NodeType.VALIDATOR)
@@ -117,10 +118,23 @@ class PoT:
         tx_to_verified = self.tx_to_verified.find(uuid)
         if not tx_to_verified:
             logging.info(
-                f"Transaction not find {uuid.hex} from "
+                f"Transaction not find in to verify {uuid.hex} from "
                 f"{', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
-            logging.info(f"Getting transaction {uuid.hex} from node {node.identifier.hex}")
-            tx_bytes = Request.send_transaction_get_info(node.host, node.port, uuid.hex)
+            tx_verified = self.blockchain.find_tx_verified(uuid)
+            if tx_verified:
+                raise PoTException("Transaction already verified", 418)
+            tx_bytes = None
+            for validator_id in self.nodes.validators.all():
+                validator_node = self.nodes.find_by_identifier(validator_id)
+                logging.info(f"Getting transaction {uuid.hex} from node {validator_node.identifier.hex}")
+                try:
+                    tx_bytes = Request.send_transaction_get_info(validator_node.host, validator_node.port, uuid.hex)
+                    break
+                except Exception as e:
+                    logging.warning(e)
+
+            if not tx_bytes:
+                raise PoTException("Cannot get transaction to verify from validators", 400)
 
             b = BytesIO(tx_bytes)
             tx = Tx.decode(b)
@@ -135,24 +149,119 @@ class PoT:
         logging.info(f"Printing result verification for transaction {uuid.hex}: {tx_to_verified.voting}")
 
         if len(tx_to_verified.voting) == self.nodes.count_validator_nodes():
-            # TODO: remove/add trust
             logging.info(f"Transaction {uuid.hex} voting")
             tx_to_verified = self.tx_to_verified.pop(uuid)
-            assert isinstance(tx_to_verified, TxToVerify)
+
+            nodes_positive, nodes_negative = tx_to_verified.get_voters_id_by_result()
             if tx_to_verified.is_voting_positive():
-                self.blockchain.add_new_transaction(uuid, tx_to_verified.get_verified_tx())
+                tx_verified = tx_to_verified.get_verified_tx()
+                self.blockchain.add_new_transaction(uuid, tx_verified)
+                self.send_new_transaction_verified(uuid, tx_verified)
+                self.send_multiple_trust_change(nodes_positive, TrustChangeType.TRANSACTION_VALIDATED, 20)
+                self.send_multiple_trust_change(nodes_negative, TrustChangeType.TRANSACTION_VALIDATED, -40)
             else:
                 logging.info(f"Transaction {uuid.hex} was rejected")
+                self.send_multiple_trust_change(nodes_positive, TrustChangeType.TRANSACTION_VALIDATED, -40)
+                self.send_multiple_trust_change(nodes_negative, TrustChangeType.TRANSACTION_VALIDATED, 20)
 
-    def node_validator_agreement_list_send(self):
+    def send_new_transaction_verified(self, identifier: UUID, tx_verified: TxVerified):
+        data = str(tx_verified)
+
+        def send(node: Node):
+            logging.info(f"Sending verified transaction {identifier.hex} to node {node.identifier.hex} {data}")
+            response = requests.post(f"http://{node.host}:{node.port}/transaction/{identifier.hex}/verified", data=data)
+            if response.status_code != 200:
+                logging.error(
+                    f"Error while sending verified transaction {identifier.hex} to node {node.identifier.hex}. Error: {response.text}")
+
+        threads = []
         for node in self.nodes.all():
-            if self.self_node.identifier == node.identifier:
+            if node.identifier == self.self_node.identifier:
                 continue
-            # TODO: Send validators list
+            th = Thread(target=send, args=[node])
+            th.start()
+            threads.append(th)
 
-    # def genesis_first_validators(self):
-    #     nodes = self.nodes.all()
-    #     self.nodes.calculate_validators_number()
+        # Wait for all to end
+        while True:
+            if len(threads) != 0:
+                break
+            for thread in threads:
+                if not thread.is_alive():
+                    threads.remove(thread)
+        #self._send_to_all_nodes(send, [])
+
+    def send_multiple_trust_change(self, nodes: list[Node | UUID], change_type: TrustChangeType, change: int):
+        for node in nodes:
+            if not isinstance(node, Node):
+                node_id = node
+                node = self.nodes.find_by_identifier(node_id)
+                if not node:
+                    raise Exception(f"Node not found with identifier {node_id.hex}")
+
+            self.change_node_trust(node, change_type, change)
+
+    def send_validators_list(self):
+        data = {
+            "validators": [identifier.hex for identifier in self.nodes.validators.all()]
+        }
+        logging.info("Available nodes to send new validators list: " + ', '.join(
+            [node.identifier.hex for node in self.nodes.all()]))
+
+        def send(node: Node):
+            logging.info(f"Sending validators list to node {node.identifier.hex} {data}")
+            response = requests.post(f"http://{node.host}:{node.port}/node/validator/new", json=data)
+            if response.status_code != 200:
+                logging.error(
+                    f"Error while sending validators list to node {node.identifier.hex}. Error: {response.text}")
+
+        threads = []
+        for node in self.nodes.all():
+            if node.identifier == self.self_node.identifier:
+                continue
+            th = Thread(target=send, args=[node])
+            th.start()
+            threads.append(th)
+
+        # Wait for all to end
+        while True:
+            if len(threads) != 0:
+                break
+            for thread in threads:
+                if not thread.is_alive():
+                    threads.remove(thread)
+
+    def change_node_trust(self, change_node: Node, change_type: TrustChangeType, change: int):
+        node_trust = NodeTrustChange(change_node.identifier, int(time()), change_type, change)
+        self.nodes.node_trust.add_trust_to_node(change_node, change)
+        self.nodes.node_trust_history.add(node_trust)
+        data = {
+            "timestamp": node_trust.timestamp,
+            "change": change,
+            "type": change_type.value
+        }
+
+        def send_data(node: Node):
+            try:
+                Request.send_node_trust_change(node.host, node.port, change_node.identifier, data)
+            except Exception as e:
+                logging.error(e)
+
+        threads = []
+        for node in self.nodes.all():
+            if node.identifier == self.self_node.identifier:
+                continue
+            th = Thread(target=send_data, args=[node])
+            th.start()
+            threads.append(th)
+
+        # Wait for all to end
+        while True:
+            if len(threads) != 0:
+                break
+            for thread in threads:
+                if not thread.is_alive():
+                    threads.remove(thread)
 
     """
     API methods
@@ -176,6 +285,45 @@ class PoT:
         self.tx_to_verified.add(uuid, TxToVerify(tx, tx_node))
         self.send_transaction_populate(uuid, tx)
         return {"id": uuid.hex}
+
+    def transaction_verified_new(self, identifier: str, data: str, request_addr: str):
+        tx_id = self._validate_create_uuid(identifier)
+        self._validate_request_from_validator(request_addr)
+
+        tx_verified = TxVerified.from_str(data)
+
+        # Do not validate tx from validator
+        # tx_node = self.nodes.find_by_identifier(tx_verified.tx.sender)
+        # if not tx_node:
+        #     raise PoTException(f"Node not found with identifier {tx_verified.tx.sender.hex}", 404)
+        # if tx_node.host != request_addr:
+        #     raise PoTException(f"Node hostname ({tx_node.host}) different than remote_addr: ({request_addr})", 400)
+        # tx_verified.tx.validate(tx_node)
+
+        self.blockchain.txs_verified.add(tx_id, tx_verified)
+
+    def block_new(self, data: bytes, request_addr: str):
+        self._validate_request_from_validator(request_addr)
+
+        blocks = decode_chain(data)
+        if len(blocks) == 1:
+            raise PoTException("Blocks length is not 1", 400)
+        new_block = blocks[0]
+
+        blocks = self.blockchain.all()
+
+        if blocks[-1].hash() != new_block.prev_hash:
+            raise PoTException("Block hash does not equal prev hash", 400)
+
+        # count = 1
+        # while count < 100:
+        #     if len(blocks) <= count:
+        #         break
+        #     block = blocks[-1*count]
+        #     if new_block == block:
+        #         raise PoTException("Block already registered", 400)
+
+        self.blockchain.add(new_block)
 
     def transaction_get(self, identifier: str) -> bytes:
         self._validate_if_i_am_validator()
@@ -214,7 +362,10 @@ class PoT:
     def add_new_block(self, data: bytes, request_addr: str):
         self._validate_request_from_validator(request_addr)
         block = decode_chain(data)[0]
-        if block.prev_hash == self.blockchain.get_last_block().hash():
+        if block.prev_hash != self.blockchain.get_last_block().hash():
+            raise PoTException("Prev hash does not match hash of previous block", 400)
+
+        if self.nodes.is_validator(self.self_node.get_node()):
             txs_verified_with_ident = self.blockchain.txs_verified.sort_tx_by_time(self.blockchain.txs_verified.all())
             txs_verified = [tx_verified.tx for tx_verified in list(txs_verified_with_ident.values())]
             txs_verified_set = set(txs_verified)
@@ -242,7 +393,12 @@ class PoT:
                             txs_str = ', '.join([ident.hex for ident in idents])
                             raise PoTException(f"Transactions {txs_str} are not latest", 400)
                         break
+            txs_verified_ids = []
+            for tx_id, tx_verified in self.blockchain.txs_verified.all().items():
+                if tx_verified.tx in block.transactions:
+                    txs_verified_ids.append(tx_id)
 
+            self.blockchain.txs_verified.delete(txs_verified_ids)
             self.blockchain.add(block)
             return "", 204
 
@@ -250,7 +406,15 @@ class PoT:
         for b in self.blockchain.all():
             if b.hash() == block_hash:
                 return "Block is already in blockchain", 200
-        raise PoTException("Block is not valid", 400)
+        # Remove transaction validated
+        txs_verified_ids = []
+        for tx_id, tx_verified in self.blockchain.txs_verified.all().items():
+            if tx_verified.tx in block.transactions:
+                txs_verified_ids.append(tx_id)
+
+        self.blockchain.txs_verified.delete(txs_verified_ids)
+        self.blockchain.add(block)
+        return "", 204
 
     def populate_new_node(self, data: dict, request_addr: str) -> None:
         logging.info("Getting new node from " + request_addr)
@@ -424,53 +588,22 @@ class PoT:
 
         self.nodes.validators.set_validators(identifiers)
 
-    def send_validators_list(self):
-        data = {
-            "validators": [identifier.hex for identifier in self.nodes.validators.all()]
-        }
-        #curl_multi = pycurl.CurlMulti()
-        #n_handles = 0
-        logging.info("available nodes: " + ''.join([node.identifier.hex for node in self.nodes.all()]))
-        for node in self.nodes.all():
-            if node.identifier == self.self_node.identifier:
-                continue
-            logging.info(f"Sending validators list to node {node.identifier.hex} {data}")
-            response = requests.post(f"http://{node.host}:{node.port}/node/validator/new", json=data)
-            if response.status_code != 200:
-                logging.error(f"Error while sending validators list to node {node.identifier.hex}. Error: {response.text}")
-        #     curl = pycurl.Curl()
-        #     curl.setopt(pycurl.URL, f"http://{node.host}:{node.port}/node/validator/new")
-        #     curl.setopt(pycurl.POST, 1)
-        #     curl.setopt(pycurl.HTTPHEADER, ['Content-Type: application/json'])
-        #     curl.setopt(pycurl.POSTFIELDS, data)
-        #     curl_multi.add_handle(curl)
-        #     n_handles =+ 1
-        #
-        # while True:
-        #     ret, num_handles = curl_multi.perform()
-        #     if ret != pycurl.E_CALL_MULTI_PERFORM:
-        #         break
-        #
-        # ret = curl_multi.select(1)
-        # while True:
-        #     num_q, ok_list, err_list = curl_multi.info_read()
-        #
-        #     for curl in ok_list:
-        #         code = curl.getinfo(pycurl.HTTP_CODE)
-        #         if code != 200:
-        #             logging.error(
-        #                 f"Error while sending validators list to node {curl.getinfo(pycurl.URL)}. Error: {response.text}")
-        #         curl.getinfo(pycurl.RES)
-        #         curl_multi.remove_handle(curl)
-        #     for curl in err_list:
-        #         logging.error(
-        #             f"Error while sending validators list to node {curl.getinfo(pycurl.URL)}. Error: {response.text}")
-        #         curl_multi.remove_handle(curl)
-        #     if num_q == 0:
-        #         break
+    def node_trust_change(self, identifier: str, data: dict):
+        self._validate_request_dict_keys(data, ["timestamp", "change", "type"])
+        timestamp = int(data.get("timestamp"))
+        change = int(data.get("change"))
+        change_type = TrustChangeType(data.get("type"))
+        node_id = self._validate_create_uuid(identifier)
+        node = self.nodes.find_by_identifier(node_id)
+        if not node:
+            raise PoTException("Node not found with identifier " + node_id.hex, 404)
+        self.nodes.node_trust_history.purge_old_history()
+        node_trust = NodeTrustChange(node.identifier, timestamp, change_type, change)
+        if not self.nodes.node_trust_history.has_node_trust(node_trust):
+            self.nodes.node_trust_history.add(node_trust)
 
     """
-    Internal API methods
+    Internal API methods (helpers)
     """
 
     def _validate_if_i_am_validator(self) -> None:
@@ -482,7 +615,7 @@ class PoT:
         if not node:
             raise PoTException("Request came from unknown node", 400)
         if not self.nodes.is_validator(node):
-            logging.info("Validators" + ''.join([ident.hex for ident in self.nodes.validators.all()]))
+            logging.info("Validators " + ', '.join([ident.hex for ident in self.nodes.validators.all()]))
             raise PoTException(f"Request came from node '{node.identifier.hex}' which is not validator", 400)
 
     def _get_node_from_request_addr(self, request_addr: str) -> Node:
@@ -511,3 +644,21 @@ class PoT:
         data_keys = data.keys()
         if not set(keys).issubset(data_keys):
             raise PoTException("Missing required keys " + ', '.join(set(keys).difference(data_keys)), 400)
+
+    def _send_to_all_nodes(self, func, args: list):
+        threads = []
+        for node in self.nodes.all():
+            if node.identifier == self.self_node.identifier:
+                continue
+            args.append(node)
+            th = Thread(target=func, args=args)
+            th.start()
+            threads.append(th)
+
+        # Wait for all to end
+        while True:
+            if len(threads) != 0:
+                break
+            for thread in threads:
+                if not thread.is_alive():
+                    threads.remove(thread)

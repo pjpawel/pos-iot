@@ -224,3 +224,16 @@ class TxToVerify:
 
     def get_verified_tx(self) -> TxVerified:
         return TxVerified(self.tx, self.time)
+
+    def get_voters_id_by_result(self) -> [list[UUID], list[UUID]]:
+        """
+        :return: list of positive result voters nd negative result voters
+        """
+        positive = []
+        negative = []
+        for node_id, result in self.voting.items():
+            if result:
+                positive.append(node_id)
+            else:
+                negative.append(node_id)
+        return [positive, negative]

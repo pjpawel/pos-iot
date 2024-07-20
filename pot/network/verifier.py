@@ -21,7 +21,11 @@ class TransactionVerifier:
     def process(self):
         logging.info(self.LOG_PREFIX + "Start processing ")
         while True:
-            self.pot.tx_to_verified.refresh()
+
+            if not self.pot.nodes.is_validator(self.pot.self_node.get_node()):
+                sleep(5)
+                continue
+
             uuid_to_do = []
             for uuid, tx_to_verify in self.pot.tx_to_verified.all().items():
                 if self.pot.self_node.identifier not in list(tx_to_verify.voting.keys()):
@@ -49,7 +53,7 @@ class TransactionVerifier:
                 try:
                     result = self.verify_transaction(tx_to_verify)
                     logging.info(self.LOG_PREFIX + f"Transaction {tx_uuid.hex} verified. Result: {result}")
-                    self.pot.add_transaction_verification_result(tx_uuid, self.pot.self_node, result)
+                    self.pot.add_transaction_verification_result(tx_uuid, self.pot.self_node.get_node(), result)
                     self.pot.send_transaction_verification(tx_uuid, result)
                 except Exception as e:
                     logging.error(self.LOG_PREFIX + f"Error while verifying transaction of id {tx_uuid.hex}. Error: {e}")

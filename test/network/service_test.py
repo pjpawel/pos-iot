@@ -88,6 +88,24 @@ def test_prepare_nodes_info(helper: Helper):
     assert service.prepare_nodes_info(service.all()) == info
 
 
+def test_node_trust_change(helper: Helper):
+    helper.put_storage_env()
+    service = Node()
+
+    identifier = uuid4()
+    node = NodeDto(identifier, "172.0.0.1", 5000)
+
+    service.node_trust.add_new_node_trust(node)
+    basic_trust = service.node_trust.BASIC_TRUST
+    assert basic_trust == service.node_trust.get_node_trust(node)
+
+    service.node_trust.add_trust_to_node(node, 20)
+    assert basic_trust + 20 == service.node_trust.get_node_trust(node)
+
+    service.node_trust.add_trust_to_node(node, -40)
+    assert basic_trust + 20 - 40 == service.node_trust.get_node_trust(node)
+
+
 def test_update_node(helper: Helper):
     helper.put_storage_env()
     service = Node()

@@ -3,7 +3,8 @@ from uuid import UUID
 
 from pot.network.block import BlockCandidate, Block
 from pot.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
-    ValidatorAgreement, ValidatorAgreementInfoManager, ValidatorAgreementResult, NodeTrust, ValidatorManager
+    ValidatorAgreement, ValidatorAgreementInfoManager, ValidatorAgreementResult, NodeTrust, ValidatorManager, \
+    NodeTrustHistoryManager
 from pot.network.node import Node as NodeDto, SelfNodeInfo, NodeType
 from pot.network.transaction import TxVerified, Tx
 
@@ -30,6 +31,7 @@ class Blockchain(BlockchainManager):
             self_node.private_key
         )
         self.add(block)
+        self.txs_verified.delete(list(txs_verified.keys()))
         return block
 
     def create_first_block(self, self_node: SelfNodeInfo) -> None:
@@ -39,6 +41,12 @@ class Blockchain(BlockchainManager):
             self_node.identifier,
             self_node.private_key
         ))
+
+    def find_tx_verified(self, identifier: UUID) -> TxVerified|None:
+        for tx_id, tx_verified in self.txs_verified.all():
+            if tx_id == identifier:
+                return tx_verified
+        return None
 
     def find_last_transactions_values_for_node(self, node: NodeDto, t_type: str | None = None) -> list[dict]:
         n_count = 0
@@ -95,6 +103,7 @@ class Node(NodeManager):
     validator_agreement_info: ValidatorAgreementInfoManager
     validator_agreement_result: ValidatorAgreementResult
     node_trust: NodeTrust
+    node_trust_history: NodeTrustHistoryManager
     validators: ValidatorManager
 
     def __init__(self):
@@ -103,6 +112,7 @@ class Node(NodeManager):
         self.validator_agreement_info = ValidatorAgreementInfoManager()
         self.validator_agreement_result = ValidatorAgreementResult()
         self.node_trust = NodeTrust()
+        self.node_trust_history = NodeTrustHistoryManager()
         self.validators = ValidatorManager()
 
     def prepare_all_nodes_info(self) -> list[dict]:

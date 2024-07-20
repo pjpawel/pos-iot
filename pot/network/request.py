@@ -1,3 +1,6 @@
+import logging
+from uuid import UUID
+
 import requests
 
 from pot.network.exception import PublicKeyNotFoundException
@@ -29,8 +32,7 @@ class Request:
     def send_populate_verification_result(host: str, port: int, identifier: str, data: dict) -> None:
         response = requests.post(f"http://{host}:{port}/transaction/{identifier}/verifyResult", json=data)
         if response.status_code != 200:
-            raise Exception(f"Cannot send populate verification result to host: {host}:{port}")
-        return response.json()
+            raise Exception(f"Cannot send populate verification result to host: {host}:{port} response: {response.text.encode('utf-8')}")
 
     @staticmethod
     def send_transaction_get_info(host: str, port: int, identifier: str) -> bytes:
@@ -41,6 +43,16 @@ class Request:
 
     @staticmethod
     def send_blockchain_new_block(host: str, port: int, data: bytes) -> None:
+        logging.info(f"Sending new block to host: {host}:{port}")
         response = requests.post(f"http://{host}:{port}/blockchain/block/new", data)
         if response.status_code != 200:
-            raise Exception(f"Cannot send new block to host: {host}:{port}")
+            msg = f"Cannot send new block to host: {host}:{port}"
+            logging.warning(msg)
+            raise Exception(msg)
+        logging.info(f"New block send to node in {host}:{port}")
+
+    @staticmethod
+    def send_node_trust_change(host: str, port: int, node_id: UUID, data: dict) -> None:
+        response = requests.patch(f"http://{host}:{port}/node/{node_id.hex}/trust", json=data)
+        if response.status_code >= 300:
+            raise Exception(f"Cannot send change node trust for node {node_id.hex}, data: {response.request.body} sending to {host}:{port}, response: {response.text}")

@@ -3,16 +3,15 @@ import json
 import logging
 import os
 import time
-import traceback
 from io import BytesIO
-from sys import getsizeof
 from typing import BinaryIO
 from uuid import UUID
 from pathlib import Path
 
 from pot.network.block import Block
 from pot.network.node import Node
-from pot.network.transaction import TxToVerify, Tx, TxVerified
+from pot.network.transaction import TxToVerify, TxVerified
+from .trust import NodeTrustChange
 
 
 def encode_chain(blocks: list[Block]) -> bytes:
@@ -326,6 +325,7 @@ class ValidatorStorage(Storage):
     def load(self) -> list[UUID]:
         self._wait_for_lock()
         logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        self.update_cache()
         if self.is_empty():
             self.unlock()
             return []
@@ -417,6 +417,48 @@ class ValidatorAgreementResultStorage(Storage):
                 writer = csv.writer(f)
                 for key in list(txs.keys()):
                     writer.writerow([key.hex, txs[key].__str__()])
+            self.update_cache()
+            self.unlock()
+        except Exception as e:
+            self.unlock()
+            raise e
+
+
+class NodeTrustHistory(Storage):
+    PATH = 'noe_trust_history'
+
+    def load(self) -> list[NodeTrustChange]:
+        self._wait_for_lock()
+        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        if self.is_empty():
+            self.update_cache()
+            return []
+        with open(self.path) as f:
+            reader = csv.reader(f)
+            node_trusts = [NodeTrustChange.load_from_list(data) for data in reader]
+        self.update_cache()
+        return node_trusts
+
+    def dump(self, nodes_trusts: list[NodeTrustChange]) -> None:
+        self.wait_for_set_lock()
+        logging.info(f"Writing {len(nodes_trusts)} nodes to storage {self.PATH}")
+        try:
+            with open(self.path, 'w') as f:
+                writer = csv.writer(f)
+                writer.writerows([node_trust.to_list() for node_trust in nodes_trusts])
+            self.update_cache()
+            self.unlock()
+        except Exception as e:
+            self.unlock()
+            raise e
+
+    def update(self, node_trusts: list[NodeTrustChange]) -> None:
+        self.wait_for_set_lock()
+        logging.info(f"Appending {len(node_trusts)} nodes to storage {self.PATH}")
+        try:
+            with open(self.path, 'a') as f:
+                writer = csv.writer(f)
+                writer.writerows([node_trust.to_list() for node_trust in node_trusts])
             self.update_cache()
             self.unlock()
         except Exception as e:
