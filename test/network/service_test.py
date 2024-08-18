@@ -67,7 +67,7 @@ def test_prepare_nodes_info(helper: Helper):
     service.add(node)
 
     service.validators.set_validators([identifier1])
-    service.node_trust.add_trust_to_node(service.find_by_identifier(identifier1), 300)
+    service.node_trust.add_trust_to_node(service.find_by_identifier(identifier1), 1)
 
     info = [
         {
@@ -75,14 +75,14 @@ def test_prepare_nodes_info(helper: Helper):
             "host": "172.0.0.1",
             "port": 5000,
             "type": "VALIDATOR",
-            "trust": 600
+            "trust": 5001
         },
         {
             "identifier": identifier2.hex,
             "host": "172.0.0.2",
             "port": 5000,
             "type": "SENSOR",
-            "trust": 300
+            "trust": 5000
         }
     ]
     assert service.prepare_nodes_info(service.all()) == info
