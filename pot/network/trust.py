@@ -5,7 +5,7 @@ from uuid import UUID
 class TrustChangeType(IntEnum):
     BLOCK_VALIDATED = 10
 
-    TRANSACTION_VALIDATED = 20
+    TRANSACTION_VALIDATED = 1
 
 
 class NodeTrustChange:

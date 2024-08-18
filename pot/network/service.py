@@ -43,7 +43,7 @@ class Blockchain(BlockchainManager):
         ))
 
     def find_tx_verified(self, identifier: UUID) -> TxVerified|None:
-        for tx_id, tx_verified in self.txs_verified.all():
+        for tx_id, tx_verified in self.txs_verified.all().items():
             if tx_id == identifier:
                 return tx_verified
         return None
@@ -185,19 +185,19 @@ class Node(NodeManager):
     def clear_agreement_list(self):
         self.validator_agreement.set([])
 
-    def get_agreement_leader(self):
+    def get_agreement_leader(self) -> UUID:
         self.validator_agreement_info.refresh()
         return self.validator_agreement_info.leaders[len(self.validator_agreement_info.leaders)-1]
 
     def is_agreement_voting_ended(self):
-        # TODO: to be completed
-        pass
+        results = self.validator_agreement_result.all()
+        return len(results) == len(self.validators.all())
 
     def is_agreement_result_success(self) -> bool:
         self.validator_agreement_result.refresh()
         n_success = sum(i is True for i in self.validator_agreement_result.all().values())
         validators_number = self.get_actual_validators_number()
-        return n_success >= validators_number/2
+        return n_success > validators_number/2
 
     def get_actual_validators_number(self) -> int:
         return len(self.get_validator_nodes())

@@ -43,16 +43,46 @@ class Request:
 
     @staticmethod
     def send_blockchain_new_block(host: str, port: int, data: bytes) -> None:
-        logging.info(f"Sending new block to host: {host}:{port}")
+        logging.debug(f"Sending new block to host: {host}:{port}")
         response = requests.post(f"http://{host}:{port}/blockchain/block/new", data)
         if response.status_code != 200:
             msg = f"Cannot send new block to host: {host}:{port}"
-            logging.warning(msg)
+            logging.error(msg)
             raise Exception(msg)
-        logging.info(f"New block send to node in {host}:{port}")
+        logging.info(f"New block sent to node in {host}:{port}")
 
     @staticmethod
     def send_node_trust_change(host: str, port: int, node_id: UUID, data: dict) -> None:
         response = requests.patch(f"http://{host}:{port}/node/{node_id.hex}/trust", json=data)
         if response.status_code >= 300:
             raise Exception(f"Cannot send change node trust for node {node_id.hex}, data: {response.request.body} sending to {host}:{port}, response: {response.text}")
+
+    @staticmethod
+    def send_validator_agreement_start(host: str, port: int, data: dict) -> None:
+        logging.debug(f"Sending start new validator agreement to host: {host}:{port}")
+        response = requests.post(f"http://{host}:{port}/node/validator/agreement", json=data)
+        if response.status_code != 200:
+            msg = f"Cannot send start new validator agreement to host: {host}:{port}: {response.text}"
+            logging.error(msg)
+            raise Exception(msg)
+        logging.info(f"Start new validator agreement sent to node in {host}:{port}")
+
+    @staticmethod
+    def send_validator_agreement_vote(host: str, port: int, data: dict) -> None:
+        logging.debug(f"Sending add result validator agreement to host: {host}:{port}")
+        response = requests.patch(f"http://{host}:{port}/node/validator/agreement/vote", json=data)
+        if response.status_code != 200:
+            msg = f"Cannot send add result validator agreement to host: {host}:{port}: {response.text}"
+            logging.error(msg)
+            raise Exception(msg)
+        logging.info(f"Add result validator agreement sent to node in {host}:{port}")
+
+    @staticmethod
+    def send_validator_agreement_done(host: str, port: int, data: dict) -> None:
+        logging.debug(f"Sending end validator agreement to host: {host}:{port}")
+        response = requests.post(f"http://{host}:{port}/node/validator/agreement/done", json=data)
+        if response.status_code != 200:
+            msg = f"Cannot send end validator agreement to host: {host}:{port}: {response.text}"
+            logging.error(msg)
+            raise Exception(msg)
+        logging.info(f"Done validator agreement sent to node in {host}:{port}")

@@ -37,7 +37,7 @@ class PoT:
         genesis_ip = socket.gethostbyname(genesis_hostname)
 
         name = "genesis" if ip == genesis_ip else "node"
-        logging.info(f"=== Running as {name} ===")
+        logging.debug(f"=== Running as {name} ===")
 
         if self.nodes.find_by_identifier(self.self_node.identifier) is None:
             node = self.self_node.get_node()
@@ -492,7 +492,7 @@ class PoT:
 
     def node_validator_agreement_get(self, remote_addr: str) -> dict:
         self._validate_if_i_am_validator()
-        self._validate_request_from_validator(remote_addr)
+        #self._validate_request_from_validator(remote_addr)
         is_started = self.nodes.is_agreement_started()
         data = {
             "isStarted": is_started
@@ -508,7 +508,7 @@ class PoT:
 
         is_started = self.nodes.is_agreement_started()
         if is_started:
-            raise PoTException('Validator agreement already stared', 400)
+            raise PoTException('Validator agreement already started', 400)
 
         leader = self._get_node_from_request_addr(remote_addr)
         if not self.nodes.is_validator(leader):
@@ -526,7 +526,10 @@ class PoT:
         if self.nodes.calculate_validators_number() != len(nodes):
             raise PoTException("Validator number is not correct", 400)
 
-        self.nodes.validator_agreement_info.set_info_data(True, nodes)
+        leader = self._get_node_from_request_addr(remote_addr)
+        self.nodes.validator_agreement_info.set_info_data(True, [leader.identifier])
+        self.nodes.validator_agreement.set(nodes)
+        self.nodes.validator_agreement_result.add(leader.identifier, True)
 
         return {
             "isStarted": is_started,
@@ -545,15 +548,74 @@ class PoT:
         vote = data.get("result")
         if vote is None:
             raise PoTException("Missing vote result", 400)
+        if not isinstance(vote, bool):
+            raise PoTException("Vote result must be of type bool", 400)
         node = self._get_node_from_request_addr(remote_addr)
-        # TODO: to be completed
+        if self.nodes.validator_agreement_result.find(node.identifier):
+            raise PoTException("Vote result is already saved", 400)
+        self.nodes.validator_agreement_result.add(node.identifier, vote)
 
-    def node_validator_agreement_done(self, data: dict):
+        if self.nodes.is_agreement_voting_ended() and self.nodes.get_agreement_leader() == self.self_node.identifier:
+            self.validator_agreement_end()
+
+    def validator_agreement_end(self):
+        new_leader = self.nodes.get_most_trusted_validator()
+        new_validators = self.nodes.validator_agreement.all()
+        self.nodes.clear_agreement_list()
+        if self.nodes.is_agreement_result_success():
+            self.nodes.validators.set_validators(new_validators)
+            self.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
+            self.nodes.validator_agreement_info.set_info_data(False, [])
+            self.send_validators_list()
+        else:
+            self.nodes.validator_agreement_info.add_leader(new_leader)
+
+        # done_data = {
+        #     "validators": [vid.hex for vid in self.nodes.validator_agreement.all()],
+        #     "leader": new_leader.identifier.hex
+        # }
+        #
+        # def send(func):
+        #     threads = []
+        #     for node in self.nodes.all():
+        #         if node.identifier == self.self_node.identifier or node.identifier not in self.nodes.validators.all():
+        #             continue
+        #         logging.info(
+        #             f"Sending validator agreement done to host: {node.host}:{node.port} - starting thread")
+        #         th = Thread(target=func, args=[node])
+        #         th.start()
+        #         threads.append(th)
+        #
+        #     # Wait for all to end
+        #     while True:
+        #         if len(threads) != 0:
+        #             break
+        #         for thread in threads:
+        #             if not thread.is_alive():
+        #                 threads.remove(thread)
+        #
+        # def done(node: Node):
+        #     Request.send_validator_agreement_done(node.host, node.port, done_data)
+        #
+        # send(done)
+
+
+    def node_validator_agreement_done(self, remote_addr: str, data: dict):
+        self._validate_request_from_validator(remote_addr)
         logging.info(f"Validator agreement done {data}")
-        self._validate_request_dict_keys(data, ["validators"])
+        self._validate_request_dict_keys(data, ["validators", "leader"])
         validator_list = [self._validate_create_uuid(ident) for ident in data.get("validators")]
-        if validator_list == self.nodes.validators.all():
-            return
+        nodes_id_list = [node.identifier for node in self.nodes.all()]
+        for validator_id in validator_list:
+            if validator_id not in nodes_id_list:
+                raise PoTException(f"Node {validator_id} is not node", 400)
+
+        new_leader_id = self._validate_create_uuid(data.get("leader"))
+        new_leader = self.nodes.find_by_identifier(new_leader_id)
+        if new_leader is None:
+            raise PoTException(f"Proposed new leader id ({new_leader_id}) is not found in nodes list", 400)
+        if not self.nodes.is_validator(new_leader):
+            raise PoTException(f"Proposed new leader ({new_leader_id}) is not validator", 400)
 
         self_node = self.nodes.find_by_identifier(self.self_node.identifier)
         if self.nodes.is_validator(self_node):
@@ -561,16 +623,22 @@ class PoT:
                 raise PoTException("Agreement is not started or list is not send", 400)
             if validator_list != self.nodes.validator_agreement.all():
                 raise PoTException("List is not the same as in agreement", 400)
-            # TODO check if could be ended
             if not self.nodes.is_agreement_voting_ended():
                 raise PoTException("Voting is not ended", 400)
 
-        self.nodes.clear_agreement_list()
         if self.nodes.is_agreement_result_success():
             self.nodes.validators.set_validators(validator_list)
             self.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
         else:
-            self.nodes.validator_agreement_info.add_leader(self.nodes.get_most_trusted_validator())
+            new_leader_id = self._validate_create_uuid(data.get("leader"))
+            new_leader = self.nodes.find_by_identifier(new_leader_id)
+            if new_leader is None:
+                raise PoTException(f"Proposed new leader id ({new_leader_id}) is not found in nodes list", 400)
+            if not self.nodes.is_validator(new_leader):
+                raise PoTException(f"Proposed new leader ({new_leader_id}) is not validator", 400)
+            self.nodes.validator_agreement_info.add_leader(new_leader)
+
+        self.nodes.clear_agreement_list()
 
     def node_new_validators(self, remote_addr: str, data: dict):
         self._validate_request_from_validator(remote_addr)
@@ -581,12 +649,13 @@ class PoT:
             uuid = self._validate_create_uuid(ident)
             node = self.nodes.find_by_identifier(uuid)
             if not node:
-                msg = f""
+                msg = f"Unknown node of identifier {uuid}"
                 logging.warning(msg)
                 raise PoTException(msg, 400)
             identifiers.append(uuid)
 
         self.nodes.validators.set_validators(identifiers)
+        # TODO: Reset validator agreement
 
     def node_trust_change(self, identifier: str, data: dict):
         self._validate_request_dict_keys(data, ["timestamp", "change", "type"])
@@ -599,8 +668,11 @@ class PoT:
             raise PoTException("Node not found with identifier " + node_id.hex, 404)
         self.nodes.node_trust_history.purge_old_history()
         node_trust = NodeTrustChange(node.identifier, timestamp, change_type, change)
-        if not self.nodes.node_trust_history.has_node_trust(node_trust):
-            self.nodes.node_trust_history.add(node_trust)
+        self.nodes.node_trust_history.add(node_trust)
+        self.nodes.node_trust.add_trust_to_node(node, change)
+        # if not self.nodes.node_trust_history.has_node_trust(node_trust):
+        #     self.nodes.node_trust_history.add(node_trust)
+        #     self.nodes.node_trust.add_trust_to_node(node, change)
 
     """
     Internal API methods (helpers)

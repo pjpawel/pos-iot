@@ -24,11 +24,11 @@ class Dumper:
         # self.dump_dir = os.path.join(base_dump_dir, str(int(time())))
         # if not os.path.isdir(self.dump_dir):
         #     os.mkdir(self.dump_dir)
-        logging.info(f"Dumping files to directory: {self.dump_dir}")
+        logging.debug(f"Dumping files to directory: {self.dump_dir}")
 
     def dump(self) -> None:
         utime = int(time())
-        # logging.info(f"Dumping files with timestamp {utime}")
+        # logging.debug(f"Dumping files with timestamp {utime}")
         dump_time_dir = os.path.join(self.dump_dir, str(utime))
 
         os.mkdir(dump_time_dir)

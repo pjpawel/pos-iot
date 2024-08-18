@@ -108,7 +108,7 @@ class TransactionToVerifyManager(Manager):
         if not tx:
             raise Exception(f"Transaction {identifier.hex} not found")
         if tx.has_verification_result(node):
-            logging.warning(f"Voting is already saved from node {node.identifier}")
+            logging.warning(f"Voting of transaction {identifier.hex} is already saved from node {node.identifier}")
             return
         self.refresh()
         try:
@@ -207,7 +207,7 @@ class NodeTrust(Manager):
     _storage = NodeTrustStorage
     _trusts = {}
 
-    BASIC_TRUST = 300
+    BASIC_TRUST = 5000
 
     def __init__(self):
         self._storage = NodeTrustStorage()
@@ -290,7 +290,7 @@ class ValidatorAgreementResult(Manager):
 
     def __init__(self):
         self._storage = ValidatorAgreementResultStorage()
-        self.clear()
+        self._results = self._storage.load()
 
     def add(self, identifier: UUID, result: bool) -> None:
         self.refresh()
@@ -321,7 +321,7 @@ class ValidatorAgreement(Manager):
 
     def __init__(self):
         self._storage = ValidatorAgreementStorage()
-        self.uuids = []
+        self.uuids = self._storage.load()
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
@@ -350,6 +350,11 @@ class ValidatorAgreementInfoManager(Manager):
             self.last_successful_agreement = 0
             self.leaders = []
             self._storage.dump(self.prepare_info_data())
+        else:
+            data = self._storage.load()
+            self.is_started = data["isStarted"]
+            self.last_successful_agreement = data["last_successful_agreement"]
+            self.leaders = [UUID(identifier) for identifier in data["leaders"]]
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
@@ -390,7 +395,7 @@ class NodeTrustHistoryManager(Manager):
 
     def __init__(self):
         self._storage = NodeTrustHistory()
-        self.node_trusts = []
+        self.node_trusts = self._storage.load()
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():

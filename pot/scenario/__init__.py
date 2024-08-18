@@ -37,7 +37,7 @@ def get_scenarios(names_list: str) -> list[Scenario]:
     for name in names:
         try:
             scenario_enum = getattr(Scenario, name)
-            logging.info(f"Running scenario {scenario_enum.name}")
+            logging.debug(f"Running scenario {scenario_enum.name}")
         except AttributeError:
             mess = f'Error: There is no scenario with name: {name}'
             print(mess)
@@ -60,7 +60,7 @@ def run_scenarios(names_list: str, pot: PoT):
     for name in names:
         try:
             scenario_enum = getattr(Scenario, name)
-            logging.info(f"Running scenario {scenario_enum.name}")
+            logging.debug(f"Running scenario {scenario_enum.name}")
         except AttributeError:
             mess = f'Error: There is no scenario with name: {name}'
             print(mess)

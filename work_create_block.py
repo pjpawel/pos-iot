@@ -46,7 +46,7 @@ while True:
         for node in pot.nodes.all():
             if node.identifier == pot.self_node.identifier:
                 continue
-            logging.info(f"Sending new node to host: {node.host}:{node.port} - starting thread")
+            logging.debug(f"Sending new block to host: {node.host}:{node.port} - starting thread")
             th = Thread(target=send, args=[node])
             th.start()
             threads.append(th)

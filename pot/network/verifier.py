@@ -19,7 +19,7 @@ class TransactionVerifier:
         thread.start()
 
     def process(self):
-        logging.info(self.LOG_PREFIX + "Start processing ")
+        logging.debug(self.LOG_PREFIX + "Start processing ")
         while True:
 
             if not self.pot.nodes.is_validator(self.pot.self_node.get_node()):
@@ -32,7 +32,7 @@ class TransactionVerifier:
                     uuid_to_do.append(uuid)
 
             if uuid_to_do:
-                logging.info(
+                logging.debug(
                     self.LOG_PREFIX + f"Transactions {','.join([uid.hex for uid in uuid_to_do])} found to verify")
 
                 tx_uuid = None
@@ -49,7 +49,7 @@ class TransactionVerifier:
                     logging.debug(self.LOG_PREFIX + f"Nothing to verify")
                     continue
 
-                logging.info(self.LOG_PREFIX + f"Verifying transaction of id {tx_uuid.hex}")
+                logging.debug(self.LOG_PREFIX + f"Verifying transaction of id {tx_uuid.hex}")
                 try:
                     result = self.verify_transaction(tx_to_verify)
                     logging.info(self.LOG_PREFIX + f"Transaction {tx_uuid.hex} verified. Result: {result}")

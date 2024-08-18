@@ -89,18 +89,17 @@ class BlocksStorage(Storage):
 
     def load(self) -> list[Block]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return []
-        with open(self.path, "rb") as f:
-            blocks = self.load_from_file(f)
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        blocks = []
+        if not self.is_empty():
+            with open(self.path, "rb") as f:
+                blocks = self.load_from_file(f)
         self.update_cache()
         return blocks
 
     def dump(self, blocks: list[Block]):
         self.wait_for_set_lock()
-        logging.info(f"Writing {len(blocks)} {self.PATH} to storage")
+        logging.debug(f"Writing {len(blocks)} {self.PATH} to storage")
         try:
             with open(self.path, 'wb') as f:
                 f.write(encode_chain(blocks))
@@ -112,7 +111,7 @@ class BlocksStorage(Storage):
 
     def update(self, blocks: list[Block]):
         self.wait_for_set_lock()
-        logging.info(f"Appending {len(blocks)} {self.PATH} to storage")
+        logging.debug(f"Appending {len(blocks)} {self.PATH} to storage")
         try:
             with open(self.path, 'ab') as f:
                 f.write(encode_chain(blocks))
@@ -134,19 +133,18 @@ class NodeStorage(Storage):
 
     def load(self) -> list[Node]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return []
-        with open(self.path) as f:
-            reader = csv.reader(f)
-            nodes = [Node.load_from_list(data) for data in reader]
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        nodes = []
+        if not self.is_empty():
+            with open(self.path) as f:
+                reader = csv.reader(f)
+                nodes = [Node.load_from_list(data) for data in reader]
         self.update_cache()
         return nodes
 
     def dump(self, nodes: list[Node]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Writing {len(nodes)} nodes to storage {self.PATH}")
+        logging.debug(f"Writing {len(nodes)} nodes to storage {self.PATH}")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
@@ -159,7 +157,7 @@ class NodeStorage(Storage):
 
     def update(self, nodes: list[Node]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Appending {len(nodes)} nodes to storage {self.PATH}")
+        logging.debug(f"Appending {len(nodes)} nodes to storage {self.PATH}")
         try:
             with open(self.path, 'a') as f:
                 writer = csv.writer(f)
@@ -176,20 +174,18 @@ class NodeTrustStorage(Storage):
 
     def load(self) -> dict[UUID, int]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return {}
-        with open(self.path, 'r') as f:
-            reader = csv.reader(f)
-            trusts = {}
-            for row in reader:
-                trusts[UUID(row[0])] = int(row[1])
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        trusts = {}
+        if not self.is_empty():
+            with open(self.path, 'r') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    trusts[UUID(row[0])] = int(row[1])
         self.update_cache()
         return trusts
 
     def update(self, trusts: dict[UUID, int]) -> None:
-        logging.info(f"Appending {len(trusts)} {self.PATH} to storage")
+        logging.debug(f"Appending {len(trusts)} {self.PATH} to storage")
         self.wait_for_set_lock()
         try:
             with open(self.path, 'a') as f:
@@ -205,7 +201,7 @@ class NodeTrustStorage(Storage):
     def dump(self, trusts: dict[UUID, int], lock: bool = True) -> None:
         if lock:
             self.wait_for_set_lock()
-        logging.info(f"Writing {len(trusts)} {self.PATH} to storage")
+        logging.debug(f"Writing {len(trusts)} {self.PATH} to storage")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
@@ -226,7 +222,7 @@ class TransactionStorage(Storage):
     def dump(self, txs: dict[UUID, TxToVerify], lock: bool = True) -> None:
         if lock:
             self.wait_for_set_lock()
-        logging.info(f"Writing {len(txs)} '{self.PATH}' to storage")
+        logging.debug(f"Writing {len(txs)} '{self.PATH}' to storage")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
@@ -242,7 +238,7 @@ class TransactionStorage(Storage):
 
     def update(self, txs: dict[UUID, TxToVerify]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Appending {len(txs)} {self.PATH} to storage")
+        logging.debug(f"Appending {len(txs)} {self.PATH} to storage")
         try:
             with open(self.path, 'a') as f:
                 writer = csv.writer(f)
@@ -256,15 +252,13 @@ class TransactionStorage(Storage):
 
     def load(self) -> dict[UUID, TxToVerify]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return {}
-        with open(self.path, 'r') as f:
-            reader = csv.reader(f)
-            txs = {}
-            for row in reader:
-                txs[UUID(row[0])] = TxToVerify.from_str(row[1])
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        txs = {}
+        if not self.is_empty():
+            with open(self.path, 'r') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    txs[UUID(row[0])] = TxToVerify.from_str(row[1])
         self.update_cache()
         return txs
 
@@ -274,26 +268,24 @@ class TransactionVerifiedStorage(Storage):
 
     def load(self) -> dict[UUID, TxVerified]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return {}
-        with open(self.path, 'r') as f:
-            reader = csv.reader(f)
-            txs = {}
-            for row in reader:
-                txs[UUID(row[0])] = TxVerified.from_str(row[1])
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        txs = {}
+        if not self.is_empty():
+            with open(self.path, 'r') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    txs[UUID(row[0])] = TxVerified.from_str(row[1])
         self.update_cache()
         return txs
 
     def update(self, txs: dict[UUID, TxVerified]) -> None:
-        logging.info(f"Appending {len(txs)} {self.PATH} to storage")
+        logging.debug(f"Appending {len(txs)} {self.PATH} to storage")
         self.wait_for_set_lock()
         try:
             with open(self.path, 'a') as f:
                 writer = csv.writer(f)
-                for key in list(txs.keys()):
-                    writer.writerow([key.hex, txs[key].__str__()])
+                for key, value in txs.items():
+                    writer.writerow([key.hex, value.__str__()])
             self.update_cache()
             self.unlock()
         except Exception as e:
@@ -303,12 +295,12 @@ class TransactionVerifiedStorage(Storage):
     def dump(self, txs: dict[UUID, TxVerified], lock: bool = True) -> None:
         if lock:
             self.wait_for_set_lock()
-        logging.info(f"Writing {len(txs)} '{self.PATH}' to storage")
+        logging.debug(f"Writing {len(txs)} '{self.PATH}' to storage")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
-                for key in list(txs.keys()):
-                    writer.writerow([key.hex, txs[key].__str__()])
+                for key, value in txs.items():
+                    writer.writerow([key.hex, value.__str__()])
             self.update_cache()
             if lock:
                 self.unlock()
@@ -324,19 +316,18 @@ class ValidatorStorage(Storage):
 
     def load(self) -> list[UUID]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
         self.update_cache()
-        if self.is_empty():
-            self.unlock()
-            return []
-        with open(self.path) as f:
-            uuids = [UUID(hx) for hx in f.read().split(self.SEPARATOR)]
+        uuids = []
+        if not self.is_empty():
+            with open(self.path) as f:
+                uuids = [UUID(hx) for hx in f.read().split(self.SEPARATOR)]
         self.unlock()
         return uuids
 
     def dump(self, uuids: list[UUID]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Writing {len(uuids)} '{self.PATH}' to storage")
+        logging.debug(f"Writing {len(uuids)} '{self.PATH}' to storage")
         try:
             with open(self.path, 'w') as f:
                 f.write(self.SEPARATOR.join([uid.hex for uid in uuids]))
@@ -356,18 +347,17 @@ class ValidatorAgreementInfoStorage(Storage):
 
     def load(self) -> dict:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return {}
-        with open(self.path) as f:
-            data = json.load(f)
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        data = {}
+        if not self.is_empty():
+            with open(self.path) as f:
+                data = json.load(f)
         self.update_cache()
         return data
 
     def dump(self, data: dict) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Writing {str(data)} {self.PATH} to storage")
+        logging.debug(f"Writing {str(data)} {self.PATH} to storage")
         try:
             with open(self.path, 'w') as f:
                 json.dump(data, f)
@@ -383,20 +373,18 @@ class ValidatorAgreementResultStorage(Storage):
 
     def load(self) -> dict[UUID, bool]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return {}
-        with open(self.path, 'r') as f:
-            reader = csv.reader(f)
-            txs = {}
-            for row in reader:
-                txs[UUID(row[0])] = bool(row[1])
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        txs = {}
+        if not self.is_empty():
+            with open(self.path, 'r') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    txs[UUID(row[0])] = bool(row[1])
         self.update_cache()
         return txs
 
     def update(self, results: dict[UUID, bool]) -> None:
-        logging.info(f"Appending {len(results)} {self.PATH} to storage")
+        logging.debug(f"Appending {len(results)} {self.PATH} to storage")
         self.wait_for_set_lock()
         try:
             with open(self.path, 'a') as f:
@@ -410,7 +398,7 @@ class ValidatorAgreementResultStorage(Storage):
             raise e
 
     def dump(self, txs: dict[UUID, bool]) -> None:
-        logging.info(f"Writing {len(txs)} '{self.PATH}' to storage")
+        logging.debug(f"Writing {len(txs)} '{self.PATH}' to storage")
         self.wait_for_set_lock()
         try:
             with open(self.path, 'w') as f:
@@ -425,23 +413,22 @@ class ValidatorAgreementResultStorage(Storage):
 
 
 class NodeTrustHistory(Storage):
-    PATH = 'noe_trust_history'
+    PATH = 'node_trust_history'
 
     def load(self) -> list[NodeTrustChange]:
         self._wait_for_lock()
-        logging.info(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
-        if self.is_empty():
-            self.update_cache()
-            return []
-        with open(self.path) as f:
-            reader = csv.reader(f)
-            node_trusts = [NodeTrustChange.load_from_list(data) for data in reader]
+        logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+        node_trusts = []
+        if not self.is_empty():
+            with open(self.path) as f:
+                reader = csv.reader(f)
+                node_trusts = [NodeTrustChange.load_from_list(data) for data in reader]
         self.update_cache()
         return node_trusts
 
     def dump(self, nodes_trusts: list[NodeTrustChange]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Writing {len(nodes_trusts)} nodes to storage {self.PATH}")
+        logging.debug(f"Writing {len(nodes_trusts)} nodes to storage {self.PATH}")
         try:
             with open(self.path, 'w') as f:
                 writer = csv.writer(f)
@@ -454,7 +441,7 @@ class NodeTrustHistory(Storage):
 
     def update(self, node_trusts: list[NodeTrustChange]) -> None:
         self.wait_for_set_lock()
-        logging.info(f"Appending {len(node_trusts)} nodes to storage {self.PATH}")
+        logging.debug(f"Appending {len(node_trusts)} nodes to storage {self.PATH}")
         try:
             with open(self.path, 'a') as f:
                 writer = csv.writer(f)

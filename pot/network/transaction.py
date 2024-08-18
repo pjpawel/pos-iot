@@ -175,7 +175,7 @@ class TxToVerify:
     def add_verification_result(self, node: Node, result: bool) -> None:
         if node.identifier in list(self.voting.keys()):
             logging.warning(f"Voting is already saved from node {node.identifier.hex}")
-            # logging.info(f"Voting: " + '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]))
+            # logging.debug(f"Voting: " + '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]))
             return
         self.voting[node.identifier] = result
         logging.info(f"Successfully added verification result {result} from {node.identifier.hex}")

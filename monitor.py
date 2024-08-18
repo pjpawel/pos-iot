@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from matplotlib.pyplot import savefig
+import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
 from pot.network.node import SelfNodeInfo
@@ -32,11 +32,16 @@ def get_info_from_nodes(path: str) -> dict:
     nodes = storage.load()
     trust = NodeTrust.__new__(NodeTrust)
     trust._storage = NodeTrustStorage(path)
-    trust._storage.load()
-    self_node = SelfNodeInfo()
+    # trust._storage.load()
+    # print(f"Trust from {path}: {trust._storage.load()}")
+    # old_value = os.getenv('STORAGE_DIR')
+    # os.putenv('STORAGE_DIR', path)
+    # self_node = SelfNodeInfo()
+    # os.putenv('STORAGE_DIR', old_value)
     return {
         "len": len(nodes),
-        "trust": trust.get_node_trust(self_node.get_node())
+        #"trust": trust.get_node_trust(self_node.get_node())
+        "trust": trust._storage.load()
     }
 
 
@@ -72,13 +77,17 @@ cols_dict = {
     'time': 'Time',
     'number_of_nodes': 'Number of nodes',
     'number_of_validators': 'Number of validators',
-    'node_trust': 'Node trust',
+    # 'node_trust': 'Node trust',
     'number_of_blocks': 'Number of blocks',
     'number_of_transaction_to_verify': 'Number of transactions to verify',
     'number_of_verified_transactions': 'Number of verified transactions',
 }
 
 cols = list(cols_dict.keys())
+
+df_trust = pd.DataFrame(columns=["time", "sourceNode", "node", "trust"])
+df_trust.set_index(["time", "sourceNode", "node"], inplace=True)
+# df_trust.sort_index()
 
 first_time = None
 dfs = {}
@@ -90,6 +99,8 @@ for node in os.listdir(storage_path):
         continue
 
     print(f"Processing node {node}")
+
+    trust_data = []
 
     df = pd.DataFrame(columns=cols)
     df.set_index('time', inplace=True)
@@ -119,19 +130,38 @@ for node in os.listdir(storage_path):
             print(f"Exception {e} while loading from node: {node} from time {time}")
             raise e
 
-        df.loc[time - first_time] = [
+        actual_time = time - first_time
+        df.loc[actual_time] = [
             nodes_info['len'],
             validators_info['len'],
-            nodes_info["trust"],
+            # nodes_info["trust"],
             blocks_info['len'],
             txs_to_ver_info['len'],
             txs_ver_info['len']
         ]
+        for node_id, trust in nodes_info["trust"].items():
+            trust_data.append({
+                "time": actual_time,
+                "sourceNode": node,
+                "node": node_id.hex,
+                "trust": trust
+            })
+            # df_trust.loc[(actual_time, node, node_id.hex), :] = trust
         record_i += 1
 
     # check if all df has step by step info
-    df.to_excel(os.path.join(result_path, f"result-{node}.xlsx"))
+    #df.to_excel(os.path.join(result_path, f"result-{node}.xlsx"))
     dfs[node] = df
+
+    df_trust_node = pd.DataFrame(trust_data, columns=["time", "sourceNode", "node", "trust"])
+    df_trust_node.set_index(["time", "sourceNode", "node"], inplace=True)
+    #df_trust_node.to_excel(os.path.join(result_path, f"result-trust-{node}.xlsx"))
+
+    df_trust = pd.concat([df_trust, df_trust_node])
+
+#df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
+
+print("")
 
 # check if all df has step by step info
 for col in cols[1:]:
@@ -146,8 +176,8 @@ for col in cols[1:]:
 
     df_show = pd.DataFrame(data)
     print(f"Processing column {col}")
-    print(df_show.info())
-    print(df_show.head())
+    #print(df_show.info())
+    #print(df_show.head())
     # df_show.plot(
     #     legend=True,
     #     title=f"Plot {col} against time",
@@ -162,9 +192,23 @@ for col in cols[1:]:
         legend=True,
         title=f"Plot {col} against time",
         xlabel="Time [s]",
-        ylabel=col,
-        #        subplots=True,
+        # subplots=True,
         ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True
     )
-    savefig(os.path.join(result_path, f"plot-{col}.png"))
+    plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
+
+print(" ")
+nodes_ids = df_trust.reset_index()["node"].unique()
+for node_id in nodes_ids:
+    print(f"Processing trust for node {node_id}")
+    (df_trust.xs(node_id, level=2)
+        .reset_index()
+        .pivot(index='time', columns='sourceNode', values='trust')
+        .plot(kind='line', figsize=(10, 6)))
+    plt.title(f"Change of trust for node {node_id} in time ")
+    plt.xlabel('Time [s]')
+    plt.ylabel('Trust')
+    plt.legend(title='Source node')
+    plt.grid(True)
+    plt.savefig(os.path.join(result_path, f"plot-trust-{node_id}.png"))

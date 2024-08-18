@@ -39,6 +39,10 @@ echo "Starting worker set random validators"
 python3 work_set_random_validators.py &
 echo "Starting worker create block"
 python3 work_create_block.py &
+echo "Starting worker agreement"
+python3 work_start_agreement.py &
+echo "Starting worker validate agreement"
+python3 work_validate_agreement.py &
 
 touch log/app.log
 

@@ -35,8 +35,8 @@ if ip != genesis_ip:
 pot = PoT()
 pot.load(only_from_file=True)
 
-sleep(70.0)
-logging.info("Starting setting new validators")
+sleep(50.0)
+logging.debug("Starting setting new validators")
 validators_number = pot.nodes.calculate_validators_number()
 
 identifiers = []
@@ -48,4 +48,4 @@ validator_ids = random.sample(identifiers, validators_number)
 pot.nodes.validators.set_validators(validator_ids)
 logging.info(f"Validators list updated: {[idnt.hex for idnt in validator_ids]}")
 pot.send_validators_list()
-logging.info(f"Validators list sent to all nodes")
+logging.debug(f"Validators list sent to all nodes")
