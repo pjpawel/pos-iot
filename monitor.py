@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import pandas as pd
@@ -161,6 +162,10 @@ for node in os.listdir(storage_path):
 
 #df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
 
+print("")
+import datetime
+first_time_date = datetime.datetime.fromtimestamp(first_time, datetime.timezone.utc)
+print(f"First time: {first_time} - {first_time_date.isoformat()}")
 print("")
 
 # check if all df has step by step info

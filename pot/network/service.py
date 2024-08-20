@@ -22,7 +22,7 @@ class Blockchain(BlockchainManager):
 
     def create_block(self, self_node: SelfNodeInfo) -> Block:
         txs_verified = self.txs_verified.all()
-        txs = [txs_verified.tx for txs_verified in txs_verified.values()]
+        txs = [txs_verified.tx for txs_verified in list(txs_verified.values())]
         cblock = BlockCandidate.create_new(txs)
         self.txs_verified.delete(list(txs_verified.keys()))
         block = cblock.sign(

@@ -20,7 +20,7 @@ load_dotenv()
 """
 Configuring logger
 """
-setup_logger("BLOCK")
+setup_logger("BLOCK", "DEBUG")
 
 sleep(0.1)
 
@@ -32,11 +32,12 @@ node = pot.nodes.find_by_identifier(pot.self_node.identifier)
 while True:
     
     if not pot.nodes.is_validator(node):
-        sleep(5)
+        sleep(10)
         continue
 
-    print("Checking")
-    if pot.blockchain.get_last_block().timestamp + 100 < int(time()) and pot.blockchain.txs_verified.all():
+    logging.debug("Checking block should be created")
+
+    if pot.blockchain.get_last_block().timestamp + 150 < int(time()) and pot.blockchain.txs_verified.all():
         block = pot.blockchain.create_block(pot.self_node)
 
         def send(node: Node):
@@ -59,6 +60,6 @@ while True:
                 if not thread.is_alive():
                     threads.remove(thread)
 
-    sleep(5)
+    sleep(10)
 
 

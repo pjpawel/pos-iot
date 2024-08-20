@@ -1,6 +1,6 @@
 import logging
-import os
 import socket
+import sys
 from base64 import b64encode
 from uuid import uuid4, UUID
 
@@ -19,6 +19,7 @@ load_dotenv()
 """
 Configuring logger
 """
+sys.argv[0] = 'http'
 setup_logger("API")
 
 """
@@ -243,11 +244,13 @@ def validator_agreement_get():
 
 @app.patch("/node/validator/agreement/vote")
 def validator_agreement_vote():
+    logging.warning(f"Agreement vote called")
     app.pot.node_validator_agreement_vote(request.remote_addr, request.get_json())
     return {}
 
 
 @app.post("/node/validator/agreement/done")
 def validator_agreement_done():
+    logging.warning(f"Agreement done called")
     app.pot.node_validator_agreement_done(request.remote_addr, request.get_json())
     return {}

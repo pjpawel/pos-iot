@@ -26,7 +26,7 @@ Configuring logger
 """
 setup_logger("START_AGREEMENT", "DEBUG")
 
-sleep(150)
+sleep(70)
 
 pot = PoT()
 pot.load(only_from_file=True)

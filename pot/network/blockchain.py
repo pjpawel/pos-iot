@@ -240,6 +240,8 @@ class PoT:
             "change": change,
             "type": change_type.value
         }
+        if node_trust.change < 0:
+            logging.warning(f"Change trust '{change}' node '{change_node.identifier.hex}' of type {change_type.value}")
 
         def send_data(node: Node):
             try:
@@ -326,15 +328,18 @@ class PoT:
         self.blockchain.add(new_block)
 
     def transaction_get(self, identifier: str) -> bytes:
-        self._validate_if_i_am_validator()
+        #self._validate_if_i_am_validator()
         uuid = self._validate_create_uuid(identifier)
         tx_to_verified = self.tx_to_verified.find(uuid)
-        if not tx_to_verified:
-            logging.info(
-                f"Transaction not find {identifier} from "
-                f"{', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
-            raise PoTException(f"Cannot find transaction of given id {identifier}", 404)
-        return tx_to_verified.tx.encode()
+        if tx_to_verified:
+            return tx_to_verified.tx.encode()
+        logging.info(
+            f"Transaction not find {identifier} from "
+            f"{', '.join([uuid.hex for uuid in self.tx_to_verified.all().keys()])}")
+        tx_verified = self.blockchain.txs_verified.find(uuid)
+        if tx_verified:
+            tx_verified.tx.encode()
+        raise PoTException(f"Cannot find transaction of given id {identifier}", 404)
 
     def transaction_populate(self, data: bytes, identifier: str) -> None:
         uuid = self._validate_create_uuid(identifier)
@@ -500,6 +505,9 @@ class PoT:
         if is_started:
             data["leader"] = self.nodes.get_agreement_leader().hex
             data["list"] = [node.hex for node in self.nodes.get_agreement_list()]
+            data["voting"] = {}
+            for node_id, result in self.nodes.validator_agreement_result.all().items():
+                data["voting"][node_id.hex] = result
         return data
 
     def node_validator_agreement_start(self, remote_addr: str, data: dict):

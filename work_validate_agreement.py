@@ -4,6 +4,7 @@ from threading import Thread
 from time import sleep, time
 from math import ceil
 from random import randint
+from uuid import UUID
 
 from dotenv import load_dotenv
 
@@ -29,16 +30,19 @@ sleep(10)
 pot = PoT()
 pot.load(only_from_file=True)
 
-node = pot.self_node.get_node()
+self_node = pot.self_node.get_node()
 
 
 def add_agreement_result(result: bool):
-    pot.nodes.validator_agreement_result.add(node.identifier, result)
+    logging.warning(
+        f"Validators list that is judged: {', '.join([vid.hex for vid in pot.nodes.validator_agreement.all()])}")
+    logging.warning(f"Result of validation: {result} for node {self_node.identifier.hex}")
+
+
+    pot.nodes.validator_agreement_result.add(self_node.identifier, result)
     vote_data = {
         "result": result
     }
-
-    logging.debug(f"Validators list that is judged: {', '.join([vid.hex for vid in pot.nodes.validator_agreement.all()])}")
 
     def send(func):
         threads = []
@@ -95,60 +99,70 @@ def add_agreement_result(result: bool):
     # pot.send_validators_list()
 
 import socket
-logging.info(f"Node: {node.identifier}. Socket: {socket.gethostbyname(socket.gethostname())}")
+logging.info(f"Node: {self_node.identifier}. Socket: {socket.gethostbyname(socket.gethostname())}")
 
-while True:
+try:
+    while True:
 
-    if not pot.nodes.is_validator(node):
-        sleep(10)
-        continue
-
-    logging.info(f"Checking if validator has work to do: {node.identifier.hex}")
-    agreement_info = pot.nodes.validator_agreement_info
-    agreement_info.refresh()
-    if agreement_info.is_started:
-        if pot.nodes.validator_agreement_result.find(node.identifier) is None:
-            # TODO: check if agreement is working
-            add_agreement_result(True)
+        if not pot.nodes.is_validator(self_node):
+            sleep(10)
             continue
 
-            proposed_agreement_list = pot.nodes.validator_agreement_info.leaders
+        logging.info(f"Checking if validator has work to do: {self_node.identifier.hex}")
+        agreement_info = pot.nodes.validator_agreement_info
+        agreement_info.refresh()
+        if agreement_info.is_started:
+            if pot.nodes.validator_agreement_result.find(self_node.identifier) is None:
+                logging.info("Validation is starting")
+                proposed_agreement_list = pot.nodes.validator_agreement.all()
 
-            if len(proposed_agreement_list) != len(set(proposed_agreement_list)):
-                logging.warning(f"There are duplicates in agreement list")
-                add_agreement_result(False)
-                continue
-
-            nodes = pot.nodes.prepare_all_nodes_info()
-            nodes = sorted(nodes, key=lambda node_info: node_info["trust"])
-            validator_len = max(2, ceil(len(nodes) * 0.1))
-            proposed_agreement_list_len = len(proposed_agreement_list)
-            if validator_len != proposed_agreement_list_len:
-                logging.warning(
-                    f"Calculated length of nodes ({validator_len}) is not equal agreement list ({proposed_agreement_list_len})")
-                add_agreement_result(False)
-                continue
-
-            half_validator_len = int(validator_len / 2)
-            agreement_list = nodes[0:half_validator_len]
-            agreement_id_list = [node["identifier"] for node in agreement_list]
-
-            # [validator.hex for validator in proposed_agreement_list[:proposed_agreement_list_len]]
-            if proposed_agreement_list[:proposed_agreement_list_len] != agreement_id_list:
-                diff = set(proposed_agreement_list[:proposed_agreement_list_len]).difference(set(agreement_id_list))
-                logging.warning(f"There is a difference between proposed agreement list and agreement list. " +
-                                f"Original list {', '.join([validator.hex for validator in proposed_agreement_list[:proposed_agreement_list_len]])} " +
-                                f"Calculated list {', '.join(agreement_id_list)} ")
-                add_agreement_result(False)
-                continue
-
-            possible_node_ids = [node["identifier"] for node in nodes[half_validator_len:]]
-            for node_id in proposed_agreement_list[proposed_agreement_list_len / 2:]:
-                if node_id not in possible_node_ids:
-                    logging.warning(f"Node {node_id} not in possible nodes {', '.join(possible_node_ids)}")
+                if len(proposed_agreement_list) != len(set(proposed_agreement_list)):
+                    logging.warning(f"There are duplicates in agreement list")
                     add_agreement_result(False)
                     continue
+                logging.debug("There is no duplicates in agreement")
 
-            add_agreement_result(True)
+                nodes = pot.nodes.prepare_all_nodes_info()
+                nodes = sorted(nodes, key=lambda node_info: node_info["trust"])
+                validator_len = max(2, ceil(len(nodes) * 0.1))
+                proposed_agreement_list_len = len(proposed_agreement_list)
+                if validator_len != proposed_agreement_list_len:
+                    logging.warning(f"Calculated length of nodes ({validator_len}) "
+                                    f"is not equal agreement list ({proposed_agreement_list_len})")
+                    add_agreement_result(False)
+                    continue
+                logging.debug("Length of agreement is the same")
 
-    sleep(10)
+                half_validator_len = int(validator_len / 2)
+                agreement_list = nodes[0:half_validator_len]
+                agreement_id_list = [UUID(hex=node["identifier"]) for node in agreement_list]
+
+                # [validator.hex for validator in proposed_agreement_list[:proposed_agreement_list_len]]
+                if proposed_agreement_list[:half_validator_len] != agreement_id_list:
+                    diff = set(proposed_agreement_list[:half_validator_len]).difference(set(agreement_id_list))
+                    logging.warning(f"There is a difference between proposed agreement list and agreement list. " +
+                                    f"Original list {', '.join([validator.hex for validator in proposed_agreement_list[:half_validator_len]])} " +
+                                    f"Calculated list {', '.join([node_id.hex for node_id in agreement_id_list])} " +
+                                    f"Diff: {', '.join([node_id.hex for node_id in list(diff)])}")
+                    add_agreement_result(False)
+                    continue
+                logging.debug("First part of agreement is the same")
+
+                possible_node_ids = [UUID(hex=node["identifier"]) for node in nodes[half_validator_len:]]
+                logging.debug(f"Possible nodes id {', '.join([node_id.hex for node_id in possible_node_ids])}")
+                not_valid = True
+                second_part_of_agreement_list = proposed_agreement_list[half_validator_len:]
+                logging.debug(f"Second part of agreement {', '.join([node_id.hex for node_id in second_part_of_agreement_list])}")
+                for node_id in second_part_of_agreement_list:
+                    logging.debug(f"Checking node {node_id.hex} in {', '.join([node_id_agreement.hex for node_id_agreement in second_part_of_agreement_list])}")
+                    if node_id not in possible_node_ids:
+                        logging.debug(f"Node {node_id} not in possible nodes {', '.join([node_id.hex for node_id in possible_node_ids])}")
+                        not_valid = False
+                        break
+
+                logging.debug(f"Second part of agreement result is {not_valid}")
+                add_agreement_result(not_valid)
+
+        sleep(10)
+except Exception as e:
+    logging.error(f"Error: {e}")
