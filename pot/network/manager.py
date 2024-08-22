@@ -388,7 +388,7 @@ class ValidatorAgreementInfoManager(Manager):
 
 
 class NodeTrustHistoryManager(Manager):
-    TRUST_PURGE_INTERVAL = 60
+    TRUST_PURGE_INTERVAL = 5
 
     _storage = NodeTrustHistory
     node_trusts: list[NodeTrustChange]
@@ -425,7 +425,9 @@ class NodeTrustHistoryManager(Manager):
     def has_node_trust(self, new_node_trust: NodeTrustChange) -> bool:
         self.refresh()
         for node_trust in self.all():
-            if node_trust == new_node_trust:
+            if (node_trust.node_id == new_node_trust.node_id
+                    and node_trust.change == new_node_trust.change
+                    and node_trust.type == new_node_trust.type):
                 return True
         return False
 

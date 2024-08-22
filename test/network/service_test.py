@@ -1,7 +1,9 @@
+from time import time
 from uuid import uuid4
 
 from pot.network.service import Node
 from pot.network.node import Node as NodeDto
+from pot.network.trust import NodeTrustChange, TrustChangeType
 from test.network.conftest import Helper
 
 
@@ -104,6 +106,58 @@ def test_node_trust_change(helper: Helper):
 
     service.node_trust.add_trust_to_node(node, -40)
     assert basic_trust + 20 - 40 == service.node_trust.get_node_trust(node)
+
+
+def test_node_trust_change_purge_history(helper: Helper):
+    helper.put_storage_env()
+    service = Node()
+
+    identifier = uuid4()
+    node = NodeDto(identifier, "172.0.0.1", 5000)
+
+    service.node_trust.add_new_node_trust(node)
+    basic_trust = service.node_trust.BASIC_TRUST
+    assert basic_trust == service.node_trust.get_node_trust(node)
+
+    service.node_trust_history.purge_old_history()
+    assert len(service.node_trust_history.all()) == 0
+
+    change_type = TrustChangeType.TRANSACTION_VALIDATED
+    purge_interval = service.node_trust_history.TRUST_PURGE_INTERVAL
+
+    node_trust = NodeTrustChange(node.identifier, int(time()) - purge_interval - 1, change_type, 1)
+    service.node_trust_history.add(node_trust)
+
+    assert len(service.node_trust_history.all()) == 1
+
+    service.node_trust_history.purge_old_history()
+    assert len(service.node_trust_history.all()) == 0
+
+
+def test_node_trust_change_already_in_history(helper: Helper):
+    helper.put_storage_env()
+    service = Node()
+
+    identifier = uuid4()
+    node = NodeDto(identifier, "172.0.0.1", 5000)
+
+    service.node_trust.add_new_node_trust(node)
+    basic_trust = service.node_trust.BASIC_TRUST
+    assert basic_trust == service.node_trust.get_node_trust(node)
+
+    service.node_trust_history.purge_old_history()
+    assert len(service.node_trust_history.all()) == 0
+
+    change_type = TrustChangeType.TRANSACTION_VALIDATED
+    purge_interval = service.node_trust_history.TRUST_PURGE_INTERVAL
+
+    node_trust = NodeTrustChange(node.identifier, int(time()), change_type, 1)
+    service.node_trust_history.add(node_trust)
+    assert len(service.node_trust_history.all()) == 1
+
+    node_trust2 = NodeTrustChange(node.identifier, int(time()), change_type, 1)
+    service.node_trust_history.purge_old_history()
+    assert service.node_trust_history.has_node_trust(node_trust2)
 
 
 def test_update_node(helper: Helper):

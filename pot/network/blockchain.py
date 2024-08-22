@@ -152,17 +152,18 @@ class PoT:
             logging.info(f"Transaction {uuid.hex} voting")
             tx_to_verified = self.tx_to_verified.pop(uuid)
 
+            trust_change = TrustChangeType.TRANSACTION_VALIDATED
             nodes_positive, nodes_negative = tx_to_verified.get_voters_id_by_result()
             if tx_to_verified.is_voting_positive():
                 tx_verified = tx_to_verified.get_verified_tx()
                 self.blockchain.add_new_transaction(uuid, tx_verified)
                 self.send_new_transaction_verified(uuid, tx_verified)
-                self.send_multiple_trust_change(nodes_positive, TrustChangeType.TRANSACTION_VALIDATED, 20)
-                self.send_multiple_trust_change(nodes_negative, TrustChangeType.TRANSACTION_VALIDATED, -40)
+                self.send_multiple_trust_change(nodes_positive, trust_change, trust_change.value)
+                self.send_multiple_trust_change(nodes_negative, trust_change, -10*trust_change.value)
             else:
                 logging.info(f"Transaction {uuid.hex} was rejected")
-                self.send_multiple_trust_change(nodes_positive, TrustChangeType.TRANSACTION_VALIDATED, -40)
-                self.send_multiple_trust_change(nodes_negative, TrustChangeType.TRANSACTION_VALIDATED, 20)
+                self.send_multiple_trust_change(nodes_positive, trust_change, -10*trust_change.value)
+                self.send_multiple_trust_change(nodes_negative, trust_change, trust_change.value)
 
     def send_new_transaction_verified(self, identifier: UUID, tx_verified: TxVerified):
         data = str(tx_verified)
@@ -231,7 +232,9 @@ class PoT:
                 if not thread.is_alive():
                     threads.remove(thread)
 
-    def change_node_trust(self, change_node: Node, change_type: TrustChangeType, change: int):
+    def change_node_trust(self, change_node: Node, change_type: TrustChangeType, change: int | None = None):
+        if change is None:
+            change = change_type.value
         node_trust = NodeTrustChange(change_node.identifier, int(time()), change_type, change)
         self.nodes.node_trust.add_trust_to_node(change_node, change)
         self.nodes.node_trust_history.add(node_trust)
@@ -286,6 +289,9 @@ class PoT:
         uuid = uuid4()
         self.tx_to_verified.add(uuid, TxToVerify(tx, tx_node))
         self.send_transaction_populate(uuid, tx)
+
+        self.change_node_trust(tx_node, TrustChangeType.TRANSACTION_CREATED)
+
         return {"id": uuid.hex}
 
     def transaction_verified_new(self, identifier: str, data: str, request_addr: str):
@@ -539,6 +545,8 @@ class PoT:
         self.nodes.validator_agreement.set(nodes)
         self.nodes.validator_agreement_result.add(leader.identifier, True)
 
+        self.change_node_trust(leader, TrustChangeType.AGREEMENT_STARTED)
+
         return {
             "isStarted": is_started,
             "leader": self.nodes.get_agreement_leader().hex,
@@ -578,6 +586,20 @@ class PoT:
         else:
             self.nodes.validator_agreement_info.add_leader(new_leader)
 
+        positives_results_nodes = []
+        negatives_results_nodes = []
+        for node_id, result in self.nodes.validator_agreement_result.all().items():
+            node = self.nodes.find_by_identifier(node_id)
+            if result:
+                positives_results_nodes.append(node)
+            else:
+                negatives_results_nodes.append(node)
+
+        change_type = TrustChangeType.AGREEMENT_VALIDATION
+        self.send_multiple_trust_change(positives_results_nodes, change_type, change_type.value)
+        self.send_multiple_trust_change(negatives_results_nodes, change_type, -10*change_type.value)
+
+
         # done_data = {
         #     "validators": [vid.hex for vid in self.nodes.validator_agreement.all()],
         #     "leader": new_leader.identifier.hex
@@ -606,7 +628,6 @@ class PoT:
         #     Request.send_validator_agreement_done(node.host, node.port, done_data)
         #
         # send(done)
-
 
     def node_validator_agreement_done(self, remote_addr: str, data: dict):
         self._validate_request_from_validator(remote_addr)
@@ -663,7 +684,10 @@ class PoT:
             identifiers.append(uuid)
 
         self.nodes.validators.set_validators(identifiers)
-        # TODO: Reset validator agreement
+        self.nodes.validator_agreement_info.set_info_data(False, [])
+        self.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
+        self.nodes.validator_agreement.set([])
+        self.nodes.validator_agreement_result.clear()
 
     def node_trust_change(self, identifier: str, data: dict):
         self._validate_request_dict_keys(data, ["timestamp", "change", "type"])
@@ -674,13 +698,14 @@ class PoT:
         node = self.nodes.find_by_identifier(node_id)
         if not node:
             raise PoTException("Node not found with identifier " + node_id.hex, 404)
-        self.nodes.node_trust_history.purge_old_history()
+
         node_trust = NodeTrustChange(node.identifier, timestamp, change_type, change)
-        self.nodes.node_trust_history.add(node_trust)
-        self.nodes.node_trust.add_trust_to_node(node, change)
-        # if not self.nodes.node_trust_history.has_node_trust(node_trust):
-        #     self.nodes.node_trust_history.add(node_trust)
-        #     self.nodes.node_trust.add_trust_to_node(node, change)
+        self.nodes.node_trust_history.purge_old_history()
+        if not self.nodes.node_trust_history.has_node_trust(node_trust):
+            self.nodes.node_trust_history.add(node_trust)
+            self.nodes.node_trust.add_trust_to_node(node, change)
+        # self.nodes.node_trust_history.add(node_trust)
+        # self.nodes.node_trust.add_trust_to_node(node, change)
 
     """
     Internal API methods (helpers)

@@ -1,5 +1,5 @@
 import logging
-import random
+import socket
 from threading import Thread
 from time import sleep, time
 from math import ceil
@@ -33,7 +33,6 @@ pot.load(only_from_file=True)
 
 node = pot.self_node.get_node()
 
-import socket
 logging.info(f"Node: {node.identifier}. Socket: {socket.gethostbyname(socket.gethostname())}")
 
 while True:

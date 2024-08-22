@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from pot.network.blockchain import PoT
 from pot.network.node import Node
 from pot.network.request import Request
+from pot.network.trust import TrustChangeType
 from pot.utils import setup_logger
 
 
@@ -27,11 +28,11 @@ sleep(0.1)
 pot = PoT()
 pot.load(only_from_file=True)
 
-node = pot.nodes.find_by_identifier(pot.self_node.identifier)
+self_node = pot.nodes.find_by_identifier(pot.self_node.identifier)
 
 while True:
     
-    if not pot.nodes.is_validator(node):
+    if not pot.nodes.is_validator(self_node):
         sleep(10)
         continue
 
@@ -45,7 +46,7 @@ while True:
 
         threads = []
         for node in pot.nodes.all():
-            if node.identifier == pot.self_node.identifier:
+            if node.identifier == self_node.identifier:
                 continue
             logging.debug(f"Sending new block to host: {node.host}:{node.port} - starting thread")
             th = Thread(target=send, args=[node])
@@ -59,6 +60,8 @@ while True:
             for thread in threads:
                 if not thread.is_alive():
                     threads.remove(thread)
+
+        pot.change_node_trust(self_node, TrustChangeType.BLOCK_CREATED)
 
     sleep(10)
 

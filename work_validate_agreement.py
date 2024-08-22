@@ -1,9 +1,8 @@
 import logging
-import random
+import socket
 from threading import Thread
-from time import sleep, time
+from time import sleep
 from math import ceil
-from random import randint
 from uuid import UUID
 
 from dotenv import load_dotenv
@@ -38,11 +37,7 @@ def add_agreement_result(result: bool):
         f"Validators list that is judged: {', '.join([vid.hex for vid in pot.nodes.validator_agreement.all()])}")
     logging.warning(f"Result of validation: {result} for node {self_node.identifier.hex}")
 
-
     pot.nodes.validator_agreement_result.add(self_node.identifier, result)
-    vote_data = {
-        "result": result
-    }
 
     def send(func):
         threads = []
@@ -61,6 +56,10 @@ def add_agreement_result(result: bool):
             for thread in threads:
                 if not thread.is_alive():
                     threads.remove(thread)
+
+    vote_data = {
+        "result": result
+    }
 
     def vote(node: Node):
         Request.send_validator_agreement_vote(node.host, node.port, vote_data)
@@ -98,7 +97,7 @@ def add_agreement_result(result: bool):
     #
     # pot.send_validators_list()
 
-import socket
+
 logging.info(f"Node: {self_node.identifier}. Socket: {socket.gethostbyname(socket.gethostname())}")
 
 try:
