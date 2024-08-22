@@ -235,7 +235,7 @@ class PoT:
     def change_node_trust(self, change_node: Node, change_type: TrustChangeType, change: int | None = None):
         if change is None:
             change = change_type.value
-        node_trust = NodeTrustChange(change_node.identifier, int(time()), change_type, change)
+        node_trust = NodeTrustChange(change_node.identifier, time(), change_type, change)
         self.nodes.node_trust.add_trust_to_node(change_node, change)
         self.nodes.node_trust_history.add(node_trust)
         data = {
@@ -691,7 +691,7 @@ class PoT:
 
     def node_trust_change(self, identifier: str, data: dict):
         self._validate_request_dict_keys(data, ["timestamp", "change", "type"])
-        timestamp = int(data.get("timestamp"))
+        timestamp = float(data.get("timestamp"))
         change = int(data.get("change"))
         change_type = TrustChangeType(data.get("type"))
         node_id = self._validate_create_uuid(identifier)
@@ -702,8 +702,8 @@ class PoT:
         node_trust = NodeTrustChange(node.identifier, timestamp, change_type, change)
         self.nodes.node_trust_history.purge_old_history()
         if not self.nodes.node_trust_history.has_node_trust(node_trust):
-            self.nodes.node_trust_history.add(node_trust)
             self.nodes.node_trust.add_trust_to_node(node, change)
+            self.nodes.node_trust_history.add(node_trust)
         # self.nodes.node_trust_history.add(node_trust)
         # self.nodes.node_trust.add_trust_to_node(node, change)
 

@@ -61,11 +61,14 @@ class TransactionVerifier:
                 logging.debug(self.LOG_PREFIX + "Nothing to verify")
                 sleep(1)
 
-    def verify_transaction(self, tx: TxToVerify) -> bool:
+    def verify_transaction(self, tx_to_verify: TxToVerify) -> bool:
         """
         Verify transaction based on previous records
-        :param tx:
+        :param tx_to_verify:
         :return:
         """
-        # TODO:
-        return True
+        tx = tx_to_verify.tx
+        tx_type = tx.data.get(tx.TYPE_KEY)
+        if tx_type == "0":
+            return True
+        last_txs = self.pot.blockchain.find_last_transactions_values_for_node(tx_to_verify.node, tx_type)

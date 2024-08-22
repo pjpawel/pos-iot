@@ -210,5 +210,4 @@ class Node(NodeManager):
 
 
 class TransactionToVerify(TransactionToVerifyManager):
-    # TODO: is done?
     pass

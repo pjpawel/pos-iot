@@ -12,11 +12,11 @@ class TrustChangeType(IntEnum):
 
 class NodeTrustChange:
     node_id: UUID
-    timestamp: int
+    timestamp: float
     type: TrustChangeType
     change: int
 
-    def __init__(self, node_id: UUID, timestamp: int, change_type: TrustChangeType, change: int):
+    def __init__(self, node_id: UUID, timestamp: float, change_type: TrustChangeType, change: int):
         self.node_id = node_id
         self.timestamp = timestamp
         self.type = change_type
@@ -29,4 +29,4 @@ class NodeTrustChange:
     def load_from_list(cls, data: list):
         node_id = UUID(data[0])
         change_type = TrustChangeType(int(data[2]))
-        return cls(node_id, int(data[1]), change_type, int(data[3]))
+        return cls(node_id, float(data[1]), change_type, int(data[3]))

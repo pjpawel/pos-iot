@@ -388,7 +388,7 @@ class ValidatorAgreementInfoManager(Manager):
 
 
 class NodeTrustHistoryManager(Manager):
-    TRUST_PURGE_INTERVAL = 5
+    TRUST_PURGE_INTERVAL = 1.0
 
     _storage = NodeTrustHistory
     node_trusts: list[NodeTrustChange]
@@ -411,7 +411,7 @@ class NodeTrustHistoryManager(Manager):
         self.node_trusts = node_trusts
 
     def purge_old_history(self) -> None:
-        purge_timestamp = int(time()) - self.TRUST_PURGE_INTERVAL
+        purge_timestamp = time() - self.TRUST_PURGE_INTERVAL
         self.refresh()
         node_trusts_to_remove = []
         for node_trust in self.all():
