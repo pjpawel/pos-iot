@@ -5,9 +5,20 @@ from uuid import UUID
 
 from .block import Block
 from .node import Node, NodeType
-from .storage import BlocksStorage, NodeStorage, TransactionStorage, Storage, TransactionVerifiedStorage, \
-    ValidatorStorage, ValidatorAgreementStorage, ValidatorAgreementInfoStorage, ValidatorAgreementResultStorage, \
-    NodeTrustStorage, decode_chain, NodeTrustHistory
+from .storage import (
+    BlocksStorage,
+    NodeStorage,
+    TransactionStorage,
+    Storage,
+    TransactionVerifiedStorage,
+    ValidatorStorage,
+    ValidatorAgreementStorage,
+    ValidatorAgreementInfoStorage,
+    ValidatorAgreementResultStorage,
+    NodeTrustStorage,
+    decode_chain,
+    NodeTrustHistory,
+)
 from .transaction import TxToVerify, TxVerified
 from .trust import NodeTrustChange
 
@@ -103,12 +114,16 @@ class TransactionToVerifyManager(Manager):
             raise e
         return tx
 
-    def add_verification_result(self, identifier: UUID, node: Node, result: bool) -> None:
+    def add_verification_result(
+        self, identifier: UUID, node: Node, result: bool
+    ) -> None:
         tx = self.find(identifier)
         if not tx:
             raise Exception(f"Transaction {identifier.hex} not found")
         if tx.has_verification_result(node):
-            logging.warning(f"Voting of transaction {identifier.hex} is already saved from node {node.identifier}")
+            logging.warning(
+                f"Voting of transaction {identifier.hex} is already saved from node {node.identifier}"
+            )
             return
         self.refresh()
         try:
@@ -119,7 +134,9 @@ class TransactionToVerifyManager(Manager):
         except Exception as e:
             self._storage.unlock()
             raise e
-        logging.info(f"Successfully added verification result {result} from {node.identifier.hex}")
+        logging.info(
+            f"Successfully added verification result {result} from {node.identifier.hex}"
+        )
 
 
 class NodeManager(Manager):
@@ -273,7 +290,9 @@ class TransactionVerifiedManager(Manager):
 
     @staticmethod
     def sort_tx_by_time(txs: dict[UUID, TxVerified]) -> dict[UUID, TxVerified]:
-        return OrderedDict(sorted(txs.items(), key=lambda item: item[1].time, reverse=True))
+        return OrderedDict(
+            sorted(txs.items(), key=lambda item: item[1].time, reverse=True)
+        )
 
     def delete(self, identifiers: list[UUID]) -> list[TxVerified]:
         self.refresh()
@@ -379,7 +398,7 @@ class ValidatorAgreementInfoManager(Manager):
         return {
             "isStarted": self.is_started,
             "last_successful_agreement": self.last_successful_agreement,
-            "leaders": [leader.hex for leader in self.leaders]
+            "leaders": [leader.hex for leader in self.leaders],
         }
 
     def add_leader(self, node: Node) -> None:
@@ -419,15 +438,19 @@ class NodeTrustHistoryManager(Manager):
                 node_trusts_to_remove.append(node_trust)
 
         if len(node_trusts_to_remove) > 0:
-            node_trusts = list(set(self.node_trusts).difference(set(node_trusts_to_remove)))
+            node_trusts = list(
+                set(self.node_trusts).difference(set(node_trusts_to_remove))
+            )
             self.set(node_trusts)
 
     def has_node_trust(self, new_node_trust: NodeTrustChange) -> bool:
         self.refresh()
         for node_trust in self.all():
-            if (node_trust.node_id == new_node_trust.node_id
-                    and node_trust.change == new_node_trust.change
-                    and node_trust.type == new_node_trust.type):
+            if (
+                node_trust.node_id == new_node_trust.node_id
+                and node_trust.change == new_node_trust.change
+                and node_trust.type == new_node_trust.type
+            ):
                 return True
         return False
 

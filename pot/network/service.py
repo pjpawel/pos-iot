@@ -2,9 +2,18 @@ from hashlib import sha256
 from uuid import UUID
 
 from pot.network.block import BlockCandidate, Block
-from pot.network.manager import BlockchainManager, NodeManager, TransactionToVerifyManager, TransactionVerifiedManager, \
-    ValidatorAgreement, ValidatorAgreementInfoManager, ValidatorAgreementResult, NodeTrust, ValidatorManager, \
-    NodeTrustHistoryManager
+from pot.network.manager import (
+    BlockchainManager,
+    NodeManager,
+    TransactionToVerifyManager,
+    TransactionVerifiedManager,
+    ValidatorAgreement,
+    ValidatorAgreementInfoManager,
+    ValidatorAgreementResult,
+    NodeTrust,
+    ValidatorManager,
+    NodeTrustHistoryManager,
+)
 from pot.network.node import Node as NodeDto, SelfNodeInfo, NodeType
 from pot.network.transaction import TxVerified, Tx
 
@@ -26,9 +35,7 @@ class Blockchain(BlockchainManager):
         cblock = BlockCandidate.create_new(txs)
         self.txs_verified.delete(list(txs_verified.keys()))
         block = cblock.sign(
-            self.get_last_block().hash(),
-            self_node.identifier,
-            self_node.private_key
+            self.get_last_block().hash(), self_node.identifier, self_node.private_key
         )
         self.add(block)
         self.txs_verified.delete(list(txs_verified.keys()))
@@ -36,19 +43,23 @@ class Blockchain(BlockchainManager):
 
     def create_first_block(self, self_node: SelfNodeInfo) -> None:
         block = BlockCandidate.create_new([])
-        self.add(block.sign(
-            sha256(b'0000000000').digest(),
-            self_node.identifier,
-            self_node.private_key
-        ))
+        self.add(
+            block.sign(
+                sha256(b"0000000000").digest(),
+                self_node.identifier,
+                self_node.private_key,
+            )
+        )
 
-    def find_tx_verified(self, identifier: UUID) -> TxVerified|None:
+    def find_tx_verified(self, identifier: UUID) -> TxVerified | None:
         for tx_id, tx_verified in self.txs_verified.all().items():
             if tx_id == identifier:
                 return tx_verified
         return None
 
-    def find_last_transactions_values_for_node(self, node: NodeDto, t_type: str | None = None) -> list[dict]:
+    def find_last_transactions_values_for_node(
+        self, node: NodeDto, t_type: str | None = None
+    ) -> list[dict]:
         n_count = 0
         include_type = t_type is not None
         txs_verified = self.txs_verified.all().values()
@@ -62,10 +73,7 @@ class Blockchain(BlockchainManager):
             tx_type = tx.data.get(Tx.TYPE_KEY)
             if include_type and tx_type != type:
                 return None
-            txs_values.append({
-                "type": tx_type,
-                "data": tx.data
-            })
+            txs_values.append({"type": tx_type, "data": tx.data})
             n_count += 1
 
         for tx_verified in txs_verified:
@@ -76,10 +84,7 @@ class Blockchain(BlockchainManager):
                 tx_type = tx.data.get(Tx.TYPE_KEY)
                 if include_type and tx_type != type:
                     continue
-                txs_values.append({
-                    "type": tx_type,
-                    "data": tx.data
-                })
+                txs_values.append({"type": tx_type, "data": tx.data})
                 n_count += 1
         blocks = self.all()
         for block in blocks:
@@ -90,10 +95,7 @@ class Blockchain(BlockchainManager):
                     tx_type = tx.data.get(Tx.TYPE_KEY)
                     if include_type and tx_type != type:
                         continue
-                    txs_values.append({
-                        "type": tx_type,
-                        "data": tx.data
-                    })
+                    txs_values.append({"type": tx_type, "data": tx.data})
                     n_count += 1
         return txs_values
 
@@ -140,7 +142,7 @@ class Node(NodeManager):
             nodes.append(node)
         self._nodes += nodes
         self._storage.dump(self._nodes)
-        #self.validators.set_validators(validators)
+        # self.validators.set_validators(validators)
 
     def get_validator_nodes(self) -> list[NodeDto]:
         nodes = self.all()
@@ -187,7 +189,9 @@ class Node(NodeManager):
 
     def get_agreement_leader(self) -> UUID:
         self.validator_agreement_info.refresh()
-        return self.validator_agreement_info.leaders[len(self.validator_agreement_info.leaders)-1]
+        return self.validator_agreement_info.leaders[
+            len(self.validator_agreement_info.leaders) - 1
+        ]
 
     def is_agreement_voting_ended(self):
         results = self.validator_agreement_result.all()
@@ -195,9 +199,11 @@ class Node(NodeManager):
 
     def is_agreement_result_success(self) -> bool:
         self.validator_agreement_result.refresh()
-        n_success = sum(i is True for i in self.validator_agreement_result.all().values())
+        n_success = sum(
+            i is True for i in self.validator_agreement_result.all().values()
+        )
         validators_number = self.get_actual_validators_number()
-        return n_success > validators_number/2
+        return n_success > validators_number / 2
 
     def get_actual_validators_number(self) -> int:
         return len(self.get_validator_nodes())
@@ -206,7 +212,7 @@ class Node(NodeManager):
         nnodes = self.len()
         if nnodes < 2:
             return nnodes
-        return max(2, min(int(nnodes/5), int(nnodes/2)))
+        return max(2, min(int(nnodes / 5), int(nnodes / 2)))
 
 
 class TransactionToVerify(TransactionToVerifyManager):

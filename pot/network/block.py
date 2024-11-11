@@ -6,7 +6,10 @@ from time import time
 from uuid import UUID
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
 
 from .transaction import Tx
 from .utils import decode_int, encode_int, read_bytes
@@ -55,15 +58,15 @@ class Block:
         out += [self.signature]
         out += [encode_int(len(self.transactions), 4)]
         if len(self.transactions) > 0:
-            out += [b''.join([tx.encode() for tx in self.transactions])]
-        return b''.join(out)
+            out += [b"".join([tx.encode() for tx in self.transactions])]
+        return b"".join(out)
 
     def hash(self) -> bytes:
         return sha256(self.encode()).digest()
 
     def verify(self, public_key: Ed25519PublicKey) -> bool:
         all_data = bytearray(self.encode())
-        data = b''.join([bytes(all_data[:56]) + bytes(all_data[120:])])
+        data = b"".join([bytes(all_data[:56]) + bytes(all_data[120:])])
         try:
             public_key.verify(self.signature, data)
         except InvalidSignature:
@@ -72,12 +75,14 @@ class Block:
 
     def to_dict(self):
         return {
-            'version': self.version,
-            'timestamp': self.timestamp,
-            'prev_hash': b64encode(self.prev_hash).hex(),
-            'validator': self.validator.hex,
-            'signature': b64encode(self.signature).hex(),
-            'transactions': [transaction.to_dict() for transaction in self.transactions]
+            "version": self.version,
+            "timestamp": self.timestamp,
+            "prev_hash": b64encode(self.prev_hash).hex(),
+            "validator": self.validator.hex,
+            "signature": b64encode(self.signature).hex(),
+            "transactions": [
+                transaction.to_dict() for transaction in self.transactions
+            ],
         }
 
 
@@ -123,13 +128,15 @@ class BlockCandidate:
         out += [self.prev_hash]
         out += [self.validator.bytes_le]
         out += [encode_int(len(self.transactions), 4)]
-        out += [b''.join([tx.encode() for tx in self.transactions])]
-        return b''.join(out)
+        out += [b"".join([tx.encode() for tx in self.transactions])]
+        return b"".join(out)
 
     def add_transaction(self, tx: Tx) -> None:
         self.transactions.append(tx)
 
-    def sign(self, prev_hash: bytes, validator: UUID, private_key: Ed25519PrivateKey) -> Block:
+    def sign(
+        self, prev_hash: bytes, validator: UUID, private_key: Ed25519PrivateKey
+    ) -> Block:
         self.timestamp = int(time())
         self.prev_hash = prev_hash
         self.validator = validator
@@ -140,5 +147,5 @@ class BlockCandidate:
             self.prev_hash,
             self.validator,
             signature,
-            self.transactions
+            self.transactions,
         )

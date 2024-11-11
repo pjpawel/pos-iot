@@ -56,18 +56,22 @@ class Tx:
         data_encoded = encode_str(json.dumps(self.data))
         out += [encode_int(len(data_encoded), 4)]
         out += [data_encoded]
-        return b''.join(out)
+        return b"".join(out)
 
     def validate(self, node: Node) -> None:
         all_data = self.encode()
         try:
-            data = b''.join([bytes(all_data[:24]) + bytes(all_data[88:])])
+            data = b"".join([bytes(all_data[:24]) + bytes(all_data[88:])])
             self.validate_data()
             node.get_public_key().verify(self.signature, data)
         except InvalidSignature as error:
             logging.error(f"Invalid signature error {error}")
-            logging.error(f"Transaction data: {b64encode(all_data)}, node public key: {node.get_public_key_str()}")
-            raise PoTException(f"Transaction not verified by identifier {self.sender.hex}", 400)
+            logging.error(
+                f"Transaction data: {b64encode(all_data)}, node public key: {node.get_public_key_str()}"
+            )
+            raise PoTException(
+                f"Transaction not verified by identifier {self.sender.hex}", 400
+            )
         except Exception as e:
             raise PoTException(f"Validation error: {e}", 400)
 
@@ -80,8 +84,14 @@ class Tx:
         data = self.data.get(self.DATA_KEY)
         if not data:
             raise Exception("Missing 'data' (d) in transaction")
-        if not isinstance(data, float) and not isinstance(data, int) and not isinstance(data, str):
-            raise Exception("Invalid type of 'data' (d) in transaction. Must be int, float or str")
+        if (
+            not isinstance(data, float)
+            and not isinstance(data, int)
+            and not isinstance(data, str)
+        ):
+            raise Exception(
+                "Invalid type of 'data' (d) in transaction. Must be int, float or str"
+            )
         note = self.data.get(self.NOTE_KEY)
         if note and not isinstance(note, str):
             raise Exception("Invalid type of 'note' (n) in transaction. Must be string")
@@ -91,7 +101,7 @@ class Tx:
             "version": self.version,
             "timestamp": self.timestamp,
             "sender": self.sender.hex,
-            "data": self.data
+            "data": self.data,
         }
 
     def __str__(self):
@@ -130,7 +140,7 @@ class TxCandidate:
         data_encoded = encode_str(json.dumps(self.data))
         out += [encode_int(len(data_encoded), 4)]
         out += [data_encoded]
-        return b''.join(out)
+        return b"".join(out)
 
     def sign(self, self_node: SelfNodeInfo | SelfNode) -> Tx:
         self.sender = self_node.identifier
@@ -148,12 +158,12 @@ class TxVerified:
         self.time = time
 
     def __str__(self) -> str:
-        return ':'.join([str(self.tx).replace(':', '_'), str(self.time)])
+        return ":".join([str(self.tx).replace(":", "_"), str(self.time)])
 
     @classmethod
     def from_str(cls, data: str):
-        split = data.split(':')
-        return cls(Tx.from_str((split[0].replace('_', ':'))), int(split[1]))
+        split = data.split(":")
+        return cls(Tx.from_str((split[0].replace("_", ":"))), int(split[1]))
 
 
 @dataclass
@@ -178,7 +188,9 @@ class TxToVerify:
             # logging.debug(f"Voting: " + '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]))
             return
         self.voting[node.identifier] = result
-        logging.info(f"Successfully added verification result {result} from {node.identifier.hex}")
+        logging.info(
+            f"Successfully added verification result {result} from {node.identifier.hex}"
+        )
 
     def is_voting_positive(self) -> bool:
         results = list(self.voting.values())
@@ -198,27 +210,31 @@ class TxToVerify:
         return abs(n_positives - n_negatives) > missing
 
     def __str__(self) -> str:
-        return ':'.join([
-            str(self.tx).replace(':', '_'),
-            str(self.node).replace(':', '_'),
-            '_'.join([f"{key.hex}-{self.voting[key]}" for key in list(self.voting.keys())]),
-            str(self.time)
-        ])
+        return ":".join(
+            [
+                str(self.tx).replace(":", "_"),
+                str(self.node).replace(":", "_"),
+                "_".join(
+                    [
+                        f"{key.hex}-{self.voting[key]}"
+                        for key in list(self.voting.keys())
+                    ]
+                ),
+                str(self.time),
+            ]
+        )
 
     @classmethod
     def from_str(cls, data: str):
-        split = data.split(':')
-        node_info = split[1].split('_')
+        split = data.split(":")
+        node_info = split[1].split("_")
         # node = Node.load_from_list(node_info) if node_info[4] == '0' else SelfNode.load_from_list(node_info)
         node = Node.load_from_list(node_info)
-        tx = cls(
-            Tx.from_str((split[0].replace('_', ':'))),
-            node
-        )
+        tx = cls(Tx.from_str((split[0].replace("_", ":"))), node)
         tx.time = int(split[3])
         if split[2] != "":
-            for vote in split[2].split('_'):
-                vote_split = vote.split('-')
+            for vote in split[2].split("_"):
+                vote_split = vote.split("-")
                 tx.voting[UUID(vote_split[0])] = bool(vote_split[1])
         return tx
 

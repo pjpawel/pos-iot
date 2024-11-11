@@ -19,7 +19,7 @@ load_dotenv()
 """
 Configuring logger
 """
-sys.argv[0] = 'http'
+sys.argv[0] = "http"
 setup_logger("API")
 
 """
@@ -44,7 +44,7 @@ def pot_error_handler(error: PoTException):
 """
 
 
-@app.get("/info", endpoint='info')
+@app.get("/info", endpoint="info")
 def info():
     """
     Show info about node
@@ -57,11 +57,11 @@ def info():
         "status": "active",
         "ip": ip,
         "hostname": hostname,
-        "identifier": app.pot.self_node.identifier.hex
+        "identifier": app.pot.self_node.identifier.hex,
     }
 
 
-@app.get("/blockchain", endpoint='get_blockchain')
+@app.get("/blockchain", endpoint="get_blockchain")
 def get_blockchain():
     """
     Show blockchain storage
@@ -81,8 +81,10 @@ def get_transaction_to_verify():
             "voting": {
                 "result": tx_to_verify.get_positive_votes(),
                 "count": len(tx_to_verify.voting),
-                "voting": [{"uuid": k.hex, "result": v} for k, v in tx_to_verify.voting.items()]
-            }
+                "voting": [
+                    {"uuid": k.hex, "result": v} for k, v in tx_to_verify.voting.items()
+                ],
+            },
         }
     return data
 
@@ -99,9 +101,7 @@ def get_transaction_verified():
 
 @app.get("/node/list")
 def nodes():
-    return {
-        "nodes": app.pot.nodes.prepare_all_nodes_info()
-    }
+    return {"nodes": app.pot.nodes.prepare_all_nodes_info()}
 
 
 @app.get("/node/<identifier>")
@@ -112,7 +112,7 @@ def node(identifier: str):
     return app.pot.nodes.prepare_nodes_info([node_f])[0]
 
 
-@app.get("/public-key", endpoint='get_public_key')
+@app.get("/public-key", endpoint="get_public_key")
 def get_public_key():
     return app.pot.self_node.get_public_key_str()
 
@@ -122,30 +122,36 @@ def get_public_key():
 """
 
 
-@app.post("/transaction", endpoint='new_transaction')
+@app.post("/transaction", endpoint="new_transaction")
 def transaction_new():
     try:
         if request.content_length >= 1024:
             return "Transaction data is too long", 400
-        return app.pot.transaction_new(request.get_data(as_text=False), request.remote_addr)
+        return app.pot.transaction_new(
+            request.get_data(as_text=False), request.remote_addr
+        )
     except Exception:
         logging.exception("Error registering new transaction")
         return "Invalid transaction data", 400
 
 
-@app.post("/transaction/<identifier>/verified", endpoint='populate_transaction_verified')
-def transaction_new(identifier: str):
+@app.post(
+    "/transaction/<identifier>/verified", endpoint="populate_transaction_verified"
+)
+def transaction_verified(identifier: str):
     try:
         if request.content_length >= 1024:
             return "Transaction data is too long", 400
-        app.pot.transaction_verified_new(identifier, request.get_data(as_text=True), request.remote_addr)
+        app.pot.transaction_verified_new(
+            identifier, request.get_data(as_text=True), request.remote_addr
+        )
         return ""
     except Exception:
         logging.exception("Error registering new transaction verified")
         return "Invalid transaction data", 400
 
 
-@app.post("/block", endpoint='populate_block')
+@app.post("/block", endpoint="populate_block")
 def block_new():
     try:
         app.pot.block_new(request.get_data(), request.remote_addr)
@@ -154,7 +160,8 @@ def block_new():
         logging.exception("Error registering new block")
         return "Invalid block data", 400
 
-@app.post("/node/populate-new", endpoint='populate_node')
+
+@app.post("/node/populate-new", endpoint="populate_node")
 def populate_new_node():
     """
     Request must be in form: {
@@ -168,18 +175,19 @@ def populate_new_node():
     return ""
 
 
-@app.post("/blockchain/block/new", endpoint='blockchain_block_populate_node')
+@app.post("/blockchain/block/new", endpoint="blockchain_block_populate_node")
 def populate_new_block():
     return app.pot.add_new_block(request.get_data(False), request.remote_addr)
 
 
-@app.post("/node/validator/new", endpoint='inform_about_new_validator')
+@app.post("/node/validator/new", endpoint="inform_about_new_validator")
 def new_validators():
     app.pot.node_new_validators(request.remote_addr, request.get_json())
     return ""
 
 
-@app.patch("/node/<identifier>/trust", endpoint='node_trust_change')
+# CHECK
+@app.patch("/node/<identifier>/trust", endpoint="node_trust_change")
 def node_trust_change(identifier: str):
     app.pot.node_trust_change(identifier, request.get_json())
     return ""
@@ -198,7 +206,7 @@ def transaction_get(identifier: str):
 
 @app.post("/transaction/<identifier>/populate")
 def transaction_populate(identifier: str):
-    #TODO: nie jest VALIDATOR
+    # TODO: nie jest VALIDATOR
     app.pot.transaction_populate(request.get_data(as_text=False), identifier)
     return ""
 
@@ -206,11 +214,13 @@ def transaction_populate(identifier: str):
 @app.post("/transaction/<identifier>/verifyResult")
 def transaction_verify_result(identifier: str):
     request_json = request.get_json()
-    app.pot.transaction_populate_verify_result(request_json.get("result"), identifier, request.remote_addr)
+    app.pot.transaction_populate_verify_result(
+        request_json.get("result"), identifier, request.remote_addr
+    )
     return ""
 
 
-@app.post("/node/register", endpoint='node_register')
+@app.post("/node/register", endpoint="node_register")
 def node_register():
     """
     Initialize node registration
@@ -223,7 +233,7 @@ def node_register():
     return app.pot.node_register(identifier, request.remote_addr, port, n_type)
 
 
-@app.get("/node/update", endpoint='node_update')
+@app.get("/node/update", endpoint="node_update")
 def node_update():
     """
     Node identifier must be valid uuid hex
@@ -234,7 +244,9 @@ def node_update():
 
 @app.post("/node/validator/agreement")
 def validator_agreement_start():
-    return app.pot.node_validator_agreement_start(request.remote_addr, request.get_json())
+    return app.pot.node_validator_agreement_start(
+        request.remote_addr, request.get_json()
+    )
 
 
 @app.get("/node/validator/agreement")

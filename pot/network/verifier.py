@@ -8,15 +8,15 @@ from pot.network.transaction import TxToVerify
 
 
 class TransactionVerifier:
-    LOG_PREFIX = 'TX_VERIFY: '
+    LOG_PREFIX = "TX_VERIFY: "
     pot: PoT
 
     def __init__(self, pot: PoT):
         self.pot = pot
 
-    def start_thread(self):
-        thread = Thread(target=self.process)
-        thread.start()
+    # def start_thread(self):
+    #     thread = Thread(target=self.process)
+    #     thread.start()
 
     def process(self):
         logging.debug(self.LOG_PREFIX + "Start processing ")
@@ -28,12 +28,16 @@ class TransactionVerifier:
 
             uuid_to_do = []
             for uuid, tx_to_verify in self.pot.tx_to_verified.all().items():
-                if self.pot.self_node.identifier not in list(tx_to_verify.voting.keys()):
+                if self.pot.self_node.identifier not in list(
+                    tx_to_verify.voting.keys()
+                ):
                     uuid_to_do.append(uuid)
 
             if uuid_to_do:
                 logging.debug(
-                    self.LOG_PREFIX + f"Transactions {','.join([uid.hex for uid in uuid_to_do])} found to verify")
+                    self.LOG_PREFIX
+                    + f"Transactions {','.join([uid.hex for uid in uuid_to_do])} found to verify"
+                )
 
                 tx_uuid = None
                 tx_to_verify = None
@@ -49,14 +53,24 @@ class TransactionVerifier:
                     logging.debug(self.LOG_PREFIX + f"Nothing to verify")
                     continue
 
-                logging.debug(self.LOG_PREFIX + f"Verifying transaction of id {tx_uuid.hex}")
+                logging.debug(
+                    self.LOG_PREFIX + f"Verifying transaction of id {tx_uuid.hex}"
+                )
                 try:
                     result = self.verify_transaction(tx_to_verify)
-                    logging.info(self.LOG_PREFIX + f"Transaction {tx_uuid.hex} verified. Result: {result}")
-                    self.pot.add_transaction_verification_result(tx_uuid, self.pot.self_node.get_node(), result)
+                    logging.info(
+                        self.LOG_PREFIX
+                        + f"Transaction {tx_uuid.hex} verified. Result: {result}"
+                    )
+                    self.pot.add_transaction_verification_result(
+                        tx_uuid, self.pot.self_node.get_node(), result
+                    )
                     self.pot.send_transaction_verification(tx_uuid, result)
                 except Exception as e:
-                    logging.error(self.LOG_PREFIX + f"Error while verifying transaction of id {tx_uuid.hex}. Error: {e}")
+                    logging.error(
+                        self.LOG_PREFIX
+                        + f"Error while verifying transaction of id {tx_uuid.hex}. Error: {e}"
+                    )
             else:
                 logging.debug(self.LOG_PREFIX + "Nothing to verify")
                 sleep(1)
@@ -71,4 +85,8 @@ class TransactionVerifier:
         tx_type = tx.data.get(tx.TYPE_KEY)
         if tx_type == "0":
             return True
-        last_txs = self.pot.blockchain.find_last_transactions_values_for_node(tx_to_verify.node, tx_type)
+        last_txs = self.pot.blockchain.find_last_transactions_values_for_node(
+            tx_to_verify.node, tx_type
+        )
+        # TODO:
+        return

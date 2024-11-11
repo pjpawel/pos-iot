@@ -16,7 +16,9 @@ class NodeTrustChange:
     type: TrustChangeType
     change: int
 
-    def __init__(self, node_id: UUID, timestamp: float, change_type: TrustChangeType, change: int):
+    def __init__(
+        self, node_id: UUID, timestamp: float, change_type: TrustChangeType, change: int
+    ):
         self.node_id = node_id
         self.timestamp = timestamp
         self.type = change_type

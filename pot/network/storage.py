@@ -16,7 +16,7 @@ from .trust import NodeTrustChange
 
 
 def encode_chain(blocks: list[Block]) -> bytes:
-    return b''.join([block.encode() for block in blocks])
+    return b"".join([block.encode() for block in blocks])
 
 
 def decode_chain(byt: bytes) -> list[Block]:
@@ -31,7 +31,7 @@ def decode_chain(byt: bytes) -> list[Block]:
 
 
 class Storage:
-    PATH = ''
+    PATH = ""
     path: str
     _storage_dir: str
     _lock: str
@@ -46,7 +46,9 @@ class Storage:
         self.invalidate_cache()  # TODO: Po nim nie może nastąpić is_up_to_date
 
     def is_up_to_date(self):
-        return self._cached_mtime == os.path.getmtime(self.path) and self._cached_size == os.path.getsize(self.path)
+        return self._cached_mtime == os.path.getmtime(
+            self.path
+        ) and self._cached_size == os.path.getsize(self.path)
 
     def update_cache(self):
         self._cached_mtime = os.path.getmtime(self.path)
@@ -86,14 +88,16 @@ class Storage:
 
 
 class BlocksStorage(Storage):
-    PATH = 'blockchain'
+    PATH = "blockchain"
 
     def load(self) -> list[Block]:
         # self._wait_for_lock()
-        f = open(self.path, 'rb')
+        f = open(self.path, "rb")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             blocks = []
             if not self.is_empty():
                 # with open(self.path, "rb") as f:
@@ -105,7 +109,7 @@ class BlocksStorage(Storage):
         return blocks
 
     def dump(self, blocks: list[Block]):
-        f = open(self.path, 'wb')
+        f = open(self.path, "wb")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {len(blocks)} {self.PATH} to storage")
@@ -117,7 +121,7 @@ class BlocksStorage(Storage):
             f.close()
 
     def update(self, blocks: list[Block]):
-        f = open(self.path, 'ab')
+        f = open(self.path, "ab")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Appending {len(blocks)} {self.PATH} to storage")
@@ -136,13 +140,15 @@ class BlocksStorage(Storage):
 
 
 class NodeStorage(Storage):
-    PATH = 'nodes'
+    PATH = "nodes"
 
     def load(self) -> list[Node]:
-        f = open(self.path, 'r')
+        f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             nodes = []
             if not self.is_empty():
                 reader = csv.reader(f)
@@ -154,7 +160,7 @@ class NodeStorage(Storage):
         return nodes
 
     def dump(self, nodes: list[Node]) -> None:
-        f = open(self.path, 'w')
+        f = open(self.path, "w")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {len(nodes)} {self.PATH} to storage")
@@ -167,7 +173,7 @@ class NodeStorage(Storage):
             f.close()
 
     def update(self, nodes: list[Node]) -> None:
-        f = open(self.path, 'a')
+        f = open(self.path, "a")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Appending {len(nodes)} {self.PATH} to storage")
@@ -181,13 +187,15 @@ class NodeStorage(Storage):
 
 
 class NodeTrustStorage(Storage):
-    PATH = 'nodes_trust'
+    PATH = "nodes_trust"
 
     def load(self) -> dict[UUID, int]:
-        f = open(self.path, 'r')
+        f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             trusts = {}
             if not self.is_empty():
                 reader = csv.reader(f)
@@ -200,7 +208,7 @@ class NodeTrustStorage(Storage):
         return trusts
 
     def update(self, trusts: dict[UUID, int]) -> None:
-        f = open(self.path, 'a')
+        f = open(self.path, "a")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Appending {len(trusts)} {self.PATH} to storage")
@@ -214,7 +222,7 @@ class NodeTrustStorage(Storage):
             f.close()
 
     def dump(self, trusts: dict[UUID, int]) -> None:
-        f = open(self.path, 'w')
+        f = open(self.path, "w")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {len(trusts)} {self.PATH} to storage")
@@ -229,14 +237,14 @@ class NodeTrustStorage(Storage):
 
 
 class TransactionStorage(Storage):
-    PATH = 'transaction'
+    PATH = "transaction"
 
     def dump(self, txs: dict[UUID, TxToVerify], lock: bool = True) -> None:
         if lock:
             self.wait_for_set_lock()
         logging.debug(f"Writing {len(txs)} '{self.PATH}' to storage")
         try:
-            with open(self.path, 'w') as f:
+            with open(self.path, "w") as f:
                 writer = csv.writer(f)
                 for key in list(txs.keys()):
                     writer.writerow([key.hex, txs[key].__str__()])
@@ -267,7 +275,7 @@ class TransactionStorage(Storage):
         self.wait_for_set_lock()
         logging.debug(f"Appending {len(txs)} {self.PATH} to storage")
         try:
-            with open(self.path, 'a') as f:
+            with open(self.path, "a") as f:
                 writer = csv.writer(f)
                 for key in list(txs.keys()):
                     writer.writerow([key.hex, txs[key].__str__()])
@@ -282,7 +290,7 @@ class TransactionStorage(Storage):
         logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
         txs = {}
         if not self.is_empty():
-            with open(self.path, 'r') as f:
+            with open(self.path, "r") as f:
                 reader = csv.reader(f)
                 for row in reader:
                     txs[UUID(row[0])] = TxToVerify.from_str(row[1])
@@ -291,13 +299,15 @@ class TransactionStorage(Storage):
 
 
 class TransactionVerifiedStorage(Storage):
-    PATH = 'transaction_verified'
+    PATH = "transaction_verified"
 
     def load(self) -> dict[UUID, TxVerified]:
-        f = open(self.path, 'r')
+        f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             txs = {}
             if not self.is_empty():
                 reader = csv.reader(f)
@@ -310,7 +320,7 @@ class TransactionVerifiedStorage(Storage):
         return txs
 
     def update(self, txs: dict[UUID, TxVerified]) -> None:
-        f = open(self.path, 'a')
+        f = open(self.path, "a")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Appending {len(txs)} {self.PATH} to storage")
@@ -323,7 +333,7 @@ class TransactionVerifiedStorage(Storage):
             f.close()
 
     def dump(self, txs: dict[UUID, TxVerified]) -> None:
-        f = open(self.path, 'w')
+        f = open(self.path, "w")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {len(txs)} '{self.PATH}' to storage")
@@ -337,14 +347,16 @@ class TransactionVerifiedStorage(Storage):
 
 
 class ValidatorStorage(Storage):
-    PATH = 'validators'
-    SEPARATOR = ';'
+    PATH = "validators"
+    SEPARATOR = ";"
 
     def load(self) -> list[UUID]:
-        f = open(self.path, 'r')
+        f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             uuids = []
             if not self.is_empty():
                 uuids = [UUID(hx) for hx in f.read().split(self.SEPARATOR)]
@@ -355,7 +367,7 @@ class ValidatorStorage(Storage):
         return uuids
 
     def dump(self, uuids: list[UUID]) -> None:
-        f = open(self.path, 'w')
+        f = open(self.path, "w")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {len(uuids)} {self.PATH} to storage")
@@ -368,17 +380,19 @@ class ValidatorStorage(Storage):
 
 
 class ValidatorAgreementStorage(ValidatorStorage):
-    PATH = 'validators_agreement'
+    PATH = "validators_agreement"
 
 
 class ValidatorAgreementInfoStorage(Storage):
-    PATH = 'validators_agreement_info'
+    PATH = "validators_agreement_info"
 
     def load(self) -> dict:
-        f = open(self.path, 'r')
+        f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             data = {}
             if not self.is_empty():
                 data = json.load(f)
@@ -389,7 +403,7 @@ class ValidatorAgreementInfoStorage(Storage):
         return data
 
     def dump(self, data: dict) -> None:
-        f = open(self.path, 'w')
+        f = open(self.path, "w")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {str(data)} {self.PATH} to storage")
@@ -402,13 +416,15 @@ class ValidatorAgreementInfoStorage(Storage):
 
 
 class ValidatorAgreementResultStorage(Storage):
-    PATH = 'validator_agreement_result'
+    PATH = "validator_agreement_result"
 
     def load(self) -> dict[UUID, bool]:
-        f = open(self.path, 'r')
+        f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             txs = {}
             if not self.is_empty():
                 reader = csv.reader(f)
@@ -421,7 +437,7 @@ class ValidatorAgreementResultStorage(Storage):
         return txs
 
     def update(self, results: dict[UUID, bool]) -> None:
-        f = open(self.path, 'a')
+        f = open(self.path, "a")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Appending {len(results)} {self.PATH} to storage")
@@ -435,7 +451,7 @@ class ValidatorAgreementResultStorage(Storage):
             f.close()
 
     def dump(self, txs: dict[UUID, bool]) -> None:
-        f = open(self.path, 'w')
+        f = open(self.path, "w")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {len(txs)} '{self.PATH}' to storage")
@@ -450,13 +466,15 @@ class ValidatorAgreementResultStorage(Storage):
 
 
 class NodeTrustHistory(Storage):
-    PATH = 'node_trust_history'
+    PATH = "node_trust_history"
 
     def load(self) -> list[NodeTrustChange]:
-        f = open(self.path, 'r')
+        f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
-            logging.debug(f"Loading '{self.PATH}' from storage of size: {self.get_size()}")
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
             node_trusts = []
             if not self.is_empty():
                 reader = csv.reader(f)
@@ -468,7 +486,7 @@ class NodeTrustHistory(Storage):
         return node_trusts
 
     def dump(self, nodes_trusts: list[NodeTrustChange]) -> None:
-        f = open(self.path, 'w')
+        f = open(self.path, "w")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Writing {len(nodes_trusts)} '{self.PATH}' to storage")
@@ -481,7 +499,7 @@ class NodeTrustHistory(Storage):
             f.close()
 
     def update(self, node_trusts: list[NodeTrustChange]) -> None:
-        f = open(self.path, 'a')
+        f = open(self.path, "a")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)
             logging.debug(f"Appending {len(node_trusts)} {self.PATH} to storage")

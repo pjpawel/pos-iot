@@ -5,7 +5,10 @@ from uuid import UUID, uuid4
 import json
 from enum import StrEnum, auto
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey, Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PublicKey,
+    Ed25519PrivateKey,
+)
 from cryptography.hazmat.primitives import serialization
 
 from .request import Request
@@ -23,7 +26,13 @@ class Node:
     host: str
     port: int
 
-    def __init__(self, identifier: bytes | str | UUID, host: str, port: int, n_type: NodeType | None | str = None):
+    def __init__(
+        self,
+        identifier: bytes | str | UUID,
+        host: str,
+        port: int,
+        n_type: NodeType | None | str = None,
+    ):
         if isinstance(identifier, bytes):
             self.identifier = UUID(bytes_le=identifier)
         elif isinstance(identifier, str):
@@ -44,13 +53,19 @@ class Node:
         self.type = n_type
 
     def get_public_key(self) -> Ed25519PublicKey:
-        return serialization.load_pem_public_key(Request.get_public_key(self.host, self.port))
+        return serialization.load_pem_public_key(
+            Request.get_public_key(self.host, self.port)
+        )
 
     def get_public_key_str(self) -> str:
-        return self.get_public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ).decode("utf-8")
+        return (
+            self.get_public_key()
+            .public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            .decode("utf-8")
+        )
 
     @classmethod
     def load_from_dict(cls, data: dict):
@@ -64,7 +79,7 @@ class Node:
         return [self.identifier.hex, self.host, str(self.port)]
 
     def __str__(self) -> str:
-        return ':'.join(self.to_list())
+        return ":".join(self.to_list())
 
     @property
     def __dict__(self) -> dict:
@@ -72,26 +87,28 @@ class Node:
             "identifier": self.identifier.hex,
             "type": self.type.name,
             "host": self.host,
-            "port": self.port
+            "port": self.port,
         }
 
 
 class SelfNodeInfo:
-    INFO_PATH = 'self_node.json'
+    INFO_PATH = "self_node.json"
 
     identifier: UUID
     public_key: Ed25519PublicKey
     private_key: Ed25519PrivateKey
 
     def __init__(self):
-        storage = os.getenv('STORAGE_DIR')
+        storage = os.getenv("STORAGE_DIR")
         key_path = os.path.join(storage, self.INFO_PATH)
         if os.path.isfile(key_path):
             with open(key_path) as f:
                 keys = json.load(f)
             self.identifier = UUID(bytes_le=bytes.fromhex(keys.get("identifier")))
             private_key_stream = bytes(keys.get("private"), "utf-8")
-            self.private_key = serialization.load_pem_private_key(private_key_stream, password=None)
+            self.private_key = serialization.load_pem_private_key(
+                private_key_stream, password=None
+            )
             public_key_stream = bytes(keys.get("public"), "utf-8")
             self.public_key = serialization.load_pem_public_key(public_key_stream)
         else:
@@ -105,34 +122,41 @@ class SelfNodeInfo:
             self.identifier,
             socket.gethostbyname(socket.gethostname()),
             5000,
-            os.getenv("NODE_TYPE")
+            os.getenv("NODE_TYPE"),
         )
 
     def get_public_key(self) -> Ed25519PublicKey:
         return self.public_key
 
     def get_public_key_str(self):
-        return self.get_public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ).decode("utf-8")
+        return (
+            self.get_public_key()
+            .public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            .decode("utf-8")
+        )
 
     def dump(self, storage_dir: str) -> None:
         private_key_pem = self.private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
+            encryption_algorithm=serialization.NoEncryption(),
         )
         public_key_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
         with open(os.path.join(storage_dir, self.INFO_PATH), "w") as f:
-            json.dump({
-                "public": public_key_pem.decode("utf-8"),
-                "private": private_key_pem.decode("utf-8"),
-                "identifier": self.identifier.bytes_le.hex()
-            }, f)
+            json.dump(
+                {
+                    "public": public_key_pem.decode("utf-8"),
+                    "private": private_key_pem.decode("utf-8"),
+                    "identifier": self.identifier.bytes_le.hex(),
+                },
+                f,
+            )
 
 
 class SelfNode(Node):

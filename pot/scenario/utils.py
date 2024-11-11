@@ -14,4 +14,5 @@ def print_runtime_error(func):
             logging.error(e)
             print(e)
             raise e
+
     return inner

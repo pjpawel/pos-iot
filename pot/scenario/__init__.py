@@ -31,19 +31,19 @@ class Scenario(StrEnum):
         thread.start()
 
 
-def get_scenarios(names_list: str) -> list[Scenario]:
-    scenarios = []
-    names = names_list.split(",")
-    for name in names:
-        try:
-            scenario_enum = getattr(Scenario, name)
-            logging.debug(f"Running scenario {scenario_enum.name}")
-        except AttributeError:
-            mess = f'Error: There is no scenario with name: {name}'
-            print(mess)
-            raise ScenarioNotFound(mess)
-        scenarios.append(scenario_enum)
-    return scenarios
+# def get_scenarios(names_list: str) -> list[Scenario]:
+#     scenarios = []
+#     names = names_list.split(",")
+#     for name in names:
+#         try:
+#             scenario_enum = getattr(Scenario, name)
+#             logging.debug(f"Running scenario {scenario_enum.name}")
+#         except AttributeError:
+#             mess = f"Error: There is no scenario with name: {name}"
+#             print(mess)
+#             raise ScenarioNotFound(mess)
+#         scenarios.append(scenario_enum)
+#     return scenarios
 
 
 def run_scenarios(names_list: str, pot: PoT):
@@ -62,7 +62,7 @@ def run_scenarios(names_list: str, pot: PoT):
             scenario_enum = getattr(Scenario, name)
             logging.debug(f"Running scenario {scenario_enum.name}")
         except AttributeError:
-            mess = f'Error: There is no scenario with name: {name}'
-            print(mess)
-            raise ScenarioNotFound(mess)
+            msg = f"Error: There is no scenario with name: {name}"
+            print(msg)
+            raise ScenarioNotFound(msg)
         scenario_enum.call(pot)

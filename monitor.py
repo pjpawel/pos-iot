@@ -201,7 +201,7 @@ for col in cols[1:]:
         ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True
     )
-    plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
+    plt.savefig(os.path.join(result_path, f"plot-{col}.pdf"))
 
 print(" ")
 nodes_ids = df_trust.reset_index()["node"].unique()
@@ -216,4 +216,4 @@ for node_id in nodes_ids:
     plt.ylabel('Trust')
     plt.legend(title='Source node')
     plt.grid(True)
-    plt.savefig(os.path.join(result_path, f"plot-trust-{node_id}.png"))
+    plt.savefig(os.path.join(result_path, f"plot-trust-{node_id}.pdf"))

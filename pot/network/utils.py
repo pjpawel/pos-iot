@@ -11,11 +11,15 @@ def is_dir(path: str) -> bool:
     return os.path.isdir(path)
 
 
-def decode_int(io: BytesIO, n_bytes: int, encoding: Literal['big', 'little'] = 'little') -> int:
+def decode_int(
+    io: BytesIO, n_bytes: int, encoding: Literal["big", "little"] = "little"
+) -> int:
     return int.from_bytes(io.read(n_bytes), encoding)
 
 
-def encode_int(i: int, n_bytes: int, encoding: Literal['big', 'little'] = 'little') -> bytes:
+def encode_int(
+    i: int, n_bytes: int, encoding: Literal["big", "little"] = "little"
+) -> bytes:
     return i.to_bytes(n_bytes, encoding)
 
 
@@ -28,8 +32,10 @@ def encode_str(s: str, n_bytes: int = None) -> bytes:
     if n_bytes is None:
         return b
     if n_bytes != len(b):
-        raise Exception(f"Error while encoding string {s}, number of bytes {len(b)}, "
-                        f"but declared number of bytes {n_bytes}")
+        raise Exception(
+            f"Error while encoding string {s}, number of bytes {len(b)}, "
+            f"but declared number of bytes {n_bytes}"
+        )
     return b
 
 
