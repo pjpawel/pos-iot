@@ -1,5 +1,7 @@
 import datetime
 import os
+from uuid import UUID
+from pprint import pprint
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -14,9 +16,16 @@ storage_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 's
 result_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'monitor', 'result'))
 
 firsts_records = 1000
-#firsts_records = None
 
 load_dotenv()
+
+
+def get_self_node_info(path: str) -> UUID:
+    old_value = os.getenv('STORAGE_DIR')
+    os.environ["STORAGE_DIR"] = path
+    self_node = SelfNodeInfo(True)
+    os.environ["STORAGE_DIR"] = old_value
+    return self_node.identifier
 
 
 def get_info_from_blockchain(path: str) -> dict:
@@ -93,6 +102,8 @@ df_trust.set_index(["time", "sourceNode", "node"], inplace=True)
 first_time = None
 dfs = {}
 
+nodes_mapping = {}
+
 for node in os.listdir(storage_path):
     # list all nodes in dir
 
@@ -109,6 +120,7 @@ for node in os.listdir(storage_path):
     dirs = [int(time_dir) for time_dir in os.listdir(os.path.join(storage_path, node, 'dump'))]
     dirs.sort()
     print(f"Found {len(dirs)} dirs in node {node}")
+
     record_i = 0
     for time in dirs:
         # list all time in dir
@@ -121,7 +133,13 @@ for node in os.listdir(storage_path):
         storage_dir = os.path.join(storage_path, node, 'dump', str(time))
         # print(f"Processing dir {storage_dir}")
 
+        if node not in nodes_mapping.keys():
+            self_node_id = get_self_node_info(storage_dir)
+            nodes_mapping[node] = self_node_id.hex
+            print(self_node_id.hex)
+
         try:
+            #self_node_id = get_self_node_info(storage_dir)
             blocks_info = get_info_from_blockchain(storage_dir)
             nodes_info = get_info_from_nodes(storage_dir)
             validators_info = get_info_from_validators(storage_dir)
@@ -160,15 +178,16 @@ for node in os.listdir(storage_path):
 
     df_trust = pd.concat([df_trust, df_trust_node])
 
-#df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
+df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
 
 print("")
 import datetime
 first_time_date = datetime.datetime.fromtimestamp(first_time, datetime.timezone.utc)
-print(f"First time: {first_time} - {first_time_date.isoformat()}")
+print(f"First time: {first_time} - {first_time_date.isoformat()} UTC")
 print("")
 
 # check if all df has step by step info
+# TODO: uncomment
 for col in cols[1:]:
     max_value = 0
     data = {}
@@ -201,19 +220,30 @@ for col in cols[1:]:
         ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True
     )
-    plt.savefig(os.path.join(result_path, f"plot-{col}.pdf"))
+    plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
 
-print(" ")
+print("")
 nodes_ids = df_trust.reset_index()["node"].unique()
+
+print("Nodes map")
+pprint(nodes_mapping)
+print("Nodes")
+pprint(nodes_ids)
+
 for node_id in nodes_ids:
-    print(f"Processing trust for node {node_id}")
+    if node_id not in list(nodes_mapping.values()):
+        print(f"{node_id} not found in nodes_mapping")
+        continue
+    node_name = list(nodes_mapping.keys())[list(nodes_mapping.values()).index(node_id)]
+
+    print(f"Processing trust for node {node_id} => {node_name}")
     (df_trust.xs(node_id, level=2)
         .reset_index()
         .pivot(index='time', columns='sourceNode', values='trust')
         .plot(kind='line', figsize=(10, 6)))
-    plt.title(f"Change of trust for node {node_id} in time ")
+    plt.title(f"Change of trust for node {node_name} in time ")
     plt.xlabel('Time [s]')
     plt.ylabel('Trust')
     plt.legend(title='Source node')
     plt.grid(True)
-    plt.savefig(os.path.join(result_path, f"plot-trust-{node_id}.pdf"))
+    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.png"))

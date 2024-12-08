@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from time import time
 from shutil import copy
 
@@ -37,6 +38,7 @@ class Dumper:
             if path.name.endswith(".lock"):
                 continue
             copy(path, dump_time_dir)
+            Path(os.path.join(dump_time_dir, path)).chmod(0o777)
 
         # for path in self.paths:
         #     copy(path, dump_time_dir)

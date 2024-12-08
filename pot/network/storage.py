@@ -42,7 +42,8 @@ class Storage:
         self._storage_dir = os.getenv("STORAGE_DIR") if not storage else storage
         self.path = os.path.join(self._storage_dir, self.PATH)
         self._lock = self.path + ".lock"
-        Path(self.path).touch(0o777)
+        if not os.path.isfile(self.path):
+            Path(self.path).touch(0o777)
         self.invalidate_cache()  # TODO: Po nim nie może nastąpić is_up_to_date
 
     def is_up_to_date(self):

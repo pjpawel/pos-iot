@@ -27,11 +27,11 @@ class Node:
     port: int
 
     def __init__(
-        self,
-        identifier: bytes | str | UUID,
-        host: str,
-        port: int,
-        n_type: NodeType | None | str = None,
+            self,
+            identifier: bytes | str | UUID,
+            host: str,
+            port: int,
+            n_type: NodeType | None | str = None,
     ):
         if isinstance(identifier, bytes):
             self.identifier = UUID(bytes_le=identifier)
@@ -98,20 +98,20 @@ class SelfNodeInfo:
     public_key: Ed25519PublicKey
     private_key: Ed25519PrivateKey
 
-    def __init__(self):
+    def __init__(self, read_only=False):
         storage = os.getenv("STORAGE_DIR")
         key_path = os.path.join(storage, self.INFO_PATH)
         if os.path.isfile(key_path):
             with open(key_path) as f:
                 keys = json.load(f)
-            self.identifier = UUID(bytes_le=bytes.fromhex(keys.get("identifier")))
+            self.identifier = UUID(keys.get("identifier"))
             private_key_stream = bytes(keys.get("private"), "utf-8")
             self.private_key = serialization.load_pem_private_key(
                 private_key_stream, password=None
             )
             public_key_stream = bytes(keys.get("public"), "utf-8")
             self.public_key = serialization.load_pem_public_key(public_key_stream)
-        else:
+        elif not read_only:
             self.identifier = uuid4()
             self.private_key = Ed25519PrivateKey.generate()
             self.public_key = self.private_key.public_key()
@@ -153,7 +153,7 @@ class SelfNodeInfo:
                 {
                     "public": public_key_pem.decode("utf-8"),
                     "private": private_key_pem.decode("utf-8"),
-                    "identifier": self.identifier.bytes_le.hex(),
+                    "identifier": self.identifier.hex
                 },
                 f,
             )
