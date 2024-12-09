@@ -15,7 +15,7 @@ from pot.network.manager import NodeTrust
 storage_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'storage'))
 result_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'monitor', 'result'))
 
-firsts_records = 1000
+firsts_records = 10000
 
 load_dotenv()
 

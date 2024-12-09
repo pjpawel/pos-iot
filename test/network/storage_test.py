@@ -106,7 +106,7 @@ def test_transaction(helper: Helper):
     assert tx.voting == utx.voting
     assert tx.time == utx.time
     assert tx.tx == utx.tx
-    #assert tx.node == utx.node
+    # assert tx.node == utx.node
     assert txs == txs_updating
 
 
@@ -119,15 +119,11 @@ def test_transaction_adding_validator(helper: Helper):
     storage.update(txs)
 
 
-
-
-
-
 def test_node(helper: Helper):
     storage = NodeStorage()
 
     uid = uuid4()
-    node = Node(uid, 'localhost', 5000)
+    node = Node(uid, "localhost", 5000)
 
     storage.update([node])
 
@@ -139,6 +135,3 @@ def test_node(helper: Helper):
     assert len(nodes) == 1
 
     assert node == nodes[0]
-
-
-

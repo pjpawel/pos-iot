@@ -1,6 +1,7 @@
 """
 Pytest fixtures for pot.blockchain test module
 """
+
 import os
 import socket
 from hashlib import sha256
@@ -34,7 +35,7 @@ class Helper:
         Helper.put_storage_env()
         storage_dir = Helper.get_storage_dir()
         for file in os.listdir(storage_dir):
-            if file == '.gitignore':
+            if file == ".gitignore":
                 continue
             os.remove(os.path.join(storage_dir, file))
 
@@ -44,7 +45,9 @@ class Helper:
 
     @staticmethod
     def put_genesis_node_env(real_ip: bool = True) -> None:
-        os.environ["GENESIS_NODE"] = socket.gethostbyname(socket.gethostname()) if real_ip else "localhost"
+        os.environ["GENESIS_NODE"] = (
+            socket.gethostbyname(socket.gethostname()) if real_ip else "localhost"
+        )
 
     @staticmethod
     def put_node_type_env(n_type: NodeType = NodeType.VALIDATOR) -> None:
@@ -73,7 +76,9 @@ class Helper:
 
         block_p = BlockCandidate.create_new([tx, tx_2])
 
-        return block_p.sign(sha256(b'12345').digest(), self_node.identifier, self_node.private_key)
+        return block_p.sign(
+            sha256(b"12345").digest(), self_node.identifier, self_node.private_key
+        )
 
     @staticmethod
     def create_transaction(add_time: int | None = None) -> Tx:
@@ -85,7 +90,9 @@ class Helper:
 
     @staticmethod
     def create_tx_to_verify() -> TxToVerify:
-        return TxToVerify(Helper.create_transaction(), Helper.get_self_node().get_node())
+        return TxToVerify(
+            Helper.create_transaction(), Helper.get_self_node().get_node()
+        )
 
 
 @pytest.fixture()

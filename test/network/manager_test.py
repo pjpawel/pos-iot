@@ -1,7 +1,11 @@
 from time import time
 from uuid import uuid4
 
-from pot.network.manager import TransactionToVerifyManager, BlockchainManager, TransactionVerifiedManager
+from pot.network.manager import (
+    TransactionToVerifyManager,
+    BlockchainManager,
+    TransactionVerifiedManager,
+)
 from pot.network.node import NodeType
 from pot.network.transaction import TxVerified
 from test.network.conftest import Helper
@@ -47,7 +51,12 @@ def test_verified_transaction_sorting(helper: Helper):
     assert len(manager.all()) == 4
     sorted = manager.sort_tx_by_time(manager.all())
 
-    assert list(sorted.values()) == [tx_verified500, tx_verified300, tx_verified200, tx_verified100]
+    assert list(sorted.values()) == [
+        tx_verified500,
+        tx_verified300,
+        tx_verified200,
+        tx_verified100,
+    ]
 
 
 def test_verified_transaction_sorting_2(helper: Helper):

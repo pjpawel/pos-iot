@@ -24,7 +24,9 @@ def test_encode_and_decode(helper: Helper):
 
     block_p = BlockCandidate.create_new([tx, tx_2])
 
-    block = block_p.sign(sha256(b'12345').digest(), self_node.identifier, self_node.private_key)
+    block = block_p.sign(
+        sha256(b"12345").digest(), self_node.identifier, self_node.private_key
+    )
 
     encoded_block = block.encode()
 
@@ -83,11 +85,16 @@ def test_next_block_creation_external(helper: Helper):
     assert len(blockchain.all()) == 1
 
     tx = helper.create_transaction()
-    block = Block(1, int(time()), blockchain.get_last_block().hash(), self_node.identifier, sha256(b'1234567890').digest(), [tx])
+    block = Block(
+        1,
+        int(time()),
+        blockchain.get_last_block().hash(),
+        self_node.identifier,
+        sha256(b"1234567890").digest(),
+        [tx],
+    )
     blockchain.add(block)
 
     assert len(blockchain.all()) == 2
     assert blockchain.all()[1] == block
     assert block.transactions[0] == tx
-
-

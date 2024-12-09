@@ -12,20 +12,28 @@ def test_update_from_validator_single_node(helper: Helper):
     service = Node()
 
     identifier = uuid4()
-    service.update_from_json([{
-        "identifier": identifier.hex,
-        "host": "localhost",
-        "port": 5000,
-        "type": "VALIDATOR",
-        "trust": 100
-    }])
+    service.update_from_json(
+        [
+            {
+                "identifier": identifier.hex,
+                "host": "localhost",
+                "port": 5000,
+                "type": "VALIDATOR",
+                "trust": 100,
+            }
+        ]
+    )
 
     assert len(service.all()) == 1
-    #assert service.count_validator_nodes() == 1
+    # assert service.count_validator_nodes() == 1
     assert service.find_by_identifier(identifier) is not None
-    assert service.find_by_identifier(identifier) == NodeDto(identifier, "localhost", 5000)
-    assert service.node_trust.get_node_trust(service.find_by_identifier(identifier)) == 100
-    #assert service.validators.all() == [identifier]
+    assert service.find_by_identifier(identifier) == NodeDto(
+        identifier, "localhost", 5000
+    )
+    assert (
+        service.node_trust.get_node_trust(service.find_by_identifier(identifier)) == 100
+    )
+    # assert service.validators.all() == [identifier]
 
 
 def test_update_from_validator(helper: Helper):
@@ -35,25 +43,27 @@ def test_update_from_validator(helper: Helper):
     node = NodeDto(uuid4(), "localhost", 5000)
     service.add(node)
 
-    service.update_from_json([
-        {
-            "identifier": uuid4().hex,
-            "host": "172.0.0.1",
-            "port": 5000,
-            "type": "VALIDATOR",
-            "trust": 100
-        },
-        {
-            "identifier": uuid4().hex,
-            "host": "172.0.0.2",
-            "port": 5000,
-            "type": "SENSOR",
-            "trust": 600
-        }
-    ])
+    service.update_from_json(
+        [
+            {
+                "identifier": uuid4().hex,
+                "host": "172.0.0.1",
+                "port": 5000,
+                "type": "VALIDATOR",
+                "trust": 100,
+            },
+            {
+                "identifier": uuid4().hex,
+                "host": "172.0.0.2",
+                "port": 5000,
+                "type": "SENSOR",
+                "trust": 600,
+            },
+        ]
+    )
 
     assert len(service.all()) == 3
-    #assert service.count_validator_nodes() == 1
+    # assert service.count_validator_nodes() == 1
 
 
 def test_prepare_nodes_info(helper: Helper):
@@ -77,15 +87,15 @@ def test_prepare_nodes_info(helper: Helper):
             "host": "172.0.0.1",
             "port": 5000,
             "type": "VALIDATOR",
-            "trust": 5001
+            "trust": 5001,
         },
         {
             "identifier": identifier2.hex,
             "host": "172.0.0.2",
             "port": 5000,
             "type": "SENSOR",
-            "trust": 5000
-        }
+            "trust": 5000,
+        },
     ]
     assert service.prepare_nodes_info(service.all()) == info
 
@@ -125,7 +135,9 @@ def test_node_trust_change_purge_history(helper: Helper):
     change_type = TrustChangeType.TRANSACTION_VALIDATED
     purge_interval = service.node_trust_history.TRUST_PURGE_INTERVAL
 
-    node_trust = NodeTrustChange(node.identifier, time() - purge_interval - 1.0, change_type, 1)
+    node_trust = NodeTrustChange(
+        node.identifier, time() - purge_interval - 1.0, change_type, 1
+    )
     service.node_trust_history.add(node_trust)
 
     assert len(service.node_trust_history.all()) == 1
@@ -182,17 +194,17 @@ def test_update_node(helper: Helper):
             "host": "172.0.0.3",
             "port": 5000,
             "type": "VALIDATOR",
-            "trust": 500
+            "trust": 500,
         },
         {
             "identifier": identifier4.hex,
             "host": "172.0.0.4",
             "port": 5000,
             "type": "SENSOR",
-            "trust": 100
-        }
+            "trust": 100,
+        },
     ]
     service.update_from_json(info)
 
     assert len(service.all()) == 4
-    #assert service.count_validator_nodes() == 1
+    # assert service.count_validator_nodes() == 1

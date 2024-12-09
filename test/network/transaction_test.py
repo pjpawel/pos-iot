@@ -34,7 +34,7 @@ def test_create_from_candidate(helper: Helper):
 
 def test_sign_verify_keys(helper: Helper):
     private_key = Ed25519PrivateKey.generate()
-    data = b'0000000000'
+    data = b"0000000000"
     signed = private_key.sign(data)
     private_key.public_key().verify(signed, data)
 

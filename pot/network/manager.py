@@ -17,7 +17,8 @@ from .storage import (
     ValidatorAgreementResultStorage,
     NodeTrustStorage,
     decode_chain,
-    NodeTrustHistory, NodeTrustFullHistory,
+    NodeTrustHistory,
+    NodeTrustFullHistory,
 )
 from .transaction import TxToVerify, TxVerified
 from .trust import NodeTrustChange

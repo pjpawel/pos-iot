@@ -34,7 +34,7 @@ def test_decode_blockchain(helper: Helper):
     for i in range(6):
         chain.append(helper.create_block())
 
-    encoded = b''.join([block.encode() for block in chain])
+    encoded = b"".join([block.encode() for block in chain])
 
     new_chain = decode_chain(encoded)
 
@@ -102,9 +102,15 @@ def test_add_new_block_successful(helper: Helper):
     pot.blockchain.add_new_transaction(ident3, tx_verified3)
 
     cblock = BlockCandidate.create_new([tx1, tx2, tx3])
-    block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
+    block = cblock.sign(
+        pot.blockchain.get_last_block().hash(),
+        pot.self_node.identifier,
+        pot.self_node.private_key,
+    )
 
-    response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+    response_msg, response_code = pot.add_new_block(
+        block.encode(), socket.gethostbyname(socket.gethostname())
+    )
     assert response_code == 204
     assert len(pot.blockchain.blocks) == 2
 
@@ -136,9 +142,15 @@ def test_add_new_block_missing_latest(helper: Helper):
     print(f"Transactions identifiers are {ident1.hex}, {ident2.hex}, {ident3.hex}")
 
     cblock = BlockCandidate.create_new([tx1, tx2])
-    block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
+    block = cblock.sign(
+        pot.blockchain.get_last_block().hash(),
+        pot.self_node.identifier,
+        pot.self_node.private_key,
+    )
 
-    response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+    response_msg, response_code = pot.add_new_block(
+        block.encode(), socket.gethostbyname(socket.gethostname())
+    )
     assert response_code == 204
     assert len(pot.blockchain.blocks) == 2
 
@@ -167,12 +179,18 @@ def test_add_new_block_missing_not_latest(helper: Helper):
     pot.blockchain.add_new_transaction(ident3, tx_verified3)
 
     cblock = BlockCandidate.create_new([tx1, tx3])
-    block = cblock.sign(pot.blockchain.get_last_block().hash(), pot.self_node.identifier, pot.self_node.private_key)
+    block = cblock.sign(
+        pot.blockchain.get_last_block().hash(),
+        pot.self_node.identifier,
+        pot.self_node.private_key,
+    )
 
-    #with pytest.raises(PoTException):
+    # with pytest.raises(PoTException):
     #    response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
     try:
-        response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+        response_msg, response_code = pot.add_new_block(
+            block.encode(), socket.gethostbyname(socket.gethostname())
+        )
     except PoTException as e:
         assert e.code == 400
     # assert response_code == 200
@@ -187,14 +205,14 @@ def test_set_new_validators(helper: Helper):
     pot.load()
 
     identifier = uuid4()
-    pot.nodes.add(Node(identifier, '12345', 5000))
+    pot.nodes.add(Node(identifier, "12345", 5000))
 
     old_validators = pot.nodes.validators.all()
 
-    pot.node_new_validators(pot.self_node.get_node().host, {"validators": [identifier.hex]})
+    pot.node_new_validators(
+        pot.self_node.get_node().host, {"validators": [identifier.hex]}
+    )
 
     new_validators = pot.nodes.validators.all()
     assert len(new_validators) == 1
     assert new_validators[0] == identifier
-
-

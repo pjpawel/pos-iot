@@ -12,7 +12,7 @@ def encode_private_key(private_key: Ed25519PrivateKey):
     return private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
 
 
@@ -28,7 +28,3 @@ def test_load(helper: Helper):
     assert node.identifier == node2.identifier
     assert node.get_public_key_str() == node2.get_public_key_str()
     assert encode_private_key(node.private_key) == encode_private_key(node2.private_key)
-
-
-
-

@@ -27,11 +27,11 @@ class Node:
     port: int
 
     def __init__(
-            self,
-            identifier: bytes | str | UUID,
-            host: str,
-            port: int,
-            n_type: NodeType | None | str = None,
+        self,
+        identifier: bytes | str | UUID,
+        host: str,
+        port: int,
+        n_type: NodeType | None | str = None,
     ):
         if isinstance(identifier, bytes):
             self.identifier = UUID(bytes_le=identifier)
@@ -153,7 +153,7 @@ class SelfNodeInfo:
                 {
                     "public": public_key_pem.decode("utf-8"),
                     "private": private_key_pem.decode("utf-8"),
-                    "identifier": self.identifier.hex
+                    "identifier": self.identifier.hex,
                 },
                 f,
             )
