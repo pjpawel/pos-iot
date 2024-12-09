@@ -511,3 +511,26 @@ class NodeTrustHistory(Storage):
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
             f.close()
+
+
+class NodeTrustFullHistory(NodeTrustHistory):
+    PATH = "node_trust_full_history"
+
+    def update(self, node_trusts: list[NodeTrustChange]) -> None:
+        f = open(self.path, "a")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            logging.debug(f"Appending {len(node_trusts)} {self.PATH} to storage")
+            writer = csv.writer(f)
+            data = []
+            timestamp = time.time()
+            for node_trust in node_trusts:
+                record = node_trust.to_list()
+                record.append(timestamp)
+                data.append(record)
+            writer.writerows(data)
+            f.flush()
+            self.update_cache()
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+            f.close()

@@ -774,7 +774,7 @@ class PoT:
         node_trust = NodeTrustChange(node.identifier, timestamp, change_type, change)
         self.nodes.node_trust_history.purge_old_history()
         if not self.nodes.node_trust_history.has_node_trust(node_trust):
-            self.nodes.node_trust.add_trust_to_node(node, change)
+            self.nodes.node_trust.add_trust_to_node(node, node_trust.change)
             self.nodes.node_trust_history.add(node_trust)
         # self.nodes.node_trust_history.add(node_trust)
         # self.nodes.node_trust.add_trust_to_node(node, change)

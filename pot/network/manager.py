@@ -17,7 +17,7 @@ from .storage import (
     ValidatorAgreementResultStorage,
     NodeTrustStorage,
     decode_chain,
-    NodeTrustHistory,
+    NodeTrustHistory, NodeTrustFullHistory,
 )
 from .transaction import TxToVerify, TxVerified
 from .trust import NodeTrustChange
@@ -407,14 +407,16 @@ class ValidatorAgreementInfoManager(Manager):
 
 
 class NodeTrustHistoryManager(Manager):
-    TRUST_PURGE_INTERVAL = 1.0
+    TRUST_PURGE_INTERVAL = 0.2
 
     _storage = NodeTrustHistory
     node_trusts: list[NodeTrustChange]
+    _history_storage = NodeTrustFullHistory
 
     def __init__(self):
         self._storage = NodeTrustHistory()
         self.node_trusts = self._storage.load()
+        self._history_storage = NodeTrustFullHistory()
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
@@ -458,3 +460,5 @@ class NodeTrustHistoryManager(Manager):
         self.refresh()
         self._storage.update([node_trust])
         self.node_trusts.append(node_trust)
+        # TO REMOVE
+        self._history_storage.update([node_trust])
