@@ -408,7 +408,7 @@ class ValidatorAgreementInfoManager(Manager):
 
 
 class NodeTrustHistoryManager(Manager):
-    TRUST_PURGE_INTERVAL = 0.2
+    TRUST_PURGE_INTERVAL = 5.0
 
     _storage = NodeTrustHistory
     node_trusts: list[NodeTrustChange]
@@ -453,6 +453,7 @@ class NodeTrustHistoryManager(Manager):
                 node_trust.node_id == new_node_trust.node_id
                 and node_trust.change == new_node_trust.change
                 and node_trust.type == new_node_trust.type
+                and node_trust.additional_data == new_node_trust.additional_data
             ):
                 return True
         return False

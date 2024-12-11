@@ -61,7 +61,7 @@ while True:
                 if not thread.is_alive():
                     threads.remove(thread)
 
-        pot.change_node_trust(self_node, TrustChangeType.BLOCK_CREATED)
+        pot.change_node_trust(self_node, TrustChangeType.BLOCK_CREATED, additional_data=block.signature.hex())
 
     sleep(10)
 

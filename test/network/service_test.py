@@ -136,7 +136,7 @@ def test_node_trust_change_purge_history(helper: Helper):
     purge_interval = service.node_trust_history.TRUST_PURGE_INTERVAL
 
     node_trust = NodeTrustChange(
-        node.identifier, time() - purge_interval - 1.0, change_type, 1
+        node.identifier, time() - purge_interval - 1.0, change_type, 1, "abc"
     )
     service.node_trust_history.add(node_trust)
 
@@ -162,11 +162,11 @@ def test_node_trust_change_already_in_history(helper: Helper):
 
     change_type = TrustChangeType.TRANSACTION_VALIDATED
 
-    node_trust = NodeTrustChange(node.identifier, time(), change_type, 1)
+    node_trust = NodeTrustChange(node.identifier, time(), change_type, 1, "abc")
     service.node_trust_history.add(node_trust)
     assert len(service.node_trust_history.all()) == 1
 
-    node_trust2 = NodeTrustChange(node.identifier, time(), change_type, 1)
+    node_trust2 = NodeTrustChange(node.identifier, time(), change_type, 1, "abc")
     service.node_trust_history.purge_old_history()
     assert service.node_trust_history.has_node_trust(node_trust2)
 
