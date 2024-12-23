@@ -1,9 +1,12 @@
 import datetime
 import os
+import random
 from uuid import UUID
 from pprint import pprint
+import itertools
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
@@ -15,7 +18,7 @@ from pot.network.manager import NodeTrust
 storage_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'storage'))
 result_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'monitor', 'result'))
 
-firsts_records = 10000
+firsts_records = 100
 
 load_dotenv()
 
@@ -59,7 +62,8 @@ def get_info_from_validators(path: str) -> dict:
     storage = ValidatorStorage(path)
     validators = storage.load()
     return {
-        "len": len(validators)
+        "len": len(validators),
+        "validators": ','.join([v.hex for v in validators])
     }
 
 
@@ -91,6 +95,7 @@ cols_dict = {
     'number_of_blocks': 'Number of blocks',
     'number_of_transaction_to_verify': 'Number of transactions to verify',
     'number_of_verified_transactions': 'Number of verified transactions',
+    'validators': 'Validators'
 }
 
 cols = list(cols_dict.keys())
@@ -156,7 +161,8 @@ for node in os.listdir(storage_path):
             # nodes_info["trust"],
             blocks_info['len'],
             txs_to_ver_info['len'],
-            txs_ver_info['len']
+            txs_ver_info['len'],
+            validators_info["validators"]
         ]
         for node_id, trust in nodes_info["trust"].items():
             trust_data.append({
@@ -186,41 +192,63 @@ first_time_date = datetime.datetime.fromtimestamp(first_time, datetime.timezone.
 print(f"First time: {first_time} - {first_time_date.isoformat()} UTC")
 print("")
 
+random_df = dfs.get(list(dfs.keys())[random.randint(0, len(dfs.keys())-1)])
+for validators_str in random_df['validators'].unique():
+    df_validators = random_df[random_df["validators"] == validators_str]
+    print(f"Validators: {validators_str}. Index min: {df_validators.first_valid_index()}. Index max: {df_validators.last_valid_index()}")
+print("")
+
+for node, df in dfs.items():
+    df.drop(columns=['validators'], inplace=True)
+
+markers = ["1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d", "|", "_"]
+line_styles = ['-', '--', ':', '-.']
+styles = itertools.cycle([marker + line for marker in markers for line in line_styles])
+
 # check if all df has step by step info
-# TODO: uncomment
-for col in cols[1:]:
+for col in cols[1:len(cols)-2]:
     max_value = 0
     data = {}
     for node, df in dfs.items():
         data[node] = df[col]
         if max_value < df[col].max():
             max_value = df[col].max()
-        # if not index:
-        #     index = df['time']
 
+    # Standard plot all of data
     df_show = pd.DataFrame(data)
     print(f"Processing column {col}")
-    #print(df_show.info())
-    #print(df_show.head())
-    # df_show.plot(
-    #     legend=True,
-    #     title=f"Plot {col} against time",
-    #     xlabel="Time [s]",
-    #     ylabel=col,
-    #     #        subplots=True,
-    #     ylim=(-max_value*0.1, max_value + max_value*0.1),
-    #     grid=True
-    # )
+
+    style_list = [next(styles) for _ in df_show.columns]
     df_show.plot(
-        # style=['+-', '.--'],
+        style=style_list,
         legend=True,
         title=f"Plot {col} against time",
         xlabel="Time [s]",
-        # subplots=True,
         ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True
     )
     plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
+    plt.close()
+
+    # Plot of change
+    random_data = data.get(list(data.keys())[0])
+    random_change = random_data[random.randint(0, len(random_data) - 1)]
+    print("Change: " + str(int(random_change)))
+    first_idx = random_data[random_data == random_change].first_valid_index()
+    print("First index: " + str(int(first_idx)))
+
+    df_show = df_show.loc[first_idx - 5:first_idx + 5]
+    style_list = [next(styles) for _ in df_show.columns]
+    df_show.plot(
+        style=style_list,
+        legend=True,
+        title=f"Plot {col} against time - change near {first_idx} second",
+        xlabel="Time [s]",
+        # ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
+        grid=True
+    )
+    plt.savefig(os.path.join(result_path, f"plot-{col}-part.png"))
+    plt.close()
 
 print("")
 nodes_ids = df_trust.reset_index()["node"].unique()
@@ -230,6 +258,10 @@ pprint(nodes_mapping)
 print("Nodes")
 pprint(nodes_ids)
 
+markers = ["1", "2", "3", "4", "8", "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d", "|", "_"]
+line_styles = ['-', '--', ':', '-.']
+styles = itertools.cycle([marker + line for marker in markers for line in line_styles])
+
 for node_id in nodes_ids:
     if node_id not in list(nodes_mapping.values()):
         print(f"{node_id} not found in nodes_mapping")
@@ -237,13 +269,53 @@ for node_id in nodes_ids:
     node_name = list(nodes_mapping.keys())[list(nodes_mapping.values()).index(node_id)]
 
     print(f"Processing trust for node {node_id} => {node_name}")
-    (df_trust.xs(node_id, level=2)
-        .reset_index()
-        .pivot(index='time', columns='sourceNode', values='trust')
-        .plot(kind='line', figsize=(10, 6)))
+    # Plot trust for node - all
+    pivot = df_trust.xs(node_id, level=2).reset_index().pivot(index='time', columns='sourceNode', values='trust')
+    style_list = [next(styles) for _ in pivot.columns]
+    pivot.plot(
+        style=style_list,
+        legend=True,
+        title=f"Change of trust for node {node_name} in time",
+        xlabel="Time [s]",
+        ylabel="Trust",
+        grid=True
+    )
+    # (df_trust.xs(node_id, level=2)
+    #     .reset_index()
+    #     .pivot(index='time', columns='sourceNode', values='trust')
+    #     .plot(kind='line', figsize=(10, 6), style=style_list))
     plt.title(f"Change of trust for node {node_name} in time ")
     plt.xlabel('Time [s]')
     plt.ylabel('Trust')
     plt.legend(title='Source node')
     plt.grid(True)
     plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.png"))
+    plt.close()
+
+    # Plot trust for node - part
+    while True:
+        random_column = random.choice(pivot.columns)
+        random_trust = random.choice(pivot[random_column].unique())
+        if random_trust is not np.nan or random_trust == NodeTrust.BASIC_TRUST:
+            break
+    print("Trust: " + str(int(random_trust)))
+    first_idx = pivot[pivot[random_column] == random_trust].first_valid_index()
+    print("First index: " + str(int(first_idx)))
+
+    pivot = pivot.loc[first_idx - 5:first_idx + 5]
+    style_list = [next(styles) for _ in pivot.columns]
+    pivot.plot(
+        style=style_list,
+        legend=True,
+        title=f"Change of trust for node {node_name} in time - change near {first_idx} second",
+        xlabel="Time [s]",
+        ylabel="Trust",
+        grid=True
+    )
+    #plt.title(f"Change of trust for node {node_name} in time - change near {first_idx} second")
+    #plt.xlabel('Time [s]')
+    #plt.ylabel('Trust')
+    plt.legend(title='Source node')
+    plt.grid(True)
+    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}-part.png"))
+    plt.close()
