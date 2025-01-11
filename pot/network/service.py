@@ -64,15 +64,16 @@ class Blockchain(BlockchainManager):
         include_type = t_type is not None
         txs_verified = self.txs_verified.all().values()
         txs_values = []
-        # TODO: correct
 
-        def get_value_from_tx(tx: Tx) -> dict | None:
+        def add_value_from_tx(tx: Tx):
             global n_count
+            if n_count >= 100:
+                return
             if tx.sender != node.identifier:
-                return None
+                return
             tx_type = tx.data.get(Tx.TYPE_KEY)
             if include_type and tx_type != type:
-                return None
+                return
             txs_values.append({"type": tx_type, "data": tx.data})
             n_count += 1
 
@@ -81,22 +82,14 @@ class Blockchain(BlockchainManager):
                 break
             tx = tx_verified.tx
             if tx.sender == node.identifier:
-                tx_type = tx.data.get(Tx.TYPE_KEY)
-                if include_type and tx_type != type:
-                    continue
-                txs_values.append({"type": tx_type, "data": tx.data})
-                n_count += 1
+                add_value_from_tx(tx)
         blocks = self.all()
         for block in blocks:
             if n_count >= 100:
                 break
             for tx in block.transactions:
                 if tx.sender == node.identifier:
-                    tx_type = tx.data.get(Tx.TYPE_KEY)
-                    if include_type and tx_type != type:
-                        continue
-                    txs_values.append({"type": tx_type, "data": tx.data})
-                    n_count += 1
+                    add_value_from_tx(tx)
         return txs_values
 
 

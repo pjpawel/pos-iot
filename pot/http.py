@@ -1,20 +1,25 @@
 import logging
+import os
 import socket
 import sys
 from base64 import b64encode
 from uuid import uuid4, UUID
+import random
+import time
 
 from dotenv import load_dotenv
+from functools import wraps
 from flask import Flask, request, jsonify
 
 from pot.network.blockchain import PoT, PoTException
 from pot.network.node import NodeType
-from pot.utils import setup_logger
+from pot.utils import setup_logger, prepare_simulation_env
 
 """
 Loading env values
 """
 load_dotenv()
+prepare_simulation_env()
 
 """
 Configuring logger
@@ -37,6 +42,17 @@ app.pot.load()
 def pot_error_handler(error: PoTException):
     logging.error(f"POT EXCEPTION: {error.message} - {error.code}")
     return jsonify(error=error.message), error.code
+
+
+def random_delay(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        max_delay = os.environ.get("MAX_DELAY")
+        if max_delay is not None:
+            time.sleep(float(random.randint(0, int(max_delay))) / 1000.0)
+        return f(*args, **kwargs)
+
+    return wrapper
 
 
 """
@@ -71,6 +87,7 @@ def get_blockchain():
 
 
 @app.get("/transaction/to-verify")
+@random_delay
 def get_transaction_to_verify():
     data = {}
     for uuid, tx_to_verify in app.pot.tx_to_verified.all().items():
@@ -90,6 +107,7 @@ def get_transaction_to_verify():
 
 
 @app.get("/blockchain/verified")
+@random_delay
 def get_transaction_verified():
     return {
         "transactions": [
@@ -105,6 +123,7 @@ def nodes():
 
 
 @app.get("/node/<identifier>")
+@random_delay
 def node(identifier: str):
     node_f = app.pot.nodes.find_by_identifier(UUID(identifier))
     if node_f is None:
@@ -113,6 +132,7 @@ def node(identifier: str):
 
 
 @app.get("/public-key", endpoint="get_public_key")
+@random_delay
 def get_public_key():
     return app.pot.self_node.get_public_key_str()
 
@@ -123,6 +143,7 @@ def get_public_key():
 
 
 @app.post("/transaction", endpoint="new_transaction")
+@random_delay
 def transaction_new():
     try:
         if request.content_length >= 1024:
@@ -138,6 +159,7 @@ def transaction_new():
 @app.post(
     "/transaction/<identifier>/verified", endpoint="populate_transaction_verified"
 )
+@random_delay
 def transaction_verified(identifier: str):
     try:
         if request.content_length >= 1024:
@@ -152,6 +174,7 @@ def transaction_verified(identifier: str):
 
 
 @app.post("/block", endpoint="populate_block")
+@random_delay
 def block_new():
     try:
         app.pot.block_new(request.get_data(), request.remote_addr)
@@ -162,6 +185,7 @@ def block_new():
 
 
 @app.post("/node/populate-new", endpoint="populate_node")
+@random_delay
 def populate_new_node():
     """
     Request must be in form: {
@@ -176,11 +200,13 @@ def populate_new_node():
 
 
 @app.post("/blockchain/block/new", endpoint="blockchain_block_populate_node")
+@random_delay
 def populate_new_block():
     return app.pot.add_new_block(request.get_data(False), request.remote_addr)
 
 
 @app.post("/node/validator/new", endpoint="inform_about_new_validator")
+@random_delay
 def new_validators():
     app.pot.node_new_validators(request.remote_addr, request.get_json())
     return ""
@@ -188,6 +214,7 @@ def new_validators():
 
 # CHECK
 @app.patch("/node/<identifier>/trust", endpoint="node_trust_change")
+@random_delay
 def node_trust_change(identifier: str):
     app.pot.node_trust_change(identifier, request.get_json())
     return ""
@@ -199,12 +226,14 @@ def node_trust_change(identifier: str):
 
 
 @app.get("/transaction/<identifier>")
+@random_delay
 def transaction_get(identifier: str):
     # TODO: nie jest VALIDATOR
     return app.pot.transaction_get(identifier)
 
 
 @app.post("/transaction/<identifier>/populate")
+@random_delay
 def transaction_populate(identifier: str):
     # TODO: nie jest VALIDATOR
     app.pot.transaction_populate(request.get_data(as_text=False), identifier)
@@ -212,6 +241,7 @@ def transaction_populate(identifier: str):
 
 
 @app.post("/transaction/<identifier>/verifyResult")
+@random_delay
 def transaction_verify_result(identifier: str):
     request_json = request.get_json()
     app.pot.transaction_populate_verify_result(
@@ -221,6 +251,7 @@ def transaction_verify_result(identifier: str):
 
 
 @app.post("/node/register", endpoint="node_register")
+@random_delay
 def node_register():
     """
     Initialize node registration
@@ -234,6 +265,7 @@ def node_register():
 
 
 @app.get("/node/update", endpoint="node_update")
+@random_delay
 def node_update():
     """
     Node identifier must be valid uuid hex
@@ -243,6 +275,7 @@ def node_update():
 
 
 @app.post("/node/validator/agreement")
+@random_delay
 def validator_agreement_start():
     return app.pot.node_validator_agreement_start(
         request.remote_addr, request.get_json()
@@ -250,11 +283,13 @@ def validator_agreement_start():
 
 
 @app.get("/node/validator/agreement")
+@random_delay
 def validator_agreement_get():
     return app.pot.node_validator_agreement_get(request.remote_addr)
 
 
 @app.patch("/node/validator/agreement/vote")
+@random_delay
 def validator_agreement_vote():
     logging.warning(f"Agreement vote called")
     app.pot.node_validator_agreement_vote(request.remote_addr, request.get_json())
@@ -262,6 +297,7 @@ def validator_agreement_vote():
 
 
 @app.post("/node/validator/agreement/done")
+@random_delay
 def validator_agreement_done():
     logging.warning(f"Agreement done called")
     app.pot.node_validator_agreement_done(request.remote_addr, request.get_json())

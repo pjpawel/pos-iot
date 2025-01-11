@@ -1,7 +1,8 @@
 import logging
-from threading import Thread
 from time import sleep
 from random import shuffle
+
+import numpy as np
 
 from pot.network.blockchain import PoT
 from pot.network.transaction import TxToVerify
@@ -81,12 +82,22 @@ class TransactionVerifier:
         :param tx_to_verify:
         :return:
         """
+
         tx = tx_to_verify.tx
+        transaction_data_key = tx.DATA_KEY
         tx_type = tx.data.get(tx.TYPE_KEY)
+        tx_data = tx.data.get(tx.DATA_KEY)
         if tx_type == "0":
             return True
         last_txs = self.pot.blockchain.find_last_transactions_values_for_node(
             tx_to_verify.node, tx_type
         )
-        # TODO:
-        return
+        if len(last_txs) < 50:
+            return True
+        last_txs_data = [tx["data"][transaction_data_key] for tx in last_txs]
+        np.mean(last_txs_data)
+        std = np.std(last_txs_data)
+        return (
+            tx.data[transaction_data_key] < np.mean(last_txs_data) + 2 * std
+            or tx.data[transaction_data_key] > np.mean(last_txs_data) - 2 * std
+        )

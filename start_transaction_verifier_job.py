@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 from pot.network.blockchain import PoT
 from pot.network.verifier import TransactionVerifier
-from pot.utils import setup_logger
+from pot.utils import setup_logger, prepare_simulation_env
 
 
 print(f"Starting {__file__}")
@@ -13,6 +13,7 @@ print(f"Starting {__file__}")
 Loading env values
 """
 load_dotenv()
+prepare_simulation_env()
 
 """
 Configuring logger

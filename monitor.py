@@ -1,6 +1,7 @@
 import datetime
 import os
 import random
+from copy import copy
 from uuid import UUID
 from pprint import pprint
 import itertools
@@ -10,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
+from pot.network.dumper import Dumper
 from pot.network.node import SelfNodeInfo
 from pot.network.storage import BlocksStorage, NodeStorage, TransactionStorage, NodeTrustStorage, ValidatorStorage, \
     TransactionVerifiedStorage
@@ -18,7 +20,8 @@ from pot.network.manager import NodeTrust
 storage_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'storage'))
 result_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'monitor', 'result'))
 
-firsts_records = 100
+firsts_records = 10000
+firsts_records = None
 
 load_dotenv()
 
@@ -128,14 +131,17 @@ for node in os.listdir(storage_path):
 
     record_i = 0
     for time in dirs:
+        time_int = int(time)
+        time = float(time) / Dumper.SECOND_PART
         # list all time in dir
         if not first_time:
             first_time = time
 
-        if firsts_records is not None and firsts_records < record_i:
-            break
+        if firsts_records is not None:
+            if firsts_records < record_i:
+                break
 
-        storage_dir = os.path.join(storage_path, node, 'dump', str(time))
+        storage_dir = os.path.join(storage_path, node, 'dump', str(time_int))
         # print(f"Processing dir {storage_dir}")
 
         if node not in nodes_mapping.keys():
@@ -184,10 +190,11 @@ for node in os.listdir(storage_path):
 
     df_trust = pd.concat([df_trust, df_trust_node])
 
-df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
+#df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
 
 print("")
 import datetime
+first_time = int(first_time / Dumper.SECOND_PART)
 first_time_date = datetime.datetime.fromtimestamp(first_time, datetime.timezone.utc)
 print(f"First time: {first_time} - {first_time_date.isoformat()} UTC")
 print("")
@@ -216,7 +223,7 @@ for col in cols[1:len(cols)-2]:
 
     # Standard plot all of data
     df_show = pd.DataFrame(data)
-    print(f"Processing column {col}")
+    print(f"\nProcessing column {col}")
 
     style_list = [next(styles) for _ in df_show.columns]
     df_show.plot(
@@ -231,18 +238,29 @@ for col in cols[1:len(cols)-2]:
     plt.close()
 
     # Plot of change
-    random_data = data.get(list(data.keys())[0])
-    random_change = random_data[random.randint(0, len(random_data) - 1)]
-    print("Change: " + str(int(random_change)))
-    first_idx = random_data[random_data == random_change].first_valid_index()
-    print("First index: " + str(int(first_idx)))
 
-    df_show = df_show.loc[first_idx - 5:first_idx + 5]
+    random_data = random.choice(list(data.values()))
+    print("Unique values")
+    pprint(random_data.unique())
+    if len(random_data.unique()) <= 1:
+        random_change = random_data.unique()[0]
+    else:
+        while True:
+            random_change = random.choice(random_data.unique())
+            if random_change is not np.nan and random_change != 0:
+                break
+    print("Change: " + str(random_change))
+    first_idx = random_data[random_data == random_change].first_valid_index()
+    print("First index on int: " + str(int(first_idx)))
+    # first_idx = int(float(first_idx) * Dumper.SECOND_PART)
+    # print("First index on float: " + str(first_idx))
+
+    df_show = df_show.loc[first_idx - 5.0:first_idx + 5.0]
     style_list = [next(styles) for _ in df_show.columns]
     df_show.plot(
         style=style_list,
         legend=True,
-        title=f"Plot {col} against time - change near {first_idx} second",
+        title=f"Plot {col} against time - change near {round(first_idx, 2)} second",
         xlabel="Time [s]",
         # ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True
@@ -307,7 +325,7 @@ for node_id in nodes_ids:
     pivot.plot(
         style=style_list,
         legend=True,
-        title=f"Change of trust for node {node_name} in time - change near {first_idx} second",
+        title=f"Change of trust for node {node_name} in time - change near {round(first_idx, 2)} second",
         xlabel="Time [s]",
         ylabel="Trust",
         grid=True

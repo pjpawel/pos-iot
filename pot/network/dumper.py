@@ -8,6 +8,8 @@ from pot.network.blockchain import PoT
 
 
 class Dumper:
+    SECOND_PART = 10.0
+
     dump_dir: str
     paths: list[str]
     storage_dir: str
@@ -28,7 +30,7 @@ class Dumper:
         logging.debug(f"Dumping files to directory: {self.dump_dir}")
 
     def dump(self) -> None:
-        utime = int(time())
+        utime = int(time() * self.SECOND_PART)
         # logging.debug(f"Dumping files with timestamp {utime}")
         dump_time_dir = os.path.join(self.dump_dir, str(utime))
 

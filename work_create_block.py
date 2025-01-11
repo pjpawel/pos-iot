@@ -8,7 +8,7 @@ from pot.network.blockchain import PoT
 from pot.network.node import Node
 from pot.network.request import Request
 from pot.network.trust import TrustChangeType
-from pot.utils import setup_logger
+from pot.utils import setup_logger, prepare_simulation_env
 
 
 print(f"Starting {__file__}")
@@ -17,6 +17,7 @@ print(f"Starting {__file__}")
 Loading env values
 """
 load_dotenv()
+prepare_simulation_env()
 
 """
 Configuring logger

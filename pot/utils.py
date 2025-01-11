@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from random import randint
 from logging.handlers import TimedRotatingFileHandler
 
 
@@ -22,3 +23,16 @@ def setup_logger(prefix: str = "", level_str: str | None = None) -> None:
         handlers=[handler, f_handler],  # f_handler
         encoding="UTF-8",
     )
+
+
+def prepare_simulation_env():
+    if os.environ.get("SIMULATION") is None:
+        raise Exception("SIMULATION env variable is not set")
+    match int(os.environ["SIMULATION"]):
+        case 2:
+            os.environ["MAX_DELAY"] = "300"
+        case 3:
+            if randint(0, 100) % 4 == 0:
+                os.environ["POT_SCENARIOS"] = "mad_sender"
+        case _:
+            os.environ["POT_SCENARIOS"] = "instant_sender"

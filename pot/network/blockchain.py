@@ -706,10 +706,16 @@ class PoT:
 
         change_type = TrustChangeType.AGREEMENT_VALIDATION
         self.send_multiple_trust_change(
-            positives_results_nodes, change_type, change_type.value, "leader: " + last_leader.hex
+            positives_results_nodes,
+            change_type,
+            change_type.value,
+            "leader: " + last_leader.hex,
         )
         self.send_multiple_trust_change(
-            negatives_results_nodes, change_type, -10 * change_type.value, "leader: " + last_leader.hex
+            negatives_results_nodes,
+            change_type,
+            -10 * change_type.value,
+            "leader: " + last_leader.hex,
         )
 
     def node_validator_agreement_done(self, remote_addr: str, data: dict):
