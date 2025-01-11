@@ -30,10 +30,3 @@ sleep_time = 1.0 / Dumper.SECOND_PART
 while True:
     dumper.dump()
     sleep(sleep_time)
-
-
-
-
-
-
-
