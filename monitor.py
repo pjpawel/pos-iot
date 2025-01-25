@@ -287,7 +287,7 @@ for col in cols[1 : len(cols) - 2]:
     # first_idx = int(float(first_idx) * Dumper.SECOND_PART)
     # print("First index on float: " + str(first_idx))
 
-    df_show = df_show.loc[first_idx - 5.0 : first_idx + 5.0]
+    df_show = df_show.loc[first_idx - 2.0: first_idx + 2.0]
     style_list = [next(styles) for _ in df_show.columns]
     df_show.plot(
         style=style_list,
@@ -375,7 +375,7 @@ for node_id in nodes_ids:
     first_idx = pivot[pivot[random_column] == random_trust].first_valid_index()
     print("First index: " + str(int(first_idx)))
 
-    pivot = pivot.loc[first_idx - 5 : first_idx + 5]
+    pivot = pivot.loc[first_idx - 2.0: first_idx + 2.0]
     style_list = [next(styles) for _ in pivot.columns]
     pivot.plot(
         style=style_list,

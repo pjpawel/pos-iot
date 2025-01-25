@@ -126,7 +126,7 @@ echo "Running simulation 4"
 echo "************************************"
 printf "\n"
 
-./compose-start.sh 4 50
+./compose-start.sh 4 12
 sleep 500
 ./compose-stop.sh
 
@@ -148,6 +148,6 @@ mv ../monitor/result/* "$SIMULATION_DIR"/result
 
 printf "\n"
 echo "************************************"
-echo "Simulation 3 finished"
+echo "Simulation 4 finished"
 echo "************************************"
 printf "\n"
