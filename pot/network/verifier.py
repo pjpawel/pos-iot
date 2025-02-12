@@ -82,7 +82,7 @@ class TransactionVerifier:
         :param tx_to_verify:
         :return:
         """
-
+        #return True
         tx = tx_to_verify.tx
         transaction_data_key = tx.DATA_KEY
         tx_type = tx.data.get(tx.TYPE_KEY)

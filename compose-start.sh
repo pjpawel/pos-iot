@@ -1,7 +1,8 @@
 #!/bin/bash
 
 SIMULATION="${1:-1}"
-NODE_NUMBER=${2:-6}
+BUILD=${2:-1}
+NODE_NUMBER=${3:-6}
 
 TIME=$(date +%s)
 mkdir -p ../storage-archive/"$TIME"
@@ -9,8 +10,10 @@ mv ../storage/* ../storage-archive/"$TIME"
 
 NODE_NUMBER=$((NODE_NUMBER + 11))
 
-# docker compose up --build
-docker buildx build --no-cache -t pot-iot .
+if [ "$BUILD" -eq 1 ]; then
+    # docker compose up --build
+    docker buildx build --no-cache -t pot-iot .
+fi
 
 docker run -d \
   --name node_genesis \

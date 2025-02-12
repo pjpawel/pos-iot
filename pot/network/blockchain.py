@@ -407,58 +407,12 @@ class PoT:
         if block.prev_hash != self.blockchain.get_last_block().hash():
             raise PoTException("Prev hash does not match hash of previous block", 400)
         if self.nodes.is_validator(self.self_node.get_node()):
-            txs_verified_with_ident = self.blockchain.txs_verified.sort_tx_by_time(
-                self.blockchain.txs_verified.all()
-            )
-            txs_verified = [
-                tx_verified.tx for tx_verified in list(txs_verified_with_ident.values())
-            ]
-            txs_verified_set = set(txs_verified)
-            b_txs = set(block.transactions)
-            # Check if all transactions in block are verified
-            diff = b_txs.difference(txs_verified)
-            if diff:
-                raise PoTException(
-                    f"Transactions {', '.join([str(tx) for tx in diff])} are not verified",
-                    400,
-                )
-            diff = txs_verified_set.difference(b_txs)
-            if diff:
-                diff_count = []
-                # Check if missing transactions are latest in verified list
-                for tx in txs_verified:
-                    if tx in diff:
-                        diff_count.append(tx)
-                    else:
-                        diff_count = set(diff_count)
-                        if diff_count != diff:
-                            idents = []
-                            for tx_diff in diff.difference(diff_count):
-                                for (
-                                    ident,
-                                    tx_verified,
-                                ) in txs_verified_with_ident.items():
-                                    if tx_verified.tx == tx_diff:
-                                        idents.append(ident)
-                                        break
-                            txs_str = ", ".join([ident.hex for ident in idents])
-                            raise PoTException(
-                                f"Transactions {txs_str} are not latest", 400
-                            )
-                        break
-            txs_verified_ids = []
-            for tx_id, tx_verified in self.blockchain.txs_verified.all().items():
-                if tx_verified.tx in block.transactions:
-                    txs_verified_ids.append(tx_id)
-
-            self.blockchain.txs_verified.delete(txs_verified_ids)
-            self.blockchain.add(block)
-            return "", 204
-        block_hash = block.hash()
-        for b in self.blockchain.all():
-            if b.hash() == block_hash:
-                return "Block is already in blockchain", 200
-        # Remove transaction validated
+            self._register_new_block_validator(block)
+        else:
+            block_hash = block.hash()
+            for b in self.blockchain.all():
+                if b.hash() == block_hash:
+                    return "Block is already in blockchain", 200
         txs_verified_ids = []
         for tx_id, tx_verified in self.blockchain.txs_verified.all().items():
             if tx_verified.tx in block.transactions:
@@ -466,6 +420,36 @@ class PoT:
         self.blockchain.txs_verified.delete(txs_verified_ids)
         self.blockchain.add(block)
         return "", 204
+
+    def _register_new_block_validator(self, block):
+        txs_verified_with_ident = self.blockchain.txs_verified.sort_tx_by_time(self.blockchain.txs_verified.all())
+        txs_verified = [tx_verified.tx for tx_verified in list(txs_verified_with_ident.values())]
+        txs_verified_set = set(txs_verified)
+        b_txs = set(block.transactions)
+        diff = b_txs.difference(txs_verified)
+        if diff:
+            raise PoTException(f"Transactions {', '.join([str(tx) for tx in diff])} are not verified",400)
+        diff = txs_verified_set.difference(b_txs)
+        if diff:
+            self._check_for_missing_transactions(diff, txs_verified, txs_verified_with_ident)
+
+    def _check_for_missing_transactions(self, diff, txs_verified, txs_verified_with_ident):
+        diff_count = []
+        for tx in txs_verified:
+            if tx in diff:
+                diff_count.append(tx)
+            else:
+                diff_count = set(diff_count)
+                if diff_count != diff:
+                    idents = []
+                    for tx_diff in diff.difference(diff_count):
+                        for ident, tx_verified in txs_verified_with_ident.items():
+                            if tx_verified.tx == tx_diff:
+                                idents.append(ident)
+                                break
+                    txs_str = ", ".join([ident.hex for ident in idents])
+                    raise PoTException(f"Transactions {txs_str} are not latest", 400)
+                break
 
     def populate_new_node(self, data: dict, request_addr: str) -> None:
         logging.info("Getting new node from " + request_addr)
@@ -483,38 +467,23 @@ class PoT:
             )
         self.nodes.add(Node(identifier, host, port, n_type))
 
-    def node_register(
-        self, identifier: UUID, node_ip: str, port: int, n_type: NodeType
-    ) -> dict | tuple:
+    def node_register(self, identifier: UUID, node_ip: str, port: int, n_type: NodeType) -> dict | tuple:
         self._validate_if_i_am_validator()
         for node in self.nodes.all():
             if node.host == node_ip and node.port == port:
-                raise PoTException(
-                    f"Node is already registered with identifier: {node.identifier}",
-                    400,
-                )
+                raise PoTException(f"Node is already registered with identifier: {node.identifier}", 400)
         new_node = Node(identifier, node_ip, 5000, n_type)
         self.nodes.add(new_node)
         data_to_send = {
             "identifier": new_node.identifier.hex,
             "host": new_node.host,
-            "port": new_node.port,
-            # "type": n_type.value
+            "port": new_node.port
         }
         for node in self.nodes.all():
-            if (
-                node.identifier == new_node.identifier
-                or node.identifier == self.self_node.identifier
-            ):
+            if node.identifier == new_node.identifier or node.identifier == self.self_node.identifier:
                 continue
-            logging.info(
-                f"Populating node {new_node.identifier.hex} to node {node.identifier}"
-            )
-            res = requests.post(
-                f"http://{node.host}:{node.port}/node/populate-new",
-                json=data_to_send,
-                timeout=15,
-            )
+            logging.info(f"Populating node {new_node.identifier.hex} to node {node.identifier}")
+            res = requests.post(f"http://{node.host}:{node.port}/node/populate-new", json=data_to_send, timeout=15)
             logging.info(f"Response of populate {res.status_code} {res.text}")
         return data_to_send
 
@@ -652,47 +621,38 @@ class PoT:
 
     def node_validator_agreement_done(self, remote_addr: str, data: dict):
         self._validate_request_from_validator(remote_addr)
-        logging.info(f"Validator agreement done {data}")
         self._validate_request_dict_keys(data, ["validators", "leader"])
-        validator_list = [
-            self._validate_create_uuid(ident) for ident in data.get("validators")
-        ]
+        validator_list = [self._validate_create_uuid(ident) for ident in data.get("validators")]
         nodes_id_list = [node.identifier for node in self.nodes.all()]
-        for validator_id in validator_list:
-            if validator_id not in nodes_id_list:
-                raise PoTException(f"Node {validator_id} is not node", 400)
-
+        missing_validators = set(validator_list) - set(nodes_id_list)
+        if missing_validators:
+            raise PoTException(f"Nodes {', '.join(map(str, missing_validators))} are not nodes", 400)
         new_leader_id = self._validate_create_uuid(data.get("leader"))
         new_leader = self.nodes.find_by_identifier(new_leader_id)
         if new_leader is None:
-            raise PoTException(
-                f"Proposed new leader id ({new_leader_id}) is not found in nodes list",
-                400,
-            )
+            raise PoTException(f"Proposed new leader id ({new_leader_id}) is not found in nodes list",400)
         if not self.nodes.is_validator(new_leader):
-            raise PoTException(
-                f"Proposed new leader ({new_leader_id}) is not validator", 400
-            )
-
+            raise PoTException(f"Proposed new leader ({new_leader_id}) is not validator", 400)
         self_node = self.nodes.find_by_identifier(self.self_node.identifier)
         if self.nodes.is_validator(self_node):
-            if (
-                self.nodes.is_agreement_started() is False
-                or len(self.nodes.validator_agreement.all()) > 0
-            ):
-                raise PoTException("Agreement is not started or list is not send", 400)
-            if validator_list != self.nodes.validator_agreement.all():
-                raise PoTException("List is not the same as in agreement", 400)
-            if not self.nodes.is_agreement_voting_ended():
-                raise PoTException("Voting is not ended", 400)
+            self._check_validator_list(validator_list)
         if self.nodes.is_agreement_result_success():
             self.nodes.validators.set_validators(validator_list)
-            self.nodes.validator_agreement_info.set_last_successful_agreement(
-                int(time())
-            )
+            self.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
         else:
             self.nodes.validator_agreement_info.add_leader(new_leader)
         self.nodes.clear_agreement_list()
+
+    def _check_validator_list(self, validator_list):
+        if (
+                self.nodes.is_agreement_started() is False
+                or len(self.nodes.validator_agreement.all()) > 0
+        ):
+            raise PoTException("Agreement is not started or list is not send", 400)
+        if validator_list != self.nodes.validator_agreement.all():
+            raise PoTException("List is not the same as in agreement", 400)
+        if not self.nodes.is_agreement_voting_ended():
+            raise PoTException("Voting is not ended", 400)
 
     def node_new_validators(self, remote_addr: str, data: dict):
         self._validate_request_from_validator(remote_addr)

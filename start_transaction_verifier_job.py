@@ -18,7 +18,7 @@ prepare_simulation_env()
 """
 Configuring logger
 """
-setup_logger("VERIFY")
+setup_logger("VERIFY", "DEBUG")
 
 sleep(10.0)
 

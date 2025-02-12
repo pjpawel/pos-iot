@@ -291,7 +291,6 @@ def validator_agreement_get():
 @app.patch("/node/validator/agreement/vote")
 @random_delay
 def validator_agreement_vote():
-    logging.warning(f"Agreement vote called")
     app.pot.node_validator_agreement_vote(request.remote_addr, request.get_json())
     return {}
 
@@ -299,6 +298,5 @@ def validator_agreement_vote():
 @app.post("/node/validator/agreement/done")
 @random_delay
 def validator_agreement_done():
-    logging.warning(f"Agreement done called")
     app.pot.node_validator_agreement_done(request.remote_addr, request.get_json())
     return {}

@@ -9,6 +9,7 @@ import itertools
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from dotenv import load_dotenv
 
 from pot.network.dumper import Dumper
@@ -257,15 +258,18 @@ for col in cols[1 : len(cols) - 2]:
     df_show = pd.DataFrame(data)
     print(f"\nProcessing column {col}")
 
+    col_name = col.replace("_", " ")
     style_list = [next(styles) for _ in df_show.columns]
     df_show.plot(
         style=style_list,
         legend=True,
         title=f"Plot {col} against time",
         xlabel="Time [s]",
+        ylabel=col_name.capitalize(),
         ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True,
     )
+    plt.savefig(os.path.join(result_path, f"plot-{col}.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
     plt.close()
 
@@ -289,14 +293,18 @@ for col in cols[1 : len(cols) - 2]:
 
     df_show = df_show.loc[first_idx - 2.0: first_idx + 2.0]
     style_list = [next(styles) for _ in df_show.columns]
+    col_name = col.replace("_", " ")
     df_show.plot(
         style=style_list,
         legend=True,
-        title=f"Plot {col} against time - change near {round(first_idx, 2)} second",
+        title=f"Plot {col_name} against time - change near {round(first_idx, 0)} second",
         xlabel="Time [s]",
+        ylabel=col_name.capitalize(),
         # ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True,
     )
+    #plt.figure().gca().yaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.savefig(os.path.join(result_path, f"plot-{col}-part.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-{col}-part.png"))
     plt.close()
 
@@ -362,6 +370,7 @@ for node_id in nodes_ids:
     plt.ylabel("Trust")
     plt.legend(title="Source node")
     plt.grid(True)
+    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.png"))
     plt.close()
 
@@ -375,7 +384,7 @@ for node_id in nodes_ids:
     first_idx = pivot[pivot[random_column] == random_trust].first_valid_index()
     print("First index: " + str(int(first_idx)))
 
-    pivot = pivot.loc[first_idx - 2.0: first_idx + 2.0]
+    pivot = pivot.loc[first_idx - 2: first_idx + 2]
     style_list = [next(styles) for _ in pivot.columns]
     pivot.plot(
         style=style_list,
@@ -390,5 +399,6 @@ for node_id in nodes_ids:
     # plt.ylabel('Trust')
     plt.legend(title="Source node")
     plt.grid(True)
+    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}-part.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}-part.png"))
     plt.close()

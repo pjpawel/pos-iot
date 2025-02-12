@@ -8,7 +8,7 @@ from pot.network.blockchain import PoT
 
 
 class Dumper:
-    SECOND_PART = 10.0
+    SECOND_PART = 100.0
 
     dump_dir: str
     paths: list[str]

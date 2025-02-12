@@ -2,7 +2,7 @@ import logging
 import os
 import socket
 import random
-from time import sleep
+from time import sleep, time
 
 from dotenv import load_dotenv
 
@@ -36,7 +36,19 @@ if ip != genesis_ip:
 pot = PoT()
 pot.load(only_from_file=True)
 
-sleep(50.0)
+start = time()
+last_nodes_len = 1
+while True:
+    nodes_len = len(pot.nodes.all())
+    if nodes_len == last_nodes_len:
+        if time() - start > 10.0:
+            break
+    else:
+        last_nodes_len = nodes_len
+        start = time()
+    sleep(3)
+
+sleep(15.0)
 logging.debug("Starting setting new validators")
 validators_number = pot.nodes.calculate_validators_number()
 

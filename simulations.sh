@@ -8,7 +8,7 @@
 
 source env/bin/activate
 
-DATE=$(date +"%y_%d_%m_%s")
+DATE=$(date +"%y_%m_%d_%s")
 SIMULATIONS_DIR=../monitor/simulation_"$DATE"
 
 mkdir -p "$SIMULATIONS_DIR"
@@ -56,7 +56,7 @@ echo "Running simulation 2"
 echo "************************************"
 printf "\n"
 
-./compose-start.sh 2
+./compose-start.sh 2 0
 sleep 500
 ./compose-stop.sh
 
@@ -91,7 +91,7 @@ echo "Running simulation 3"
 echo "************************************"
 printf "\n"
 
-./compose-start.sh 3
+./compose-start.sh 3 0
 sleep 500
 ./compose-stop.sh
 
@@ -126,7 +126,7 @@ echo "Running simulation 4"
 echo "************************************"
 printf "\n"
 
-./compose-start.sh 4 12
+./compose-start.sh 4 0 12
 sleep 500
 ./compose-stop.sh
 

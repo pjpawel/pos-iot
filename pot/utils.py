@@ -33,6 +33,6 @@ def prepare_simulation_env():
             os.environ["MAX_DELAY"] = "300"
         case 3:
             if randint(0, 100) % 4 == 0:
-                os.environ["POT_SCENARIOS"] = "mad_sender"
+                os.environ["POT_SCENARIOS"] = "MAD_SENDER"
         case _:
-            os.environ["POT_SCENARIOS"] = "instant_sender"
+            os.environ["POT_SCENARIOS"] = "INSTANT_SENDER"
