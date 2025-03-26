@@ -21,8 +21,8 @@ class Scenario(StrEnum):
                 return instant_sender
             case self.MAD_SENDER:
                 return mad_sender
-            case self.SIMPLE_SENDER:
-                return simple_sender
+            # case self.SIMPLE_SENDER:
+            #     return simple_sender
             case _:
                 raise ScenarioNotSupported(f"Scenario is not supported: {self.name}")
 

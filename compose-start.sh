@@ -5,8 +5,9 @@ BUILD=${2:-1}
 NODE_NUMBER=${3:-6}
 
 TIME=$(date +%s)
-mkdir -p ../storage-archive/"$TIME"
-mv ../storage/* ../storage-archive/"$TIME"
+#mkdir -p ../storage-archive/"$TIME"
+#mv ../storage/* ../storage-archive/"$TIME"
+rm -rf ../storage/*
 
 NODE_NUMBER=$((NODE_NUMBER + 11))
 

@@ -9,8 +9,9 @@ from uuid import uuid4, UUID
 
 import requests
 
+from .manager import RejectedTransactionManager
 from .service import Blockchain, Node as NodeService, TransactionToVerify
-from .storage import encode_chain, decode_chain
+from .storage import encode_chain, decode_chain, TransactionTime
 from .transaction import Tx, TxToVerify, TxVerified
 from .node import Node, SelfNodeInfo, NodeType
 from .request import Request
@@ -23,12 +24,16 @@ class PoT:
     nodes: NodeService
     tx_to_verified: TransactionToVerify
     self_node: SelfNodeInfo
+    txs_rejected: RejectedTransactionManager
+    tx_time_storage: TransactionTime
 
     def __init__(self):
         self.self_node = SelfNodeInfo()
         self.blockchain = Blockchain()
         self.nodes = NodeService()
         self.tx_to_verified = TransactionToVerify()
+        self.txs_rejected = RejectedTransactionManager()
+        self.tx_time_storage = TransactionTime()
 
     def load(self, only_from_file: bool = False) -> None:
         hostname = socket.gethostname()
@@ -137,6 +142,9 @@ class PoT:
             tx_verified = self.blockchain.find_tx_verified(uuid)
             if tx_verified:
                 raise PoTException("Transaction already verified", 418)
+            if self.txs_rejected.has(uuid):
+                raise PoTException("Transaction was already rejected", 418)
+
             tx_bytes = None
             for validator_id in self.nodes.validators.all():
                 validator_node = self.nodes.find_by_identifier(validator_id)
@@ -182,14 +190,20 @@ class PoT:
                 self.send_multiple_trust_change(
                     nodes_negative, trust_change, -10 * trust_change.value, uuid.hex
                 )
+                self.tx_time_storage.append(uuid, True, time() - tx_verified.tx.timestamp)
             else:
                 logging.info(f"Transaction {uuid.hex} was rejected")
+                self.txs_rejected.add(uuid)
+                if self.tx_to_verified.find(uuid):
+                    logging.warning(f"Transaction {uuid.hex} is still in to verify. Removing it")
+                    self.tx_to_verified.pop(uuid)
                 self.send_multiple_trust_change(
                     nodes_positive, trust_change, -10 * trust_change.value, uuid.hex
                 )
                 self.send_multiple_trust_change(
                     nodes_negative, trust_change, trust_change.value, uuid.hex
                 )
+                self.tx_time_storage.append(uuid, False, time() - tx_to_verified.tx.timestamp)
 
     def send_new_transaction_verified(self, identifier: UUID, tx_verified: TxVerified):
         data = str(tx_verified)
@@ -427,6 +441,7 @@ class PoT:
         txs_verified_set = set(txs_verified)
         b_txs = set(block.transactions)
         diff = b_txs.difference(txs_verified)
+        #diff = b_txs.difference(txs_verified_set)
         if diff:
             raise PoTException(f"Transactions {', '.join([str(tx) for tx in diff])} are not verified",400)
         diff = txs_verified_set.difference(b_txs)
@@ -474,6 +489,7 @@ class PoT:
                 raise PoTException(f"Node is already registered with identifier: {node.identifier}", 400)
         new_node = Node(identifier, node_ip, 5000, n_type)
         self.nodes.add(new_node)
+        self.nodes.node_trust.add_new_node_trust(new_node)
         data_to_send = {
             "identifier": new_node.identifier.hex,
             "host": new_node.host,

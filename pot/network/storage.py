@@ -534,3 +534,53 @@ class NodeTrustFullHistory(NodeTrustHistory):
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
             f.close()
+
+class RejectedTransactions(Storage):
+    PATH = "rejected_transactions"
+
+    def load(self) -> list[UUID]:
+        f = open(self.path, "r")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
+            identifiers = []
+            if not self.is_empty():
+                reader = csv.reader(f)
+                identifiers = [UUID(data[0]) for data in reader]
+            self.update_cache()
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+            f.close()
+        return identifiers
+
+    def update(self, identifiers: list[UUID]) -> None:
+        f = open(self.path, "a")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            logging.debug(f"Appending {len(identifiers)} {self.PATH} to storage")
+            writer = csv.writer(f)
+            for identifier in identifiers:
+                writer.writerow([identifier.hex])
+            f.flush()
+            self.update_cache()
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+            f.close()
+
+class TransactionTime(Storage):
+    PATH = "transaction_time"
+
+    def append(self, identifier: UUID, result: bool, tx_time: float) -> None:
+        f = open(self.path, "a")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            logging.debug(f"Appending 1 {self.PATH} to storage")
+            writer = csv.writer(f)
+            writer.writerow([identifier.hex, result, tx_time])
+            f.flush()
+            self.update_cache()
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+            f.close()

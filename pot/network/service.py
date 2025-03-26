@@ -52,44 +52,46 @@ class Blockchain(BlockchainManager):
         )
 
     def find_tx_verified(self, identifier: UUID) -> TxVerified | None:
-        for tx_id, tx_verified in self.txs_verified.all().items():
-            if tx_id == identifier:
-                return tx_verified
+        if identifier in list(self.txs_verified.all().keys()):
+            return self.txs_verified.find(identifier)
+        # for tx_id, tx_verified in self.txs_verified.all().items():
+        #     if tx_id == identifier:
+        #         return tx_verified
         return None
 
     def find_last_transactions_values_for_node(
         self, node: NodeDto, t_type: str | None = None
     ) -> list[dict]:
         n_count = 0
-        include_type = t_type is not None
         txs_verified = self.txs_verified.all().values()
         txs_values = []
 
-        def add_value_from_tx(tx: Tx):
-            global n_count
-            if n_count >= 100:
-                return
+        def add_value_from_tx(tx: Tx, t_type: str | None) -> bool:
             if tx.sender != node.identifier:
-                return
+                return False
             tx_type = tx.data.get(Tx.TYPE_KEY)
-            if include_type and tx_type != type:
-                return
+            if t_type is not None and tx_type != t_type:
+                return False
             txs_values.append({"type": tx_type, "data": tx.data})
-            n_count += 1
+            return True
 
         for tx_verified in txs_verified:
-            if n_count >= 100:
-                break
             tx = tx_verified.tx
             if tx.sender == node.identifier:
-                add_value_from_tx(tx)
+                rs = add_value_from_tx(tx, t_type)
+                if rs:
+                    n_count += 1
+                    if n_count >= 100:
+                        break
         blocks = self.all()
         for block in blocks:
-            if n_count >= 100:
-                break
             for tx in block.transactions:
                 if tx.sender == node.identifier:
-                    add_value_from_tx(tx)
+                    rs = add_value_from_tx(tx, t_type)
+                    if rs:
+                        n_count += 1
+                        if n_count >= 100:
+                            break
         return txs_values
 
 

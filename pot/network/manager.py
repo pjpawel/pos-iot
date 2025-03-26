@@ -19,6 +19,7 @@ from .storage import (
     decode_chain,
     NodeTrustHistory,
     NodeTrustFullHistory,
+    RejectedTransactions,
 )
 from .transaction import TxToVerify, TxVerified
 from .trust import NodeTrustChange
@@ -104,6 +105,7 @@ class TransactionToVerifyManager(Manager):
         return self._txs
 
     def pop(self, identifier: UUID) -> TxToVerify:
+        logging.info(f"Pop transaction {identifier.hex}")
         self.refresh()
         try:
             self._storage.wait_for_set_lock()
@@ -122,9 +124,7 @@ class TransactionToVerifyManager(Manager):
         if not tx:
             raise Exception(f"Transaction {identifier.hex} not found")
         if tx.has_verification_result(node):
-            logging.warning(
-                f"Voting of transaction {identifier.hex} is already saved from node {node.identifier}"
-            )
+            logging.warning(f"Voting of transaction {identifier.hex} is already saved from node {node.identifier}")
             return
         self.refresh()
         try:
@@ -136,7 +136,7 @@ class TransactionToVerifyManager(Manager):
             self._storage.unlock()
             raise e
         logging.info(
-            f"Successfully added verification result {result} from {node.identifier.hex}"
+            f"Successfully added verification of transaction {identifier.hex} result {result} from {node.identifier.hex}"
         )
 
 
@@ -250,6 +250,10 @@ class NodeTrust(Manager):
             self.add_new_node_trust(node)
             self.refresh()
             trust = self._trusts.get(node.identifier)
+        # trust = None
+        # while trust is None:
+        #     self.refresh()
+        #     trust = self._trusts.get(node.identifier)
         self._trusts[node.identifier] = trust + new_trust
         self._storage.dump(self._trusts)
 
@@ -275,6 +279,7 @@ class TransactionVerifiedManager(Manager):
         self.refresh()
         self._txs[identifier] = tx
         self._storage.update({identifier: tx})
+        logging.debug(f"Added transaction {identifier.hex} to verified")
 
     def refresh(self) -> None:
         if self._storage.is_up_to_date():
@@ -464,3 +469,31 @@ class NodeTrustHistoryManager(Manager):
         self.node_trusts.append(node_trust)
         # TO REMOVE
         self._history_storage.update([node_trust])
+
+
+class RejectedTransactionManager(Manager):
+    _storage = RejectedTransactions
+    _rejected_txs: list[UUID]
+
+    def __init__(self):
+        self._storage = RejectedTransactions()
+        self._rejected_txs = self._storage.load()
+
+    def refresh(self) -> None:
+        if self._storage.is_up_to_date():
+            return
+        self._rejected_txs = self._storage.load()
+
+    def all(self) -> list[UUID]:
+        self.refresh()
+        return self._rejected_txs
+
+    def has(self, tx_id: UUID) -> bool:
+        self.refresh()
+        return tx_id in self._rejected_txs
+
+    def add(self, tx_id: UUID) -> None:
+        self.refresh()
+        self._storage.update([tx_id])
+        self._rejected_txs.append(tx_id)
+

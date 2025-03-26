@@ -43,10 +43,13 @@ class Request:
         response = requests.post(
             f"http://{host}:{port}/transaction/{identifier}/verifyResult", json=data
         )
-        if response.status_code != 200:
-            raise Exception(
-                f"Cannot send populate verification result to host: {host}:{port} response: {response.text.encode('utf-8')}"
-            )
+        if response.status_code == 200:
+            return
+        if response.status_code == 418:
+            logging.warning(f"Transaction {identifier} is already verified")
+        raise Exception(
+            f"Cannot send populate verification result to host: {host}:{port} response: {response.text.encode('utf-8')}"
+        )
 
     @staticmethod
     def send_transaction_get_info(host: str, port: int, identifier: str) -> bytes:
