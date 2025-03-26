@@ -105,6 +105,16 @@ cols_dict = {
     "validators": "Validators",
 }
 
+translation = {
+    "Time [s]": "Czas [s]",
+    "number of nodes": "Liczba węzłów",
+    "number of validators": "Liczba walidatorów",
+    "number of blocks": "Liczba bloków",
+    "number of transaction to verify": "Liczba transakcji do weryfikacji",
+    "number of verified transactions": "Liczba zweryfikowanych transakcji",
+    "validators": "Walidatorzy",
+}
+
 cols = list(cols_dict.keys())
 
 df_trust = pd.DataFrame(columns=["time", "sourceNode", "node", "trust"])
@@ -263,14 +273,20 @@ for col in cols[1 : len(cols) - 2]:
     df_show.plot(
         style=style_list,
         legend=True,
-        title=f"Plot {col} against time",
+        #title=f"Plot {col} against time",
         xlabel="Time [s]",
         ylabel=col_name.capitalize(),
         ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True,
     )
-    plt.savefig(os.path.join(result_path, f"plot-{col}.pdf"))
-    plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
+    #plt.savefig(os.path.join(result_path, f"plot-{col}.pdf"))
+    #plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
+
+    plt.xlabel("Czas [s]")
+    plt.ylabel(translation[col_name])
+
+    #plt.savefig(os.path.join(result_path, f"plot-pl-{col}.pdf"))
+    plt.savefig(os.path.join(result_path, f"plot-pl-{col}.png"))
     plt.close()
 
     # Plot of change
@@ -297,15 +313,26 @@ for col in cols[1 : len(cols) - 2]:
     df_show.plot(
         style=style_list,
         legend=True,
-        title=f"Plot {col_name} against time - change near {round(first_idx, 0)} second",
+        #title=f"Plot {col_name} against time - change near {round(first_idx, 0)} second",
         xlabel="Time [s]",
         ylabel=col_name.capitalize(),
         # ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
         grid=True,
     )
     #plt.figure().gca().yaxis.set_major_locator(MaxNLocator(integer=True))
-    plt.savefig(os.path.join(result_path, f"plot-{col}-part.pdf"))
+    #plt.savefig(os.path.join(result_path, f"plot-{col}-part.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-{col}-part.png"))
+
+    df_show.plot(
+        style=style_list,
+        legend=True,
+        xlabel="Czas [s]",
+        ylabel=translation[col_name],
+        # ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
+        grid=True,
+    )
+    #plt.savefig(os.path.join(result_path, f"plot-pl-{col}.pdf"))
+    plt.savefig(os.path.join(result_path, f"plot-pl-{col}.png"))
     plt.close()
 
 print("")
@@ -356,7 +383,7 @@ for node_id in nodes_ids:
     pivot.plot(
         style=style_list,
         legend=True,
-        title=f"Change of trust for node {node_name} in time",
+        #title=f"Change of trust for node {node_name} in time",
         xlabel="Time [s]",
         ylabel="Trust",
         grid=True,
@@ -365,13 +392,19 @@ for node_id in nodes_ids:
     #     .reset_index()
     #     .pivot(index='time', columns='sourceNode', values='trust')
     #     .plot(kind='line', figsize=(10, 6), style=style_list))
-    plt.title(f"Change of trust for node {node_name} in time ")
+    #plt.title(f"Change of trust for node {node_name} in time ")
     plt.xlabel("Time [s]")
-    plt.ylabel("Trust")
+    plt.ylabel("Level of Trust")
     plt.legend(title="Source node")
     plt.grid(True)
-    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.pdf"))
-    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.png"))
+    #plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.pdf"))
+    #plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.png"))
+
+    plt.xlabel("Czas [s]")
+    plt.ylabel("Poziom zaufania")
+
+    #plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}.pdf"))
+    plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}.png"))
     plt.close()
 
     # Plot trust for node - part
@@ -386,19 +419,27 @@ for node_id in nodes_ids:
 
     pivot = pivot.loc[first_idx - 2: first_idx + 2]
     style_list = [next(styles) for _ in pivot.columns]
-    pivot.plot(
-        style=style_list,
-        legend=True,
-        title=f"Change of trust for node {node_name} in time - change near {round(first_idx, 2)} second",
-        xlabel="Time [s]",
-        ylabel="Trust",
-        grid=True,
-    )
-    # plt.title(f"Change of trust for node {node_name} in time - change near {first_idx} second")
+    # pivot.plot(
+    #     style=style_list,
+    #     legend=True,
+    #     #title=f"Change of trust for node {node_name} in time - change near {round(first_idx, 2)} second",
+    #     xlabel="Time [s]",
+    #     ylabel="Trust",
+    #     grid=True,
+    # )
+    ## plt.title(f"Change of trust for node {node_name} in time - change near {first_idx} second")
+
+
     # plt.xlabel('Time [s]')
     # plt.ylabel('Trust')
-    plt.legend(title="Source node")
-    plt.grid(True)
-    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}-part.pdf"))
-    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}-part.png"))
-    plt.close()
+    # plt.legend(title="Source node")
+    # plt.grid(True)
+    # plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}-part.pdf"))
+    # plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}-part.png"))
+    #
+    # plt.xlabel("Czas [s]")
+    # plt.ylabel("Poziom zaufania")
+    #
+    # plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}-part.pdf"))
+    # plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}-part.png"))
+    #plt.close()
