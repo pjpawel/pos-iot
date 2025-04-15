@@ -1,3 +1,4 @@
+import csv
 import datetime
 import os
 import random
@@ -11,18 +12,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from dotenv import load_dotenv
+from requests.utils import rewind_body
 
 from pot.network.dumper import Dumper
-from pot.network.node import SelfNodeInfo
-from pot.network.storage import (
-    BlocksStorage,
-    NodeStorage,
-    TransactionStorage,
-    NodeTrustStorage,
-    ValidatorStorage,
-    TransactionVerifiedStorage,
-)
 from pot.network.manager import NodeTrust
+from pot.monitor.imports import (
+    get_self_node_info,
+    get_info_from_blockchain,
+    get_info_from_nodes, get_info_from_validators, get_info_from_transactions_to_verify,
+    get_info_from_transactions_verified, get_transactions_times, get_transactions_times_values,
+)
 
 storage_path = os.path.realpath(
     os.path.join(os.path.dirname(__file__), "..", "storage")
@@ -31,69 +30,12 @@ result_path = os.path.realpath(
     os.path.join(os.path.dirname(__file__), "..", "monitor", "result")
 )
 
-firsts_records = 10000
-firsts_records = None
+#firsts_records = 10000
+firsts_records = None   # None|10000
 
 load_dotenv()
 
-
-def get_self_node_info(path: str) -> UUID:
-    old_value = os.getenv("STORAGE_DIR")
-    os.environ["STORAGE_DIR"] = path
-    self_node = SelfNodeInfo(True)
-    os.environ["STORAGE_DIR"] = old_value
-    return self_node.identifier
-
-
-def get_info_from_blockchain(path: str) -> dict:
-    storage = BlocksStorage(path)
-    blocks = storage.load()
-    return {
-        "len": len(blocks),
-        "transaction_len": sum([len(block.transactions) for block in blocks]),
-    }
-
-
-def get_info_from_nodes(path: str) -> dict:
-    storage = NodeStorage(path)
-    nodes = storage.load()
-    trust = NodeTrust.__new__(NodeTrust)
-    trust._storage = NodeTrustStorage(path)
-    # trust._storage.load()
-    # print(f"Trust from {path}: {trust._storage.load()}")
-    # old_value = os.getenv('STORAGE_DIR')
-    # os.putenv('STORAGE_DIR', path)
-    # self_node = SelfNodeInfo()
-    # os.putenv('STORAGE_DIR', old_value)
-    return {
-        "len": len(nodes),
-        # "trust": trust.get_node_trust(self_node.get_node())
-        "trust": trust._storage.load(),
-    }
-
-
-def get_info_from_validators(path: str) -> dict:
-    storage = ValidatorStorage(path)
-    validators = storage.load()
-    return {"len": len(validators), "validators": ",".join([v.hex for v in validators])}
-
-
-def get_info_from_transactions_to_verify(path: str) -> dict:
-    storage = TransactionStorage(path)
-    try:
-        txs = storage.load()
-    except Exception as e:
-        print(f"Error while processing path {path}: {e}")
-        txs = []
-    return {"len": len(txs)}
-
-
-def get_info_from_transactions_verified(path: str) -> dict:
-    storage = TransactionVerifiedStorage(path)
-    txs = storage.load()
-    return {"len": len(txs)}
-
-
+##############################################
 cols_dict = {
     "time": "Time",
     "number_of_nodes": "Number of nodes",
@@ -115,6 +57,10 @@ translation = {
     "validators": "Walidatorzy",
 }
 
+markers = ["1","2","3","4","8","s","p","P","*","h","H","+","x","X","D","d","|","_",]
+line_styles = ["-", "--", ":", "-."]
+styles = itertools.cycle([marker + line for marker in markers for line in line_styles])
+
 cols = list(cols_dict.keys())
 
 df_trust = pd.DataFrame(columns=["time", "sourceNode", "node", "trust"])
@@ -123,15 +69,14 @@ df_trust.set_index(["time", "sourceNode", "node"], inplace=True)
 
 first_time = None
 dfs = {}
-
+transaction_times = []
 nodes_mapping = {}
+last_trust = {}
 
 for node in os.listdir(storage_path):
     # list all nodes in dir
-
     if node == ".gitignore":
         continue
-
     print(f"Processing node {node}")
 
     trust_data = []
@@ -139,12 +84,19 @@ for node in os.listdir(storage_path):
     df = pd.DataFrame(columns=cols)
     df.set_index("time", inplace=True)
 
-    dirs = [
-        int(time_dir)
-        for time_dir in os.listdir(os.path.join(storage_path, node, "dump"))
-    ]
+    dirs = [int(time_dir) for time_dir in os.listdir(os.path.join(storage_path, node, "dump"))]
     dirs.sort()
     print(f"Found {len(dirs)} dirs in node {node}")
+
+
+    storage_dir = os.path.join(storage_path, node, "storage")
+    # Get all transactions time
+    transaction_times.extend(get_transactions_times_values(storage_dir))
+    # Get last trust
+    self_node_id = get_self_node_info(storage_dir)
+    all_node_trust = get_info_from_nodes(storage_dir)["trust"]
+    last_trust[self_node_id] = all_node_trust
+
 
     record_i = 0
     for time in dirs:
@@ -208,10 +160,9 @@ for node in os.listdir(storage_path):
     )
     df_trust_node.set_index(["time", "sourceNode", "node"], inplace=True)
     # df_trust_node.to_excel(os.path.join(result_path, f"result-trust-{node}.xlsx"))
-
     df_trust = pd.concat([df_trust, df_trust_node])
 
-# df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
+#df_trust.to_excel(os.path.join(result_path, "result-trust.xlsx"))
 
 print("")
 import datetime
@@ -229,31 +180,92 @@ for validators_str in random_df["validators"].unique():
     )
 print("")
 
+"""
+Calculate transaction times
+"""
+if not transaction_times:
+    print("No transaction times")
+else:
+    tx_min = min(transaction_times)
+    tx_max = max(transaction_times)
+    tx_mean = np.mean(transaction_times)
+    tx_std = np.std(transaction_times)
+    tx_q1 = np.percentile(transaction_times, 25)
+    tx_q3 = np.percentile(transaction_times, 75)
+
+    print("Transaction times")
+    print(f"Median: {np.median(transaction_times)}")
+    print(f"Min: {tx_min}")
+    print(f"Max: {tx_max}")
+    print(f"Mean: {tx_mean}")
+    print(f"Std: {tx_std}")
+    print(f"Q1: {tx_q1}")
+    print(f"Q3: {tx_q3}")
+    print("")
+
+    with open(os.path.join(result_path, "result_tx.csv"), "w") as f:
+        csv.writer(f).writerows([transaction_times])
+
+
+"""
+Save last trust
+"""
+trusts = []
+node_to_cover = []
+for node_id, trust in last_trust.items():
+    value = trust.get(node_id, None)
+    if value is None:
+        node_to_cover.append(node_id)
+    else:
+        trusts.append(value)
+
+for node_id in node_to_cover:
+    list_values = [value.get(node_id, np.nan) for value in list(last_trust.values())]
+    new_values = [value for value in list_values if value is not np.nan]
+    if not new_values:
+        print(f"Node {node_id} not found in last trust")
+        new_values = [5000]
+    value = np.mean(new_values)
+    trusts.append(value)
+
+
+print("Info about last trust")
+#trust_values = list(last_trust.values())
+trust_values = trusts
+if not trust_values:
+    print("No trust values")
+else:
+    trust_mean = np.mean(trust_values)
+    trust_std = np.std(trust_values)
+    trust_q1 = np.percentile(trust_values, 25)
+    trust_q3 = np.percentile(trust_values, 75)
+    trust_median = np.median(trust_values)
+    trust_max = max(trust_values)
+    trust_min = min(trust_values)
+    print(f"Median: {trust_median}")
+    print(f"Mean: {trust_mean}")
+    print(f"Std: {trust_std}")
+    print(f"Q1: {trust_q1}")
+    print(f"Q3: {trust_q3}")
+    print(f"Max: {trust_max}")
+    print(f"Min: {trust_min}")
+    print("")
+
+    with open(os.path.join(result_path, "result_trust_values.csv"), "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(trusts)
+        # for node, trust in last_trust.items():
+        #     writer.writerow([node, trust])
+
+    with open(os.path.join(result_path, "result_trust.csv"), "w") as f:
+        csv.writer(f).writerow([trust_median, trust_mean, trust_std, trust_q1, trust_q3, trust_max, trust_min])
+
+
+"""
+Plotting
+"""
 for node, df in dfs.items():
     df.drop(columns=["validators"], inplace=True)
-
-markers = [
-    "1",
-    "2",
-    "3",
-    "4",
-    "8",
-    "s",
-    "p",
-    "P",
-    "*",
-    "h",
-    "H",
-    "+",
-    "x",
-    "X",
-    "D",
-    "d",
-    "|",
-    "_",
-]
-line_styles = ["-", "--", ":", "-."]
-styles = itertools.cycle([marker + line for marker in markers for line in line_styles])
 
 # check if all df has step by step info
 for col in cols[1 : len(cols) - 2]:
@@ -343,27 +355,6 @@ pprint(nodes_mapping)
 print("Nodes")
 pprint(nodes_ids)
 
-markers = [
-    "1",
-    "2",
-    "3",
-    "4",
-    "8",
-    "s",
-    "p",
-    "P",
-    "*",
-    "h",
-    "H",
-    "+",
-    "x",
-    "X",
-    "D",
-    "d",
-    "|",
-    "_",
-]
-line_styles = ["-", "--", ":", "-."]
 styles = itertools.cycle([marker + line for marker in markers for line in line_styles])
 
 for node_id in nodes_ids:
@@ -442,4 +433,4 @@ for node_id in nodes_ids:
     #
     # plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}-part.pdf"))
     # plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}-part.png"))
-    #plt.close()
+    plt.close()
