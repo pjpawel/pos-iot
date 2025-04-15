@@ -5,6 +5,7 @@ Pytest fixtures for pot.blockchain test module
 import os
 import socket
 from hashlib import sha256
+from typing import Optional
 from uuid import uuid4
 
 import pytest
@@ -63,6 +64,10 @@ class Helper:
     def get_self_node(n_type: None | NodeType = None) -> SelfNode:
         node = Node(uuid4(), "localhost", 5000, n_type)
         return SelfNode(node, Helper.get_self_node_info())
+
+    @staticmethod
+    def create_node(n_type: Optional[NodeType] = None) -> Node:
+        return Node(uuid4(), "localhost", 5000, n_type)
 
     @staticmethod
     def create_block() -> Block:
