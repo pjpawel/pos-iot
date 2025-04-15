@@ -49,7 +49,8 @@ def random_delay(f):
     def wrapper(*args, **kwargs):
         max_delay = os.environ.get("MAX_DELAY")
         if max_delay is not None:
-            time.sleep(float(random.randint(0, int(max_delay))) / 1000.0)
+            min_delay = int(os.environ.get("MIN_DELAY", 0))
+            time.sleep(float(random.randint(min_delay, int(max_delay))) / 1000.0)
         return f(*args, **kwargs)
 
     return wrapper
