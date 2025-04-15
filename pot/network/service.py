@@ -1,3 +1,4 @@
+import os
 from hashlib import sha256
 from uuid import UUID
 
@@ -102,6 +103,7 @@ class Node(NodeManager):
     node_trust: NodeTrust
     node_trust_history: NodeTrustHistoryManager
     validators: ValidatorManager
+    validators_part: float
 
     def __init__(self):
         super().__init__()
@@ -111,6 +113,7 @@ class Node(NodeManager):
         self.node_trust = NodeTrust()
         self.node_trust_history = NodeTrustHistoryManager()
         self.validators = ValidatorManager()
+        self.validators_part = float(os.environ.get("VALIDATORS_PART", 0.2))
 
     def prepare_all_nodes_info(self) -> list[dict]:
         return self.prepare_nodes_info(self.all())
@@ -204,10 +207,7 @@ class Node(NodeManager):
         return len(self.get_validator_nodes())
 
     def calculate_validators_number(self) -> int:
-        nnodes = self.len()
-        if nnodes < 2:
-            return nnodes
-        return max(2, min(int(nnodes / 5), int(nnodes / 2)))
+        return max(2, int(self.len() * self.validators_part))
 
 
 class TransactionToVerify(TransactionToVerifyManager):
