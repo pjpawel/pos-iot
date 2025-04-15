@@ -214,12 +214,8 @@ class TxToVerify:
             [
                 str(self.tx).replace(":", "_"),
                 str(self.node).replace(":", "_"),
-                "_".join(
-                    [
-                        f"{key.hex}-{self.voting[key]}"
-                        for key in list(self.voting.keys())
-                    ]
-                ),
+                # "_".join([f"{key.hex}-{str(result)}" for key, result in self.voting.items()]), # str(int(result))
+                "_".join([f"{key.hex}-{str(int(result))}" for key, result in self.voting.items()]), # str(int(result))
                 str(self.time),
             ]
         )
@@ -227,6 +223,10 @@ class TxToVerify:
     @classmethod
     def from_str(cls, data: str):
         split = data.split(":")
+        if len(split) != 4:
+            from pprint import pprint
+            pprint(split)
+            raise Exception(f"Invalid TxToVerify string:")
         node_info = split[1].split("_")
         # node = Node.load_from_list(node_info) if node_info[4] == '0' else SelfNode.load_from_list(node_info)
         node = Node.load_from_list(node_info)
@@ -235,7 +235,8 @@ class TxToVerify:
         if split[2] != "":
             for vote in split[2].split("_"):
                 vote_split = vote.split("-")
-                tx.voting[UUID(vote_split[0])] = bool(vote_split[1])
+                # tx.voting[UUID(vote_split[0])] = vote_split[1] == "True"
+                tx.voting[UUID(vote_split[0])] = bool(int(vote_split[1]))
         return tx
 
     def get_verified_tx(self) -> TxVerified:
