@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pot.network.node import Node
+from pot.network.node import Node, NodeType
 from pot.network.transaction import Tx, TxCandidate, TxToVerify
 from test.network.conftest import Helper
 
@@ -86,3 +86,64 @@ def test_tx_verification_result_positive(helper: Helper):
     tx_to_verify.add_verification_result(Node(uuid4(), "mno", 5000), False)
 
     assert tx_to_verify.is_voting_positive() is False
+
+
+def test_tx_to_validate_str(helper: Helper):
+    self_node_info = helper.get_self_node_info()
+
+    tx_c = TxCandidate({"d": "abc", "t": "1"})
+    tx = tx_c.sign(self_node_info)
+
+    tx_to_verify = TxToVerify(tx, helper.get_self_node())
+
+    encoded = tx_to_verify.__str__()
+    assert encoded == str(tx_to_verify)
+
+
+def test_tx_to_validate_encode(helper: Helper):
+    self_node_info = helper.get_self_node_info()
+    node = self_node_info.get_node()
+    node.type = NodeType.SENSOR
+
+    tx_c = TxCandidate({"d": "abc", "t": "1"})
+    tx = tx_c.sign(self_node_info)
+
+    tx_to_verify = TxToVerify(tx, node)
+
+    encoded = str(tx_to_verify)
+    assert tx_to_verify == TxToVerify.from_str(encoded)
+
+
+def test_tx_to_validate_encode_with_voting(helper: Helper):
+    self_node_info = helper.get_self_node_info()
+    node = self_node_info.get_node()
+    node.type = NodeType.SENSOR
+
+    tx_c = TxCandidate({"d": "abc", "t": "1"})
+    tx = tx_c.sign(self_node_info)
+
+    tx_to_verify = TxToVerify(tx, node)
+    tx_to_verify.add_verification_result(helper.create_node(), True)
+
+    encoded = str(tx_to_verify)
+    assert tx_to_verify == TxToVerify.from_str(encoded)
+
+def test_tx_to_validate_encode_with_voting2(helper: Helper):
+    self_node_info = helper.get_self_node_info()
+    node = self_node_info.get_node()
+    node.type = NodeType.SENSOR
+
+    tx_c = TxCandidate({"d": "abc", "t": "1"})
+    tx = tx_c.sign(self_node_info)
+    tx_to_verify = TxToVerify(tx, node)
+
+    node = helper.create_node()
+    print(f"Created node: {node.identifier.hex}")
+    tx_to_verify.add_verification_result(node, True)
+
+    node = helper.create_node()
+    print(f"Created node: {node.identifier.hex}")
+    tx_to_verify.add_verification_result(node, False)
+
+    assert tx_to_verify == TxToVerify.from_str(str(tx_to_verify))
+

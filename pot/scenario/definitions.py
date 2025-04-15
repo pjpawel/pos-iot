@@ -118,7 +118,7 @@ def mad_sender(pot: PoT):
 def simple_sender(pot: PoT):
     send = True
     while send:
-        sleep(5)
+        sleep(10)
         if pot.nodes.len() == 0:
             continue
         logging.debug(
