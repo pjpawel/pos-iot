@@ -584,3 +584,22 @@ class TransactionTime(Storage):
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
             f.close()
+
+    def load(self):
+        f = open(self.path, "r")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            logging.debug(
+                f"Loading '{self.PATH}' from storage of size: {self.get_size()}"
+            )
+            transactions_times = {}
+            if not self.is_empty():
+                reader = csv.reader(f)
+                for row in reader:
+                    transactions_times[UUID(row[0])] = (bool(row[1]), float(row[2]))
+            self.update_cache()
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+            f.close()
+        return transactions_times
+        
