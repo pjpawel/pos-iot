@@ -1,0 +1,259 @@
+#!/bin/bash
+
+# Run all simulations - in time of 7000 seconds
+# Simulations:
+# 1. All correct transactions
+# 2. Some nodes sending incorrect transactions
+# 3. All nodes has random delay
+
+source env/bin/activate
+
+DATE=$(date +"%y_%m_%d_%s")
+SIMULATIONS_DIR=../monitor/simulation_"$DATE"
+echo "SIMULATION DIR: $SIMULATION_DIR"
+
+mkdir -p "$SIMULATIONS_DIR"
+
+############################################
+# Run simulation 1
+printf "\n"
+echo "************************************"
+echo "Running simulation 1"
+echo "************************************"
+printf "\n"
+
+./compose-start.sh 1 1 2
+sleep 500
+./compose-stop.sh
+
+printf "\n"
+echo "************************************"
+echo "Simulation 1 stopped"
+echo "************************************"
+printf "\n"
+
+python3 monitor.py
+
+SIMULATION_DIR=$SIMULATIONS_DIR/simulation_1
+mkdir -p "$SIMULATION_DIR"
+mkdir -p "$SIMULATION_DIR"/storage
+mkdir -p "$SIMULATION_DIR"/result
+
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
+mv ../monitor/result/* "$SIMULATION_DIR"/result
+
+printf "\n"
+echo "************************************"
+echo "Simulation 1 finished"
+echo "************************************"
+printf "\n"
+
+############################################
+# Run simulation 2
+
+printf "\n"
+echo "************************************"
+echo "Running simulation 2"
+echo "************************************"
+printf "\n"
+
+./compose-start.sh 1 0 4
+sleep 500
+./compose-stop.sh
+
+printf "\n"
+echo "************************************"
+echo "Simulation 2 stopped"
+echo "************************************"
+printf "\n"
+
+python3 monitor.py
+
+SIMULATION_DIR="$SIMULATIONS_DIR"/simulation_2
+mkdir -p "$SIMULATION_DIR"
+mkdir -p "$SIMULATION_DIR"/storage
+mkdir -p "$SIMULATION_DIR"/result
+
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
+mv ../monitor/result/* "$SIMULATION_DIR"/result
+
+printf "\n"
+echo "************************************"
+echo "Simulation 2 finished"
+echo "************************************"
+printf "\n"
+
+############################################
+# Run simulation 3
+
+printf "\n"
+echo "************************************"
+echo "Running simulation 3"
+echo "************************************"
+printf "\n"
+
+./compose-start.sh 1 0 6
+sleep 500
+./compose-stop.sh
+
+printf "\n"
+echo "************************************"
+echo "Simulation 3 stopped"
+echo "************************************"
+printf "\n"
+
+python3 monitor.py
+
+SIMULATION_DIR=$SIMULATIONS_DIR/simulation_3
+mkdir -p "$SIMULATION_DIR"
+mkdir -p "$SIMULATION_DIR"/storage
+mkdir -p "$SIMULATION_DIR"/result
+
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
+mv ../monitor/result/* "$SIMULATION_DIR"/result
+
+printf "\n"
+echo "************************************"
+echo "Simulation 3 finished"
+echo "************************************"
+printf "\n"
+
+############################################
+# Run simulation 4
+
+printf "\n"
+echo "************************************"
+echo "Running simulation 4"
+echo "************************************"
+printf "\n"
+
+./compose-start.sh 1 0 8
+sleep 500
+./compose-stop.sh
+
+printf "\n"
+echo "************************************"
+echo "Simulation 4 stopped"
+echo "************************************"
+printf "\n"
+
+python3 monitor.py
+
+SIMULATION_DIR=$SIMULATIONS_DIR/simulation_4
+mkdir -p "$SIMULATION_DIR"
+mkdir -p "$SIMULATION_DIR"/storage
+mkdir -p "$SIMULATION_DIR"/result
+
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
+mv ../monitor/result/* "$SIMULATION_DIR"/result
+
+printf "\n"
+echo "************************************"
+echo "Simulation 4 finished"
+echo "************************************"
+printf "\n"
+
+############################################
+# Run simulation 5
+
+printf "\n"
+echo "************************************"
+echo "Running simulation 5"
+echo "************************************"
+printf "\n"
+
+./compose-start.sh 1 0 10
+sleep 500
+./compose-stop.sh
+
+printf "\n"
+echo "************************************"
+echo "Simulation 5 stopped"
+echo "************************************"
+printf "\n"
+
+python3 monitor.py
+
+SIMULATION_DIR=$SIMULATIONS_DIR/simulation_5
+mkdir -p "$SIMULATION_DIR"
+mkdir -p "$SIMULATION_DIR"/storage
+mkdir -p "$SIMULATION_DIR"/result
+
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
+mv ../monitor/result/* "$SIMULATION_DIR"/result
+
+printf "\n"
+echo "************************************"
+echo "Simulation 5 finished"
+echo "************************************"
+printf "\n"
+
+############################################
+# Run simulation 6
+
+printf "\n"
+echo "************************************"
+echo "Running simulation 6"
+echo "************************************"
+printf "\n"
+
+./compose-start.sh 1 0 15
+sleep 500
+./compose-stop.sh
+
+printf "\n"
+echo "************************************"
+echo "Simulation 6 stopped"
+echo "************************************"
+printf "\n"
+
+python3 monitor.py
+
+SIMULATION_DIR=$SIMULATIONS_DIR/simulation_6
+mkdir -p "$SIMULATION_DIR"
+mkdir -p "$SIMULATION_DIR"/storage
+mkdir -p "$SIMULATION_DIR"/result
+
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
+mv ../monitor/result/* "$SIMULATION_DIR"/result
+
+printf "\n"
+echo "************************************"
+echo "Simulation 6 finished"
+echo "************************************"
+printf "\n"
+
+############################################
+# Run simulation 7
+
+printf "\n"
+echo "************************************"
+echo "Running simulation 7"
+echo "************************************"
+printf "\n"
+
+./compose-start.sh 1 0 20
+sleep 500
+./compose-stop.sh
+
+printf "\n"
+echo "************************************"
+echo "Simulation 7 stopped"
+echo "************************************"
+printf "\n"
+
+python3 monitor.py
+
+SIMULATION_DIR=$SIMULATIONS_DIR/simulation_7
+mkdir -p "$SIMULATION_DIR"
+mkdir -p "$SIMULATION_DIR"/storage
+mkdir -p "$SIMULATION_DIR"/result
+
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
+mv ../monitor/result/* "$SIMULATION_DIR"/result
+
+printf "\n"
+echo "************************************"
+echo "Simulation 7 finished"
+echo "************************************"
+printf "\n"

@@ -31,10 +31,10 @@ python3 monitor.py
 
 SIMULATION_DIR=$SIMULATIONS_DIR/simulation_1
 mkdir -p "$SIMULATION_DIR"
-mkdir -p "$SIMULATION_DIR"/storage
+#mkdir -p "$SIMULATION_DIR"/storage
 mkdir -p "$SIMULATION_DIR"/result
 
-cp -r ../storage/* "$SIMULATION_DIR"/storage
+#cp -r ../storage/* "$SIMULATION_DIR"/storage
 mv ../monitor/result/* "$SIMULATION_DIR"/result
 
 printf "\n"
