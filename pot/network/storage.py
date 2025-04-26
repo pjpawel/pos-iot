@@ -247,8 +247,10 @@ class TransactionStorage(Storage):
         try:
             with open(self.path, "w") as f:
                 writer = csv.writer(f)
-                for key in list(txs.keys()):
-                    writer.writerow([key.hex, txs[key].__str__()])
+                for key, tx_to_verify in txs.items():
+                    writer.writerow([key.hex, str(tx_to_verify)])
+                # for key in list(txs.keys()):
+                #     writer.writerow([key.hex, txs[key].__str__()])
             self.update_cache()
             if lock:
                 self.unlock()
@@ -278,8 +280,10 @@ class TransactionStorage(Storage):
         try:
             with open(self.path, "a") as f:
                 writer = csv.writer(f)
-                for key in list(txs.keys()):
-                    writer.writerow([key.hex, txs[key].__str__()])
+                for key, tx_to_verify in txs.items():
+                    writer.writerow([key.hex, str(tx_to_verify)])
+                # for key in list(txs.keys()):
+                #     writer.writerow([key.hex, txs[key].__str__()])
             self.update_cache()
             self.unlock()
         except Exception as e:
@@ -294,6 +298,8 @@ class TransactionStorage(Storage):
             with open(self.path, "r") as f:
                 reader = csv.reader(f)
                 for row in reader:
+                    if len(row) != 2:
+                        print(f"Error while reading row: {row}")
                     txs[UUID(row[0])] = TxToVerify.from_str(row[1])
         self.update_cache()
         return txs
@@ -313,7 +319,11 @@ class TransactionVerifiedStorage(Storage):
             if not self.is_empty():
                 reader = csv.reader(f)
                 for row in reader:
-                    txs[UUID(row[0])] = TxVerified.from_str(row[1])
+                    try:
+                        txs[UUID(row[0])] = TxVerified.from_str(row[1])
+                    except Exception as ex:
+                        print(f"Error while processing row {row}: {ex}")
+                        raise ex
             self.update_cache()
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
@@ -585,7 +595,7 @@ class TransactionTime(Storage):
             fcntl.flock(f, fcntl.LOCK_UN)
             f.close()
 
-    def load(self):
+    def load(self) -> dict[UUID, tuple[bool, float]]:
         f = open(self.path, "r")
         try:
             fcntl.flock(f, fcntl.LOCK_EX)

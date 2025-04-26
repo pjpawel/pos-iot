@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from time import time
+from time import time, sleep
 from uuid import UUID
 
 from .block import Block
@@ -129,6 +129,7 @@ class TransactionToVerifyManager(Manager):
         self.refresh()
         try:
             self._storage.wait_for_set_lock()
+            #self._txs[identifier].add_verification_result(node, result)
             self._txs[identifier].voting[node.identifier] = result
             self._storage.dump(self._txs, False)
             self._storage.unlock()
@@ -242,15 +243,22 @@ class NodeTrust(Manager):
         self.refresh()
         self._storage.update({node.identifier: trust})
         self._trusts[node.identifier] = trust
+        logging.warning(f"Adding new node: {node.identifier.hex} trust {trust}")
 
     def add_trust_to_node(self, node: Node, new_trust: int) -> None:
-        self.refresh()
-        trust = self._trusts.get(node.identifier)
-        if trust is None:
-            self.add_new_node_trust(node)
+        #self.refresh()
+        trust = None
+        while trust is None:
             self.refresh()
             trust = self._trusts.get(node.identifier)
-        # trust = None
+            if trust is None:
+                logging.error(f"Node {node.identifier.hex} not found in trust list")
+                sleep(0.1)
+
+                # self.add_new_node_trust(node)
+                # self.refresh()
+                # trust = self._trusts.get(node.identifier)
+        #trust = None
         # while trust is None:
         #     self.refresh()
         #     trust = self._trusts.get(node.identifier)

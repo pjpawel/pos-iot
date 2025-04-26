@@ -47,10 +47,14 @@ class PoT:
         if self.nodes.find_by_identifier(self.self_node.identifier) is None:
             node = self.self_node.get_node()
             self.nodes.add(node)
+            self.nodes.node_trust.add_new_node_trust(node)
 
         self.blockchain.refresh()
         self.nodes.refresh()
         self.tx_to_verified.refresh()
+
+        if only_from_file:
+            return
 
         if ip == genesis_ip:
             if len(self.blockchain.all()) == 0:
@@ -58,7 +62,7 @@ class PoT:
             if self.nodes.count_validator_nodes() < 1:
                 self.nodes.validators.set_validators([self.self_node.identifier])
         else:
-            if len(self.nodes.all()) < 2 and not only_from_file:
+            if len(self.nodes.all()) < 2:
                 logging.info("Blockchain loading from genesis")
                 identifier_hex = Request.get_info(genesis_ip, 5000).get("identifier")
                 genesis_node = Node(
@@ -480,7 +484,9 @@ class PoT:
             raise Exception(
                 f"Node is already registered with identifier: {node_f.identifier}"
             )
-        self.nodes.add(Node(identifier, host, port, n_type))
+        node = Node(identifier, host, port, n_type)
+        self.nodes.add(node)
+        self.nodes.node_trust.add_new_node_trust(node)
 
     def node_register(self, identifier: UUID, node_ip: str, port: int, n_type: NodeType) -> dict | tuple:
         self._validate_if_i_am_validator()
@@ -493,7 +499,7 @@ class PoT:
         data_to_send = {
             "identifier": new_node.identifier.hex,
             "host": new_node.host,
-            "port": new_node.port
+            "port": new_node.port,
         }
         for node in self.nodes.all():
             if node.identifier == new_node.identifier or node.identifier == self.self_node.identifier:
