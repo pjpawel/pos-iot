@@ -292,11 +292,18 @@ for col in cols[1 : len(cols) - 2]:
         grid=True,
     )
     #plt.savefig(os.path.join(result_path, f"plot-{col}.pdf"))
-    #plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
+    plt.savefig(os.path.join(result_path, f"plot-{col}.png"))
+    plt.close()
 
-    plt.xlabel("Czas [s]")
-    plt.ylabel(translation[col_name])
-
+    df_show.plot(
+        style=style_list,
+        legend=True,
+        # title=f"Plot {col} against time",
+        xlabel="Czas [s]",
+        ylabel=translation[col_name],
+        ylim=(max(0, int(-max_value * 0.1)), max_value + max_value * 0.1),
+        grid=True,
+    )
     #plt.savefig(os.path.join(result_path, f"plot-pl-{col}.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-pl-{col}.png"))
     plt.close()
@@ -334,6 +341,7 @@ for col in cols[1 : len(cols) - 2]:
     #plt.figure().gca().yaxis.set_major_locator(MaxNLocator(integer=True))
     #plt.savefig(os.path.join(result_path, f"plot-{col}-part.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-{col}-part.png"))
+    plt.close()
 
     df_show.plot(
         style=style_list,
@@ -389,11 +397,17 @@ for node_id in nodes_ids:
     plt.legend(title="Source node")
     plt.grid(True)
     #plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.pdf"))
-    #plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.png"))
+    plt.savefig(os.path.join(result_path, f"plot-trust-{node_name}.png"))
+    plt.close()
 
-    plt.xlabel("Czas [s]")
-    plt.ylabel("Poziom zaufania")
-
+    pivot.plot(
+        style=style_list,
+        legend=True,
+        # title=f"Change of trust for node {node_name} in time",
+        xlabel="Czas [s]",
+        ylabel="Poziom zaufania",
+        grid=True,
+    )
     #plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}.pdf"))
     plt.savefig(os.path.join(result_path, f"plot-pl-trust-{node_name}.png"))
     plt.close()
