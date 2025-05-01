@@ -195,6 +195,9 @@ class PoT:
                     nodes_negative, trust_change, -10 * trust_change.value, uuid.hex
                 )
                 self.tx_time_storage.append(uuid, True, time() - tx_verified.tx.timestamp)
+                if self.tx_to_verified.find(uuid):
+                    logging.warning(f"Transaction {uuid.hex} is still in to verify. Removing it")
+                    self.tx_to_verified.pop(uuid)
             else:
                 logging.info(f"Transaction {uuid.hex} was rejected")
                 self.txs_rejected.add(uuid)

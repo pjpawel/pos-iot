@@ -11,9 +11,25 @@ from pot.network.transaction import TxToVerify
 class TransactionVerifier:
     LOG_PREFIX = "TX_VERIFY: "
     pot: PoT
+    stop: bool
 
     def __init__(self, pot: PoT):
         self.pot = pot
+        self.stop = False
+
+
+    def register_stop_handler(self):
+        """
+        Register stop handler for SIGINT
+        :return:
+        """
+        import signal
+
+        def stop_handler(signum, frame):
+            logging.info(self.LOG_PREFIX + "Stop signal received")
+            self.stop = True
+
+        signal.signal(signal.SIGINT, stop_handler)
 
     # def start_thread(self):
     #     thread = Thread(target=self.process)
@@ -22,6 +38,9 @@ class TransactionVerifier:
     def process(self):
         logging.debug(self.LOG_PREFIX + "Start processing ")
         while True:
+            if self.stop:
+                logging.info(self.LOG_PREFIX + "Stop signal received. Exiting")
+                break
 
             if not self.pot.nodes.is_validator(self.pot.self_node.get_node()):
                 sleep(5)
