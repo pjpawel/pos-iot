@@ -11,9 +11,9 @@ from dotenv import load_dotenv
 from functools import wraps
 from flask import Flask, request, jsonify
 
-from pot.network.blockchain import PoT, PoTException
-from pot.network.node import NodeType
-from pot.utils import setup_logger, prepare_simulation_env
+from post.network.blockchain import PoT, PoTException
+from post.network.node import NodeType
+from post.utils import setup_logger, prepare_simulation_env
 
 """
 Loading env values

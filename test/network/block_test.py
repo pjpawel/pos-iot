@@ -5,10 +5,10 @@ from uuid import uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pot.network.node import SelfNodeInfo
-from pot.network.service import Blockchain
-from pot.network.transaction import TxCandidate, TxVerified
-from pot.network.block import Block, BlockCandidate
+from post.network.node import SelfNodeInfo
+from post.network.service import Blockchain
+from post.network.transaction import TxCandidate, TxVerified
+from post.network.block import Block, BlockCandidate
 from test.network.conftest import Helper
 
 

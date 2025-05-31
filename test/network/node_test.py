@@ -3,7 +3,7 @@ import os
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pot.network.node import SelfNodeInfo
+from post.network.node import SelfNodeInfo
 
 from test.network.conftest import Helper
 

@@ -4,8 +4,8 @@ from random import shuffle
 
 import numpy as np
 
-from pot.network.blockchain import PoT
-from pot.network.transaction import TxToVerify
+from post.network.blockchain import PoT
+from post.network.transaction import TxToVerify
 
 
 class TransactionVerifier:

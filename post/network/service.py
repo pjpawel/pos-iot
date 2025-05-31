@@ -2,8 +2,8 @@ import os
 from hashlib import sha256
 from uuid import UUID
 
-from pot.network.block import BlockCandidate, Block
-from pot.network.manager import (
+from post.network.block import BlockCandidate, Block
+from post.network.manager import (
     BlockchainManager,
     NodeManager,
     TransactionToVerifyManager,
@@ -15,8 +15,8 @@ from pot.network.manager import (
     ValidatorManager,
     NodeTrustHistoryManager,
 )
-from pot.network.node import Node as NodeDto, SelfNodeInfo, NodeType
-from pot.network.transaction import TxVerified, Tx
+from post.network.node import Node as NodeDto, SelfNodeInfo, NodeType
+from post.network.transaction import TxVerified, Tx
 
 
 class Blockchain(BlockchainManager):

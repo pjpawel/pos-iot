@@ -5,7 +5,7 @@ mkdir -p ../storage-archive/"$TIME"
 mv ../storage/* ../storage-archive/"$TIME"
 
 docker build -t pot-iot .
-#docker stack deploy -c docker-stack.yml pot-iot
+#docker stack deploy -c docker-stack.yml post-iot
 
 docker service create \
   --name node_genesis \

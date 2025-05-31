@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 
-from pot.network.blockchain import PoT
-from pot.utils import setup_logger
+from post.network.blockchain import PoT
+from post.utils import setup_logger
 
 print(f"Starting {__file__}")
 

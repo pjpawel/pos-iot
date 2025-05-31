@@ -1,9 +1,9 @@
 import os
 from uuid import UUID
 
-from pot.network.manager import NodeTrust
-from pot.network.node import SelfNodeInfo
-from pot.network.storage import TransactionTime, NodeStorage, NodeTrustStorage, ValidatorStorage, TransactionStorage, \
+from post.network.manager import NodeTrust
+from post.network.node import SelfNodeInfo
+from post.network.storage import TransactionTime, NodeStorage, NodeTrustStorage, ValidatorStorage, TransactionStorage, \
     TransactionVerifiedStorage, BlocksStorage
 
 

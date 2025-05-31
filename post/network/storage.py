@@ -9,9 +9,9 @@ from typing import BinaryIO
 from uuid import UUID
 from pathlib import Path
 
-from pot.network.block import Block
-from pot.network.node import Node
-from pot.network.transaction import TxToVerify, TxVerified
+from post.network.block import Block
+from post.network.node import Node
+from post.network.transaction import TxToVerify, TxVerified
 from .trust import NodeTrustChange
 
 

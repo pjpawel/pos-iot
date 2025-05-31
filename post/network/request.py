@@ -3,7 +3,7 @@ from uuid import UUID
 
 import requests
 
-from pot.network.exception import PublicKeyNotFoundException
+from post.network.exception import PublicKeyNotFoundException
 
 
 class Request:

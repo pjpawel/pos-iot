@@ -4,11 +4,11 @@ from time import sleep, time
 
 from dotenv import load_dotenv
 
-from pot.network.blockchain import PoT
-from pot.network.node import Node
-from pot.network.request import Request
-from pot.network.trust import TrustChangeType
-from pot.utils import setup_logger, prepare_simulation_env
+from post.network.blockchain import PoT
+from post.network.node import Node
+from post.network.request import Request
+from post.network.trust import TrustChangeType
+from post.utils import setup_logger, prepare_simulation_env
 
 
 print(f"Starting {__file__}")

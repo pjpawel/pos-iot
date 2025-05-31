@@ -1,13 +1,13 @@
 from time import time
 from uuid import uuid4
 
-from pot.network.manager import (
+from post.network.manager import (
     TransactionToVerifyManager,
     BlockchainManager,
     TransactionVerifiedManager,
 )
-from pot.network.node import NodeType
-from pot.network.transaction import TxVerified
+from post.network.node import NodeType
+from post.network.transaction import TxVerified
 from test.network.conftest import Helper
 
 

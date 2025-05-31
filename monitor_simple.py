@@ -4,7 +4,7 @@ import pandas
 from matplotlib.pyplot import savefig
 import matplotlib.pyplot as plt
 
-from pot.network.storage import BlocksStorage, NodeStorage, TransactionStorage
+from post.network.storage import BlocksStorage, NodeStorage, TransactionStorage
 
 storage_path = os.path.join(os.path.dirname(__file__), "monitor", "storage")
 result_path = os.path.join(os.path.dirname(__file__), "monitor", "result")

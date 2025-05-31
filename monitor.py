@@ -14,9 +14,9 @@ from matplotlib.ticker import MaxNLocator
 from dotenv import load_dotenv
 from requests.utils import rewind_body
 
-from pot.network.dumper import Dumper
-from pot.network.manager import NodeTrust
-from pot.monitor.imports import (
+from post.network.dumper import Dumper
+from post.network.manager import NodeTrust
+from post.monitor.imports import (
     get_self_node_info,
     get_info_from_blockchain,
     get_info_from_nodes, get_info_from_validators, get_info_from_transactions_to_verify,

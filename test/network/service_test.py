@@ -1,9 +1,9 @@
 from time import time
 from uuid import uuid4
 
-from pot.network.service import Node
-from pot.network.node import Node as NodeDto
-from pot.network.trust import NodeTrustChange, TrustChangeType
+from post.network.service import Node
+from post.network.node import Node as NodeDto
+from post.network.trust import NodeTrustChange, TrustChangeType
 from test.network.conftest import Helper
 
 

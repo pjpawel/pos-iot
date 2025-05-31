@@ -2,9 +2,9 @@ import os
 from copy import copy
 from uuid import uuid4
 
-from pot.network.block import Block
-from pot.network.node import Node
-from pot.network.storage import BlocksStorage, TransactionStorage, NodeStorage
+from post.network.block import Block
+from post.network.node import Node
+from post.network.storage import BlocksStorage, TransactionStorage, NodeStorage
 from test.network.conftest import Helper
 
 

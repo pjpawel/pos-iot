@@ -1,5 +1,5 @@
 """
-Pytest fixtures for pot.blockchain test module
+Pytest fixtures for post.blockchain test module
 """
 
 import os
@@ -10,9 +10,9 @@ from uuid import uuid4
 
 import pytest
 
-from pot.network.block import Block, BlockCandidate
-from pot.network.node import SelfNodeInfo, NodeType, Node, SelfNode
-from pot.network.transaction import TxCandidate, Tx, TxToVerify
+from post.network.block import Block, BlockCandidate
+from post.network.node import SelfNodeInfo, NodeType, Node, SelfNode
+from post.network.transaction import TxCandidate, Tx, TxToVerify
 
 
 class Helper:

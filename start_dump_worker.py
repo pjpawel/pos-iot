@@ -2,9 +2,9 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pot.network.blockchain import PoT
-from pot.network.dumper import Dumper
-from pot.utils import setup_logger, prepare_simulation_env
+from post.network.blockchain import PoT
+from post.network.dumper import Dumper
+from post.utils import setup_logger, prepare_simulation_env
 
 
 print(f"Starting {__file__}")

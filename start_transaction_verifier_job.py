@@ -2,9 +2,9 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from pot.network.blockchain import PoT
-from pot.network.verifier import TransactionVerifier
-from pot.utils import setup_logger, prepare_simulation_env
+from post.network.blockchain import PoT
+from post.network.verifier import TransactionVerifier
+from post.utils import setup_logger, prepare_simulation_env
 
 
 print(f"Starting {__file__}")

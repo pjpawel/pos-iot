@@ -7,10 +7,10 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 
-from pot.network.blockchain import PoT
-from pot.network.node import Node
-from pot.network.request import Request
-from pot.utils import setup_logger, prepare_simulation_env
+from post.network.blockchain import PoT
+from post.network.node import Node
+from post.network.request import Request
+from post.utils import setup_logger, prepare_simulation_env
 
 print(f"Starting {__file__}")
 
@@ -75,25 +75,25 @@ def add_agreement_result(result: bool):
 
     # sleep(0.1)
 
-    # if not pot.nodes.is_agreement_voting_ended() and pot.nodes.get_agreement_leader() != node.identifier:
+    # if not post.nodes.is_agreement_voting_ended() and post.nodes.get_agreement_leader() != node.identifier:
     #     return
     #
     # logging.info("Ending validator agreement")
     #
-    # new_leader = pot.nodes.get_most_trusted_validator()
-    # new_validators = pot.nodes.validator_agreement.all()
+    # new_leader = post.nodes.get_most_trusted_validator()
+    # new_validators = post.nodes.validator_agreement.all()
     # logging.info(f"New validators: {', '.join([vid.hex for vid in new_validators])}")
     #
-    # pot.nodes.clear_agreement_list()
-    # if pot.nodes.is_agreement_result_success():
-    #     pot.nodes.validators.set_validators(new_validators)
-    #     pot.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
-    #     pot.nodes.validator_agreement_info.set_info_data(False, [])
+    # post.nodes.clear_agreement_list()
+    # if post.nodes.is_agreement_result_success():
+    #     post.nodes.validators.set_validators(new_validators)
+    #     post.nodes.validator_agreement_info.set_last_successful_agreement(int(time()))
+    #     post.nodes.validator_agreement_info.set_info_data(False, [])
     # else:
-    #     pot.nodes.validator_agreement_info.add_leader(new_leader)
+    #     post.nodes.validator_agreement_info.add_leader(new_leader)
     #
     # done_data = {
-    #     "validators": [vid.hex for vid in pot.nodes.validator_agreement.all()],
+    #     "validators": [vid.hex for vid in post.nodes.validator_agreement.all()],
     #     "leader": new_leader.identifier.hex
     # }
     #
@@ -102,7 +102,7 @@ def add_agreement_result(result: bool):
     #
     # send(done)
     #
-    # pot.send_validators_list()
+    # post.send_validators_list()
 
 
 logging.info(

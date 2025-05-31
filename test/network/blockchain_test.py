@@ -5,19 +5,19 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from pot.network.block import BlockCandidate
-from pot.network.blockchain import PoT
-from pot.network.exception import PoTException
-from pot.network.node import SelfNodeInfo, NodeType, Node
-from pot.network.storage import decode_chain
-from pot.network.transaction import TxVerified
+from post.network.block import BlockCandidate
+from post.network.blockchain import PoT
+from post.network.exception import PoTException
+from post.network.node import SelfNodeInfo, NodeType, Node
+from post.network.storage import decode_chain
+from post.network.transaction import TxVerified
 
 from test.network.conftest import Helper
 
 
 def test_pot_load(helper: Helper):
     """
-    Test if pot is correctly loaded genesis node
+    Test if post is correctly loaded genesis node
     :param helper:
     :return:
     """
@@ -186,7 +186,7 @@ def test_add_new_block_missing_not_latest(helper: Helper):
     )
 
     # with pytest.raises(PoTException):
-    #    response_msg, response_code = pot.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
+    #    response_msg, response_code = post.add_new_block(block.encode(), socket.gethostbyname(socket.gethostname()))
     try:
         response_msg, response_code = pot.add_new_block(
             block.encode(), socket.gethostbyname(socket.gethostname())
@@ -194,7 +194,7 @@ def test_add_new_block_missing_not_latest(helper: Helper):
     except PoTException as e:
         assert e.code == 400
     # assert response_code == 200
-    # assert len(pot.blockchain.blocks) == 2
+    # assert len(post.blockchain.blocks) == 2
 
 
 def test_set_new_validators(helper: Helper):

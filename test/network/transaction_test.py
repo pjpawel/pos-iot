@@ -3,8 +3,8 @@ from uuid import uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from pot.network.node import Node, NodeType
-from pot.network.transaction import Tx, TxCandidate, TxToVerify
+from post.network.node import Node, NodeType
+from post.network.transaction import Tx, TxCandidate, TxToVerify
 from test.network.conftest import Helper
 
 

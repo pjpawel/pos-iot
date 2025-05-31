@@ -1,4 +1,4 @@
-from pot.http import app
+from post.http import app
 
 
 def main():

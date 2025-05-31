@@ -1,5 +1,5 @@
 # Study of the potential use of the PoS algorithm in Internet of Things networks
-*Proof of Trust blockchain simulation*
+*Proof of Staked Trust blockchain simulation*
 
 ### Author:
 - Paweł Podgórski
@@ -23,7 +23,7 @@
 
 There is 2 ways to start simulation. In simplest way is by calling flask:
 ```shell
-python -m flask -app pot/start_node_flask run
+python -m flask -app post/start_node_flask run
 ```
 
 Full simulation can be start using docker configuration file `docker-compose.yaml`:
