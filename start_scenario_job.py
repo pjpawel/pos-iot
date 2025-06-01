@@ -28,4 +28,4 @@ Run scenarios
 pot = PoST()
 pot.load(only_from_file=True)
 
-run_scenarios(os.getenv("POT_SCENARIOS"), pot)
+run_scenarios(os.getenv("POST_SCENARIOS"), pot)

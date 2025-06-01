@@ -26,7 +26,7 @@ def setup_logger(prefix: str = "", level_str: str | None = None) -> None:
 
 
 def prepare_simulation_env():
-    os.environ["POT_SCENARIOS"] = "INSTANT_SENDER"
+    os.environ["POST_SCENARIOS"] = "INSTANT_SENDER"
     os.environ["VALIDATORS_PART"] = "0.2"
 
     if os.environ.get("SIMULATION") is None:
@@ -36,17 +36,17 @@ def prepare_simulation_env():
             os.environ["MAX_DELAY"] = "300"
         case 3:
             if randint(0, 100) % 4 == 0:
-                os.environ["POT_SCENARIOS"] = "MAD_SENDER"
+                os.environ["POST_SCENARIOS"] = "MAD_SENDER"
         case 4:
             # 50%
             if randint(0, 100) % 2 == 0:
-                os.environ["POT_SCENARIOS"] = "MAD_SENDER"
+                os.environ["POST_SCENARIOS"] = "MAD_SENDER"
         case 5:
             # 75%
             if randint(0, 100) % 4 != 0:
-                os.environ["POT_SCENARIOS"] = "MAD_SENDER"
+                os.environ["POST_SCENARIOS"] = "MAD_SENDER"
         case 6:
-            os.environ["POT_SCENARIOS"] = "MAD_SENDER"
+            os.environ["POST_SCENARIOS"] = "MAD_SENDER"
         case 7:
             os.environ["MAX_DELAY"] = "50"
         case 8:
@@ -86,5 +86,5 @@ def prepare_simulation_env():
         case 23:
             os.environ["VALIDATORS_PART"] = "0.55"
         # case _:
-        #     os.environ["POT_SCENARIOS"] = "INSTANT_SENDER"
+        #     os.environ["POST_SCENARIOS"] = "INSTANT_SENDER"
         #     os.environ["VALIDATORS_PART"] = "0.2"
