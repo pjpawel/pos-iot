@@ -7,7 +7,7 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.network.node import Node
 from post.network.request import Request
 from post.utils import setup_logger, prepare_simulation_env
@@ -27,7 +27,7 @@ setup_logger("AGREEMENT_VALIDATE", "DEBUG")
 
 sleep(10)
 
-pot = PoT()
+pot = PoST()
 pot.load(only_from_file=True)
 
 self_node = pot.self_node.get_node()

@@ -4,7 +4,7 @@ from pathlib import Path
 from time import time
 from shutil import copy
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 
 
 class Dumper:
@@ -14,7 +14,7 @@ class Dumper:
     paths: list[str]
     storage_dir: str
 
-    def __init__(self, pot: PoT):
+    def __init__(self, pot: PoST):
         self.storage_dir = os.getenv("STORAGE_DIR")
         self.dump_dir = os.getenv("DUMP_DIR")
         if not os.path.isdir(self.dump_dir):

@@ -7,18 +7,18 @@ import logging
 import numpy as np
 
 from .utils import get_random_from_list, print_runtime_error
-from ..network.blockchain import PoT
+from ..network.blockchain import PoST
 from ..network.transaction import TxCandidate, TxToVerify
 
 LOG_PREFIX = "SCENARIO: "
 
 
-def none_sender(pot: PoT):
+def none_sender(pot: PoST):
     return
 
 
 @print_runtime_error
-def instant_sender(pot: PoT):
+def instant_sender(pot: PoST):
     """
     :param pot:
     :return:
@@ -61,7 +61,7 @@ def instant_sender(pot: PoT):
 
 
 @print_runtime_error
-def mad_sender(pot: PoT):
+def mad_sender(pot: PoST):
     def generate_unverifiable_number(history, k_factor=2.5):
         if len(history) < 2:
             return random.randint(0, 5)
@@ -115,7 +115,7 @@ def mad_sender(pot: PoT):
 
 
 @print_runtime_error
-def simple_sender(pot: PoT):
+def simple_sender(pot: PoST):
     send = True
     while send:
         sleep(10)

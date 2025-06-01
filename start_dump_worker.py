@@ -2,7 +2,7 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.network.dumper import Dumper
 from post.utils import setup_logger, prepare_simulation_env
 
@@ -22,7 +22,7 @@ setup_logger("DUMP")
 
 sleep(0.001)
 
-pot = PoT()
+pot = PoST()
 pot.load(only_from_file=True)
 
 dumper = Dumper(pot)

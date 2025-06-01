@@ -4,7 +4,7 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.utils import setup_logger, prepare_simulation_env
 
 
@@ -23,7 +23,7 @@ setup_logger("UPDATE")
 
 sleep(0.1)
 
-pot = PoT()
+pot = PoST()
 pot.load(only_from_file=True)
 
 hostname = socket.gethostname()

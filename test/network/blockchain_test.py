@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from post.network.block import BlockCandidate
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.network.exception import PoTException
 from post.network.node import SelfNodeInfo, NodeType, Node
 from post.network.storage import decode_chain
@@ -22,7 +22,7 @@ def test_pot_load(helper: Helper):
     :return:
     """
     helper.put_genesis_node_env()
-    pot = PoT()
+    pot = PoST()
     pot.load()
 
     assert isinstance(pot.self_node, SelfNodeInfo)
@@ -44,7 +44,7 @@ def test_decode_blockchain(helper: Helper):
 
 def test_node_register(helper: Helper):
     helper.put_genesis_node_env()
-    pot = PoT()
+    pot = PoST()
     pot.load()
 
     uid = uuid4()
@@ -60,7 +60,7 @@ def test_node_register(helper: Helper):
 
 def test_node_update(helper: Helper):
     helper.put_genesis_node_env()
-    pot = PoT()
+    pot = PoST()
     pot.load()
 
     assert len(pot.blockchain.blocks) == 1
@@ -82,7 +82,7 @@ def test_add_new_block_successful(helper: Helper):
     helper.put_storage_env()
     helper.put_genesis_node_env(True)
 
-    pot = PoT()
+    pot = PoST()
     pot.load()
 
     assert len(pot.blockchain.blocks) == 1
@@ -119,7 +119,7 @@ def test_add_new_block_missing_latest(helper: Helper):
     helper.put_storage_env()
     helper.put_genesis_node_env(True)
 
-    pot = PoT()
+    pot = PoST()
     pot.load()
 
     assert len(pot.blockchain.blocks) == 1
@@ -159,7 +159,7 @@ def test_add_new_block_missing_not_latest(helper: Helper):
     helper.put_storage_env()
     helper.put_genesis_node_env(True)
 
-    pot = PoT()
+    pot = PoST()
     pot.load()
 
     assert len(pot.blockchain.blocks) == 1
@@ -201,7 +201,7 @@ def test_set_new_validators(helper: Helper):
     helper.put_storage_env()
     helper.put_genesis_node_env(True)
 
-    pot = PoT()
+    pot = PoST()
     pot.load()
 
     identifier = uuid4()

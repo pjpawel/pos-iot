@@ -2,7 +2,7 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.network.verifier import TransactionVerifier
 from post.utils import setup_logger, prepare_simulation_env
 
@@ -25,7 +25,7 @@ sleep(10.0)
 """
 Run verification of transactions
 """
-pot = PoT()
+pot = PoST()
 pot.load(only_from_file=True)
 
 tx_verifier = TransactionVerifier(pot)

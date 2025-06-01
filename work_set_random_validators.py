@@ -6,7 +6,7 @@ from time import sleep, time
 
 from dotenv import load_dotenv
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.utils import setup_logger, prepare_simulation_env
 
 
@@ -33,7 +33,7 @@ genesis_ip = socket.gethostbyname(genesis_hostname)
 if ip != genesis_ip:
     exit()
 
-pot = PoT()
+pot = PoST()
 pot.load(only_from_file=True)
 
 start = time()

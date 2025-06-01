@@ -4,7 +4,7 @@ from threading import Thread
 
 from .definitions import instant_sender, mad_sender, simple_sender, none_sender
 from .exception import ScenarioNotFound, ScenarioNotSupported
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 
 
 class Scenario(StrEnum):
@@ -26,7 +26,7 @@ class Scenario(StrEnum):
             case _:
                 raise ScenarioNotSupported(f"Scenario is not supported: {self.name}")
 
-    def call(self, pot: PoT):
+    def call(self, pot: PoST):
         thread = Thread(target=self.get_definition(), args=[pot])
         thread.start()
 
@@ -46,7 +46,7 @@ class Scenario(StrEnum):
 #     return scenarios
 
 
-def run_scenarios(names_list: str, pot: PoT):
+def run_scenarios(names_list: str, pot: PoST):
     """
     Allow to call multiple scenarios
     Pass names as string divided with comma

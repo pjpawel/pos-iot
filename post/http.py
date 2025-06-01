@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from functools import wraps
 from flask import Flask, request, jsonify
 
-from post.network.blockchain import PoT, PoTException
+from post.network.blockchain import PoST, PoTException
 from post.network.node import NodeType
 from post.utils import setup_logger, prepare_simulation_env
 
@@ -34,7 +34,7 @@ app = Flask(__name__)
 """
 Load blockchain
 """
-app.pot = PoT()
+app.pot = PoST()
 app.pot.load()
 
 

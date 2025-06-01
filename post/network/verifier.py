@@ -4,16 +4,16 @@ from random import shuffle
 
 import numpy as np
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.network.transaction import TxToVerify
 
 
 class TransactionVerifier:
     LOG_PREFIX = "TX_VERIFY: "
-    pot: PoT
+    pot: PoST
     stop: bool
 
-    def __init__(self, pot: PoT):
+    def __init__(self, pot: PoST):
         self.pot = pot
         self.stop = False
 

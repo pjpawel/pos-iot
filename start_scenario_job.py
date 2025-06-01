@@ -3,7 +3,7 @@ from time import sleep
 
 from dotenv import load_dotenv
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.scenario import run_scenarios
 from post.utils import setup_logger, prepare_simulation_env
 
@@ -25,7 +25,7 @@ sleep(10.0)
 """
 Run scenarios
 """
-pot = PoT()
+pot = PoST()
 pot.load(only_from_file=True)
 
 run_scenarios(os.getenv("POT_SCENARIOS"), pot)

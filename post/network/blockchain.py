@@ -19,7 +19,7 @@ from .exception import PoTException
 from .trust import NodeTrustChange, TrustChangeType
 
 
-class PoT:
+class PoST:
     blockchain: Blockchain
     nodes: NodeService
     tx_to_verified: TransactionToVerify

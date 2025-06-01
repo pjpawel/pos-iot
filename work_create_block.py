@@ -4,7 +4,7 @@ from time import sleep, time
 
 from dotenv import load_dotenv
 
-from post.network.blockchain import PoT
+from post.network.blockchain import PoST
 from post.network.node import Node
 from post.network.request import Request
 from post.network.trust import TrustChangeType
@@ -26,7 +26,7 @@ setup_logger("BLOCK", "DEBUG")
 
 sleep(0.1)
 
-pot = PoT()
+pot = PoST()
 pot.load(only_from_file=True)
 
 self_node = pot.nodes.find_by_identifier(pot.self_node.identifier)
