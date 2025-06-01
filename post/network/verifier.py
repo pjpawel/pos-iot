@@ -100,18 +100,10 @@ class TransactionVerifier:
                 )
 
     def verify_transaction(self, tx_to_verify: TxToVerify) -> bool:
-        """
-        Verify transaction based on previous records
-        :param tx_to_verify:
-        :return:
-        """
         special_prefix = self.LOG_PREFIX + " _special_ "
-        #return True
-        #logging.info(special_prefix + "Start verifying transaction")
         tx = tx_to_verify.tx
         transaction_data_key = tx.DATA_KEY
         tx_type = tx.data.get(tx.TYPE_KEY)
-        tx_data = tx.data.get(tx.DATA_KEY)
         if tx_type == "0":
             logging.info(special_prefix + "Transaction type is 0. Skipping verification")
             return True
