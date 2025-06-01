@@ -26,6 +26,9 @@ def setup_logger(prefix: str = "", level_str: str | None = None) -> None:
 
 
 def prepare_simulation_env():
+    os.environ["POT_SCENARIOS"] = "INSTANT_SENDER"
+    os.environ["VALIDATORS_PART"] = "0.2"
+
     if os.environ.get("SIMULATION") is None:
         raise Exception("SIMULATION env variable is not set")
     match int(os.environ["SIMULATION"]):
@@ -74,6 +77,14 @@ def prepare_simulation_env():
             os.environ["VALIDATORS_PART"] = "0.8"
         case 19:
             os.environ["VALIDATORS_PART"] = "0.9"
-        case _:
-            os.environ["POT_SCENARIOS"] = "INSTANT_SENDER"
-            os.environ["VALIDATORS_PART"] = "0.2"
+        case 20:
+            os.environ["VALIDATORS_PART"] = "0.25"
+        case 21:
+            os.environ["VALIDATORS_PART"] = "0.35"
+        case 22:
+            os.environ["VALIDATORS_PART"] = "0.45"
+        case 23:
+            os.environ["VALIDATORS_PART"] = "0.55"
+        # case _:
+        #     os.environ["POT_SCENARIOS"] = "INSTANT_SENDER"
+        #     os.environ["VALIDATORS_PART"] = "0.2"

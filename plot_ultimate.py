@@ -12,22 +12,25 @@ class Parameter(StrEnum):
     bad_node = auto()
     delay = auto()
     spectre = auto()
+    spectre_delay = auto()
+    spectre_part = auto()
+    spectre_delay_part = auto()
 
     def plot(self, data: dict[int, list[float]], simulation_dir: str):
         if data == {}:
             raise Exception("No data to plot")
-        if self == Parameter.spectre:
+        if self == Parameter.spectre or self == Parameter.spectre_part:
             self.plot_error_bar(data, simulation_dir)
             return
         data_values = list(data.values())
         (label, label_pl, cols) = self.get_labels(list(data.keys()))
-        y_max = min(6, max([max(x) for x in data_values]))
+        #y_max = min(6, max([max(x) for x in data_values]))
 
         plt.figure(figsize=(8, 5))
         plt.boxplot(data_values, labels=cols)
         plt.xlabel(label)
         plt.ylabel("Transaction confirmation time [s]")
-        plt.ylim(0, y_max)
+        #plt.ylim(0, y_max)
         plt.grid(True)
         filepath = os.path.join(simulation_dir, f"{self.name}.png")
         plt.savefig(filepath)
@@ -38,7 +41,7 @@ class Parameter(StrEnum):
         plt.boxplot(data_values, labels=cols)
         plt.xlabel(label_pl)
         plt.ylabel("Czas zatwierdzania transakcji [s]")
-        plt.ylim(0, y_max)
+        #plt.ylim(0, y_max)
         plt.grid(True)
         filepath = os.path.join(simulation_dir, f"{self.name}-pl.png")
         plt.savefig(filepath)
@@ -55,40 +58,40 @@ class Parameter(StrEnum):
         pprint(y)
         pprint(e)
 
-        # plt.plot(x, e)
-        # plt.ylabel("Standard deviation of nodes' trust levels")
+        plt.plot(x, e)
+        plt.ylabel("Standard deviation of nodes' trust levels")
+        plt.xlabel(label)
+        plt.grid(True)
+        filepath = os.path.join(simulation_dir, f"{self.name}-error.png")
+        plt.savefig(filepath)
+        filepath = os.path.join(simulation_dir, f"{self.name}-error.pdf")
+        plt.savefig(filepath)
+
+        plt.plot(x, e)
+        plt.ylabel("Odchylenie standardowe poziomu zaufania węzłów")
+        plt.xlabel(label_pl)
+        plt.grid(True)
+        filepath = os.path.join(simulation_dir, f"{self.name}-error-pl.png")
+        plt.savefig(filepath)
+        filepath = os.path.join(simulation_dir, f"{self.name}-error-pl.pdf")
+        plt.savefig(filepath)
+
+
+        # plt.errorbar(x, y, yerr=e, linestyle='None', marker='^')
         # plt.xlabel(label)
-        # plt.grid(True)
-        # filepath = os.path.join(simulation_dir, f"{self.name}-error.png")
+        # plt.ylabel("Trust level mean")
+        # filepath = os.path.join(simulation_dir, f"{self.name}.pdf")
         # plt.savefig(filepath)
-        # filepath = os.path.join(simulation_dir, f"{self.name}-error.pdf")
+        # filepath = os.path.join(simulation_dir, f"{self.name}.png")
         # plt.savefig(filepath)
         #
-        # plt.plot(x, e)
-        # plt.ylabel("Odchylenie standardowe poziomu zaufania węzłów")
+        # plt.errorbar(x, y, yerr=e, linestyle='None', marker='^')
         # plt.xlabel(label_pl)
-        # plt.grid(True)
-        # filepath = os.path.join(simulation_dir, f"{self.name}-error-pl.png")
+        # plt.ylabel("Średni poziom zaufania")
+        # filepath = os.path.join(simulation_dir, f"{self.name}-pl.pdf")
         # plt.savefig(filepath)
-        # filepath = os.path.join(simulation_dir, f"{self.name}-error-pl.pdf")
+        # filepath = os.path.join(simulation_dir, f"{self.name}-pl.png")
         # plt.savefig(filepath)
-
-
-        plt.errorbar(x, y, yerr=e, linestyle='None', marker='^')
-        plt.xlabel(label)
-        plt.ylabel("Trust level mean")
-        filepath = os.path.join(simulation_dir, f"{self.name}.pdf")
-        plt.savefig(filepath)
-        filepath = os.path.join(simulation_dir, f"{self.name}.png")
-        plt.savefig(filepath)
-
-        plt.errorbar(x, y, yerr=e, linestyle='None', marker='^')
-        plt.xlabel(label_pl)
-        plt.ylabel("Średni poziom zaufania")
-        filepath = os.path.join(simulation_dir, f"{self.name}-pl.pdf")
-        plt.savefig(filepath)
-        filepath = os.path.join(simulation_dir, f"{self.name}-pl.png")
-        plt.savefig(filepath)
 
 
     def get_labels(self, keys: list[int]) -> tuple[str, str, list[float]]:
@@ -107,6 +110,14 @@ class Parameter(StrEnum):
                 label_pl = "Maksymalne opóźnienie [ms]"
             case Parameter.spectre:
                 cols = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+                label = "Percentage of validators [%]"
+                label_pl = "Procent walidatorów [%]"
+            case Parameter.spectre | Parameter.spectre_delay:
+                cols = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+                label = "Percentage of validators [%]"
+                label_pl = "Procent walidatorów [%]"
+            case Parameter.spectre_part | Parameter.spectre_delay_part:
+                cols = [20, 25, 30, 35, 40, 45, 50, 55]
                 label = "Percentage of validators [%]"
                 label_pl = "Procent walidatorów [%]"
             case _:
@@ -138,7 +149,7 @@ def main(parameter: Parameter, simulation_dir: str):
             raise Exception(f"File {path} does not exist")
 
         match parameter:
-            case Parameter.spectre:
+            case Parameter.spectre | Parameter.spectre_part:
                 with open(path, "r") as file:
                     line = next(csv.reader(file))
                     data[number] = [float(x) for x in line]
